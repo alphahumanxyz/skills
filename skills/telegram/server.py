@@ -53,7 +53,8 @@ async def on_skill_load(
     upsert_relationship_fn: Any = None,
 ) -> None:
     """Called when the host loads this skill. Initializes Telethon + SQLite."""
-    api_id = int(os.environ.get("TELEGRAM_API_ID", params.get("apiId", "0")))
+    raw_api_id = os.environ.get("TELEGRAM_API_ID", params.get("apiId", "0")) or "0"
+    api_id = int(raw_api_id) if str(raw_api_id).strip().isdigit() else 0
     api_hash = os.environ.get("TELEGRAM_API_HASH", params.get("apiHash", ""))
     session_string = params.get("sessionString", "")
     data_dir = params.get("dataDir", "data")

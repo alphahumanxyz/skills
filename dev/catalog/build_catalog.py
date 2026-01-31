@@ -11,8 +11,10 @@ Usage:
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -63,23 +65,165 @@ def detect_execution_style(dir_path: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
+def extract_skill_py_fallback(skill_py_path: Path) -> dict[str, Any] | None:
+    """Fallback: Extract metadata from skill.py using AST/regex when imports fail."""
+    try:
+        content = skill_py_path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+
+    result: dict[str, Any] = {}
+    
+    # Extract name, description, version using regex (simple and reliable)
+    name_match = re.search(r'name\s*=\s*["\']([^"\']+)["\']', content)
+    if name_match:
+        result["name"] = name_match.group(1)
+    
+    desc_match = re.search(r'description\s*=\s*["\']([^"\']+)["\']', content)
+    if desc_match:
+        result["description"] = desc_match.group(1)
+    
+    version_match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
+    if version_match:
+        result["version"] = version_match.group(1)
+    
+    # Extract tick_interval
+    tick_match = re.search(r'tick_interval\s*=\s*(\d+)', content)
+    if tick_match:
+        result["tick_interval"] = int(tick_match.group(1))
+    
+    # Try to extract tools using AST (more reliable than regex)
+    try:
+        tree = ast.parse(content, filename=str(skill_py_path))
+        
+        # Find the skill = SkillDefinition(...) assignment
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "skill":
+                        if isinstance(node.value, ast.Call):
+                            # Extract tools from SkillDefinition call
+                            tools: list[str] = []
+                            hooks: list[str] = []
+                            
+                            # Look for tools= argument
+                            for keyword in node.value.keywords:
+                                if keyword.arg == "tools":
+                                    # Try to extract tool names
+                                    if isinstance(keyword.value, (ast.List, ast.Tuple)):
+                                        for elt in keyword.value.elts:
+                                            # Look for SkillTool(...) calls
+                                            if isinstance(elt, ast.Call):
+                                                # Find name= in ToolDefinition
+                                                for kw in elt.keywords:
+                                                    if kw.arg == "definition":
+                                                        # This is a ToolDefinition call
+                                                        if isinstance(kw.value, ast.Call):
+                                                            for def_kw in kw.value.keywords:
+                                                                if def_kw.arg == "name":
+                                                                    if isinstance(def_kw.value, ast.Constant):
+                                                                        tools.append(def_kw.value.value)
+                                    
+                                    # Also check for variable reference (e.g., tools=_TOOLS)
+                                    elif isinstance(keyword.value, ast.Name):
+                                        # Find the variable definition
+                                        var_name = keyword.value.id
+                                        for stmt in ast.walk(tree):
+                                            if isinstance(stmt, ast.Assign):
+                                                for tgt in stmt.targets:
+                                                    if isinstance(tgt, ast.Name) and tgt.id == var_name:
+                                                        if isinstance(stmt.value, (ast.List, ast.Tuple)):
+                                                            for elt in stmt.value.elts:
+                                                                if isinstance(elt, ast.Call):
+                                                                    for kw in elt.keywords:
+                                                                        if kw.arg == "definition" and isinstance(kw.value, ast.Call):
+                                                                            for def_kw in kw.value.keywords:
+                                                                                if def_kw.arg == "name" and isinstance(def_kw.value, ast.Constant):
+                                                                                    tools.append(def_kw.value.value)
+                            
+                            # Look for hooks= argument
+                            for keyword in node.value.keywords:
+                                if keyword.arg == "hooks":
+                                    if isinstance(keyword.value, ast.Call):
+                                        # SkillHooks(...)
+                                        for kw in keyword.value.keywords:
+                                            hook_name = kw.arg
+                                            if hook_name and kw.value is not None:
+                                                # Check if it's not None
+                                                if not (isinstance(kw.value, ast.Constant) and kw.value.value is None):
+                                                    hooks.append(hook_name)
+                            
+                            if tools:
+                                result["tools"] = tools
+                            if hooks:
+                                result["hooks"] = hooks
+                            
+                            break
+    except Exception:
+        # AST parsing failed, fall back to regex for tools
+        # Count SkillTool occurrences as a rough estimate
+        tool_count = len(re.findall(r"SkillTool\s*\(", content))
+        if tool_count > 0:
+            # Try to extract tool names from name= patterns
+            tool_names = re.findall(r'name\s*=\s*["\']([a-z_][a-z0-9_]*)["\']', content)
+            # Filter out common non-tool names
+            filtered_tools = [
+                n for n in tool_names
+                if n not in ("on_load", "on_unload", "on_tick", "on_session_start", 
+                            "on_session_end", "on_before_message", "on_after_response")
+            ]
+            if filtered_tools:
+                result["tools"] = filtered_tools
+        
+        # Extract hooks using regex
+        hooks_found = []
+        for hook in ("on_load", "on_unload", "on_session_start", "on_session_end",
+                    "on_before_message", "on_after_response", "on_memory_flush", "on_tick"):
+            if re.search(rf"{hook}\s*=\s*\w", content):
+                hooks_found.append(hook)
+        if hooks_found:
+            result["hooks"] = hooks_found
+    
+    return result if result else None
+
+
 def extract_skill_py(skill_py_path: Path) -> dict[str, Any] | None:
     """Extract metadata from skill.py via dynamic import."""
     if not skill_py_path.exists():
         return None
 
     try:
-        spec = importlib.util.spec_from_file_location("_skill_catalog", skill_py_path)
-        if spec is None or spec.loader is None:
-            return None
-        module = importlib.util.module_from_spec(spec)
-        # Add repo root to sys.path for imports
+        # Determine the package structure
+        # skill_py_path is like: /path/to/skills/telegram/skill.py
+        # We need: skills.telegram as the package name
         repo_root = skill_py_path.parent.parent.parent
+        skill_dir = skill_py_path.parent
+        skill_dir_name = skill_dir.name
+        
+        # Ensure repo root is in sys.path for absolute imports (dev.types, etc.)
         if str(repo_root) not in sys.path:
             sys.path.insert(0, str(repo_root))
+        
+        # Set up module name and package for relative imports
+        # Module name should be skills.<skill_name>.skill
+        module_name = f"skills.{skill_dir_name}.skill"
+        
+        spec = importlib.util.spec_from_file_location(module_name, skill_py_path)
+        if spec is None or spec.loader is None:
+            return None
+        
+        module = importlib.util.module_from_spec(spec)
+        # Set __package__ so relative imports work (e.g., "from .setup import ...")
+        module.__package__ = f"skills.{skill_dir_name}"
+        module.__name__ = module_name
+        
         spec.loader.exec_module(module)
     except Exception as exc:
+        # Import failed (likely missing dependencies), try fallback extraction
         print(f"  {WARN} Failed to import {skill_py_path}: {exc}", file=sys.stderr)
+        fallback_data = extract_skill_py_fallback(skill_py_path)
+        if fallback_data:
+            return fallback_data
         return None
 
     skill_obj = getattr(module, "skill", None)
@@ -177,27 +321,24 @@ def main() -> None:
         dir_path = skills_dir / dir_name
         rel_path = f"skills/{dir_name}"
 
-        # 2. Detect execution style
-        style = detect_execution_style(dir_path)
-
-        # 3. Parse metadata
+        # 2. Parse metadata
         skill_data = extract_skill_py(dir_path / "skill.py")
         pkg_data = read_pkg_json(dir_path / "package.json")
 
-        # 4. Determine name (priority: skill.py > package.json > dirName)
+        # 3. Determine name (priority: skill.py > package.json > dirName)
         name = (
             (skill_data or {}).get("name")
             or (pkg_data or {}).get("name")
             or dir_name
         )
 
-        # 5. Check for duplicates
+        # 4. Check for duplicates
         if name in seen_names:
             print(f'  {WARN} Duplicate skill name: "{name}" (in {rel_path})', file=sys.stderr)
             warnings += 1
         seen_names.add(name)
 
-        # 6. Determine description
+        # 5. Determine description
         description = (
             (skill_data or {}).get("description")
             or (pkg_data or {}).get("description")
@@ -207,12 +348,11 @@ def main() -> None:
             print(f"  {WARN} No description found for {rel_path}", file=sys.stderr)
             warnings += 1
 
-        # 7. Build entry
+        # 6. Build entry
         entry: dict[str, Any] = {
             "name": name,
             "description": description,
             "icon": None,
-            "executionStyle": style,
             "version": (
                 (skill_data or {}).get("version")
                 or (pkg_data or {}).get("version")
@@ -225,7 +365,7 @@ def main() -> None:
         }
 
         catalog_entries.append(entry)
-        print(f"  {PASS} {name} {dim(f'({style})')}", file=sys.stderr)
+        print(f"  {PASS} {name}", file=sys.stderr)
 
     # 8. Sort alphabetically
     catalog_entries.sort(key=lambda e: e["name"])
@@ -251,13 +391,6 @@ def main() -> None:
     except ValueError:
         rel_output = output_path
     print(f"  Output:   {rel_output}", file=sys.stderr)
-    print(file=sys.stderr)
-
-    by_style: dict[str, int] = {}
-    for e in catalog_entries:
-        by_style[e["executionStyle"]] = by_style.get(e["executionStyle"], 0) + 1
-    for style, count in sorted(by_style.items()):
-        print(f"    {style}: {count}", file=sys.stderr)
     print(file=sys.stderr)
 
 

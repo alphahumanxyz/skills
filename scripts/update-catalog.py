@@ -88,7 +88,6 @@ def check_catalog() -> int:
 
     # Build a fresh catalog in memory by importing the builder internals
     from dev.catalog.build_catalog import (
-        detect_execution_style,
         extract_skill_py,
         read_pkg_json,
     )
@@ -107,7 +106,6 @@ def check_catalog() -> int:
     fresh_skills: list[dict] = []
     for dir_name in entries:
         dir_path = skills_dir / dir_name
-        style = detect_execution_style(dir_path)
         skill_data = extract_skill_py(dir_path / "skill.py")
         pkg_data = read_pkg_json(dir_path / "package.json")
 
@@ -126,7 +124,6 @@ def check_catalog() -> int:
             "name": name,
             "description": description,
             "icon": None,
-            "executionStyle": style,
             "version": (
                 (skill_data or {}).get("version")
                 or (pkg_data or {}).get("version")
@@ -195,14 +192,13 @@ def show_verbose(catalog_path: Path) -> None:
 
     for s in skills:
         name = s.get("name", "?")
-        style = s.get("executionStyle", "?")
         version = s.get("version") or "?"
         tools = s.get("tools", [])
         hooks = s.get("hooks", [])
         tick = s.get("tickInterval")
         desc = s.get("description", "")
 
-        print(f"  {bold(name)} {dim(f'v{version}')} {cyan(f'[{style}]')}")
+        print(f"  {bold(name)} {dim(f'v{version}')}")
         if desc:
             print(f"    {dim(desc[:80])}")
         if tools:

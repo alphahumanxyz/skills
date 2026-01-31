@@ -171,27 +171,32 @@ class SkillServer:
             except json.JSONDecodeError:
                 self.log(f"Failed to parse JSON-RPC message: {trimmed}")
                 continue
-            await self._handle_message(message)
+
+            # Responses to our reverse RPC must be handled inline so the
+            # read loop keeps consuming stdin while handlers await futures.
+            if "result" in message or "error" in message:
+                msg_id = message.get("id")
+                future = self._pending.pop(msg_id, None)
+                if future and not future.done():
+                    if "error" in message:
+                        future.set_exception(
+                            RuntimeError(message["error"].get("message", "Reverse RPC error"))
+                        )
+                    else:
+                        future.set_result(message.get("result"))
+                continue
+
+            # Host requests are dispatched as concurrent tasks so the read
+            # loop can keep processing reverse-RPC replies.
+            asyncio.create_task(self._handle_message(message))
 
     # --------------------------------------------------------------------- #
     # Internal — message dispatch
     # --------------------------------------------------------------------- #
 
     async def _handle_message(self, message: dict[str, Any]) -> None:
-        # Response to our reverse RPC
-        if "result" in message or "error" in message:
-            msg_id = message.get("id")
-            future = self._pending.pop(msg_id, None)
-            if future and not future.done():
-                if "error" in message:
-                    future.set_exception(
-                        RuntimeError(message["error"].get("message", "Reverse RPC error"))
-                    )
-                else:
-                    future.set_result(message.get("result"))
-            return
-
-        # Request or notification from host
+        # Reverse RPC responses are handled inline in _run(); this method
+        # only receives host requests and notifications.
         method = message.get("method", "")
         params = message.get("params")
         msg_id = message.get("id")
