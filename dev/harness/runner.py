@@ -22,6 +22,7 @@ from typing import Any
 
 from dev.harness.mock_context import MockContextOptions, create_mock_context
 from dev.types.skill_types import SkillDefinition
+from dev.types.setup_types import SetupStep, SetupResult
 
 # ---------------------------------------------------------------------------
 # Console helpers
@@ -237,7 +238,88 @@ async def _run(skill_dir: str, verbose: bool) -> int:
     print()
 
     # -------------------------------------------------------------------
-    # 3. Test tools
+    # 3. Test setup flow
+    # -------------------------------------------------------------------
+    if skill.has_setup and hooks_obj:
+        has_start = hooks_obj.on_setup_start is not None
+        has_submit = hooks_obj.on_setup_submit is not None
+        has_cancel = hooks_obj.on_setup_cancel is not None
+
+        if has_start or has_submit or has_cancel:
+            print(bold("Setup Flow"))
+
+            # 3a. on_setup_start
+            step: SetupStep | None = None
+            if has_start:
+                try:
+                    step = await hooks_obj.on_setup_start(ctx)
+                    if isinstance(step, SetupStep) and step.fields:
+                        _pass(f'on_setup_start: returned step "{step.id}" with {len(step.fields)} field(s)')
+                    else:
+                        _fail("on_setup_start: must return SetupStep with at least one field")
+                        step = None
+                except Exception as exc:
+                    _fail(f"on_setup_start: threw {exc}")
+                    if verbose:
+                        import traceback
+                        traceback.print_exc()
+            else:
+                _info("on_setup_start: not defined")
+
+            # 3b. on_setup_submit with generated dummy values
+            if has_submit and step:
+                dummy_values: dict[str, Any] = {}
+                for field in step.fields:
+                    if field.type == "text" or field.type == "password":
+                        dummy_values[field.name] = field.default if field.default is not None else "test-value"
+                    elif field.type == "number":
+                        dummy_values[field.name] = field.default if field.default is not None else 42
+                    elif field.type == "boolean":
+                        dummy_values[field.name] = field.default if field.default is not None else True
+                    elif field.type == "select":
+                        if field.options:
+                            dummy_values[field.name] = field.options[0].value
+                        else:
+                            dummy_values[field.name] = "option-1"
+                    elif field.type == "multiselect":
+                        if field.options:
+                            dummy_values[field.name] = [field.options[0].value]
+                        else:
+                            dummy_values[field.name] = []
+
+                try:
+                    result = await hooks_obj.on_setup_submit(ctx, step.id, dummy_values)
+                    if isinstance(result, SetupResult) and result.status in ("next", "error", "complete"):
+                        _pass(f'on_setup_submit: returned status="{result.status}"')
+                    else:
+                        _fail("on_setup_submit: must return SetupResult with valid status")
+                except Exception as exc:
+                    _fail(f"on_setup_submit: threw {exc}")
+                    if verbose:
+                        import traceback
+                        traceback.print_exc()
+            elif has_submit:
+                _info("on_setup_submit: skipped (no step from on_setup_start)")
+            else:
+                _info("on_setup_submit: not defined")
+
+            # 3c. on_setup_cancel
+            if has_cancel:
+                try:
+                    await hooks_obj.on_setup_cancel(ctx)
+                    _pass("on_setup_cancel: OK")
+                except Exception as exc:
+                    _fail(f"on_setup_cancel: threw {exc}")
+                    if verbose:
+                        import traceback
+                        traceback.print_exc()
+            else:
+                _info("on_setup_cancel: not defined")
+
+            print()
+
+    # -------------------------------------------------------------------
+    # 4. Test tools
     # -------------------------------------------------------------------
     if skill.tools:
         print(bold(f"Tools ({len(skill.tools)})"))
@@ -276,7 +358,7 @@ async def _run(skill_dir: str, verbose: bool) -> int:
         print()
 
     # -------------------------------------------------------------------
-    # 4. Summary
+    # 5. Summary
     # -------------------------------------------------------------------
     if verbose:
         print(bold("Mock Context State"))

@@ -23,6 +23,7 @@ import sys
 from typing import Any
 
 from dev.types.skill_types import SkillDefinition, SkillTool
+from dev.types.setup_types import SetupStep, SetupResult
 
 
 class SkillServer:
@@ -263,7 +264,63 @@ class SkillServer:
             asyncio.get_event_loop().call_later(0.1, lambda: sys.exit(0))
             return {"ok": True}
 
+        # -- Setup methods --
+        if method == "setup/start":
+            if not self._hooks or not self._hooks.on_setup_start:
+                raise ValueError("Skill does not implement setup flow")
+            step = await self._hooks.on_setup_start(self._create_context())
+            return {"step": self._serialize_step(step)}
+
+        if method == "setup/submit":
+            if not self._hooks or not self._hooks.on_setup_submit:
+                raise ValueError("Skill does not implement setup flow")
+            step_id = p.get("stepId", "")
+            values = p.get("values", {})
+            result = await self._hooks.on_setup_submit(self._create_context(), step_id, values)
+            payload: dict[str, Any] = {
+                "status": result.status,
+                "nextStep": self._serialize_step(result.next_step) if result.next_step else None,
+                "errors": [{"field": e.field, "message": e.message} for e in result.errors] if result.errors else None,
+                "message": result.message,
+            }
+            return payload
+
+        if method == "setup/cancel":
+            if self._hooks and self._hooks.on_setup_cancel:
+                await self._hooks.on_setup_cancel(self._create_context())
+            return {"ok": True}
+
         raise ValueError(f"Unknown method: {method}")
+
+    # --------------------------------------------------------------------- #
+    # Internal — setup serialization
+    # --------------------------------------------------------------------- #
+
+    @staticmethod
+    def _serialize_step(step: SetupStep) -> dict[str, Any]:
+        """Serialize a SetupStep to a JSON-compatible dict."""
+        return {
+            "id": step.id,
+            "title": step.title,
+            "description": step.description,
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": f.type,
+                    "label": f.label,
+                    "description": f.description,
+                    "required": f.required,
+                    "default": f.default,
+                    "placeholder": f.placeholder,
+                    "options": (
+                        [{"label": o.label, "value": o.value} for o in f.options]
+                        if f.options
+                        else None
+                    ),
+                }
+                for f in step.fields
+            ],
+        }
 
     # --------------------------------------------------------------------- #
     # Internal — context factory

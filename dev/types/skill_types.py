@@ -14,6 +14,14 @@ from typing import Any, Protocol, runtime_checkable, Callable, Awaitable, Option
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dev.types.setup_types import (  # noqa: F401  — re-exported
+    SetupFieldOption,
+    SetupField,
+    SetupStep,
+    SetupFieldError,
+    SetupResult,
+)
+
 
 # ---------------------------------------------------------------------------
 # Tool Definition & Result
@@ -150,6 +158,10 @@ SessionHook = Callable[[SkillContext, str], Awaitable[None]]
 MessageHook = Callable[[SkillContext, str], Awaitable[str | None]]
 TickHook = Callable[[SkillContext], Awaitable[None]]
 
+SetupStartHandler = Callable[[SkillContext], Awaitable[SetupStep]]
+SetupSubmitHandler = Callable[[SkillContext, str, dict[str, Any]], Awaitable[SetupResult]]
+SetupCancelHandler = Callable[[SkillContext], Awaitable[None]]
+
 
 # ---------------------------------------------------------------------------
 # Skill Hooks
@@ -169,6 +181,9 @@ class SkillHooks(BaseModel):
     on_after_response: Optional[MessageHook] = None
     on_memory_flush: Optional[LoadHook] = None
     on_tick: Optional[TickHook] = None
+    on_setup_start: Optional[SetupStartHandler] = None
+    on_setup_submit: Optional[SetupSubmitHandler] = None
+    on_setup_cancel: Optional[SetupCancelHandler] = None
 
 
 # ---------------------------------------------------------------------------
@@ -206,4 +221,8 @@ class SkillDefinition(BaseModel):
     tick_interval: int | None = Field(
         default=None,
         description="Periodic tick interval in milliseconds (minimum 1000)",
+    )
+    has_setup: bool = Field(
+        default=False,
+        description="Whether this skill has an interactive setup flow",
     )

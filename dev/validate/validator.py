@@ -45,6 +45,9 @@ VALID_HOOKS = {
     "on_after_response",
     "on_memory_flush",
     "on_tick",
+    "on_setup_start",
+    "on_setup_submit",
+    "on_setup_cancel",
 }
 
 # ---------------------------------------------------------------------------
@@ -186,6 +189,30 @@ def validate_skill_py(skill_py_path: Path, dir_name: str) -> SkillResult:
             result.errors.append(
                 f"tick_interval {skill.tick_interval}ms is below minimum (1000ms)"
             )
+
+    # --- Validate setup flow ---
+    has_setup_start = skill.hooks and skill.hooks.on_setup_start is not None
+    has_setup_submit = skill.hooks and skill.hooks.on_setup_submit is not None
+    has_setup_cancel = skill.hooks and skill.hooks.on_setup_cancel is not None
+    has_any_setup_hook = has_setup_start or has_setup_submit or has_setup_cancel
+
+    if skill.has_setup:
+        if not has_setup_start:
+            result.errors.append(
+                "has_setup is True but on_setup_start hook is not defined"
+            )
+        elif not callable(skill.hooks.on_setup_start):  # type: ignore[union-attr]
+            result.errors.append("on_setup_start must be callable")
+        if not has_setup_submit:
+            result.errors.append(
+                "has_setup is True but on_setup_submit hook is not defined"
+            )
+        elif not callable(skill.hooks.on_setup_submit):  # type: ignore[union-attr]
+            result.errors.append("on_setup_submit must be callable")
+    elif has_any_setup_hook:
+        result.warnings.append(
+            "Setup hooks defined but has_setup is False — hooks will not be called"
+        )
 
     return result
 
