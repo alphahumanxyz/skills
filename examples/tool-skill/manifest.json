@@ -1,0 +1,7 @@
+{
+  "runtime": {
+    "type": "subprocess",
+    "command": "python3",
+    "args": ["skill.py"]
+  }
+}

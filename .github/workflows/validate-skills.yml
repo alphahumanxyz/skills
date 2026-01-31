@@ -1,0 +1,59 @@
+name: Validate Skills
+
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - "TEMPLATE/**"
+      - "examples/**"
+      - "dev/**"
+
+jobs:
+  validate:
+    name: Validate & Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: dev/package.json
+
+      - name: Install dev dependencies
+        working-directory: dev
+        run: npm install
+
+      - name: Validate all skills
+        working-directory: dev
+        run: npx tsx validate/validate-all.ts
+
+      - name: Type-check skills
+        working-directory: dev
+        run: npx tsc --noEmit
+
+      - name: Security scan
+        working-directory: dev
+        run: npx tsx security/scan-secrets.ts
+
+      - name: Run test harness on changed skills
+        working-directory: dev
+        run: |
+          # Find skill directories that have a skill.ts
+          for dir in ../skills/*/; do
+            if [ -f "${dir}skill.ts" ]; then
+              echo "Testing ${dir}..."
+              npx tsx harness/runner.ts "${dir}" || exit 1
+            fi
+          done
+          # Also test example skills
+          for dir in ../examples/typescript/*/; do
+            if [ -f "${dir}skill.ts" ]; then
+              echo "Testing ${dir}..."
+              npx tsx harness/runner.ts "${dir}" || exit 1
+            fi
+          done

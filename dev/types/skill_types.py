@@ -1,0 +1,209 @@
+"""
+AlphaHuman Skill Types — Pydantic v2 Edition
+
+Type definitions for skill development. Skills import these types
+for type checking, validation, and JSON-RPC serialization.
+
+Usage:
+    from dev.types.skill_types import SkillDefinition, SkillContext, SkillTool
+"""
+
+from __future__ import annotations
+
+from typing import Any, Protocol, runtime_checkable, Callable, Awaitable, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+# ---------------------------------------------------------------------------
+# Tool Definition & Result
+# ---------------------------------------------------------------------------
+
+
+class ToolDefinition(BaseModel):
+    """Schema for an AI-callable tool."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str = Field(description="Tool name (snake_case, unique per skill)")
+    description: str = Field(description="Human-readable description")
+    parameters: dict[str, Any] = Field(
+        description="JSON Schema for tool parameters",
+        default_factory=lambda: {"type": "object", "properties": {}},
+    )
+
+
+class ToolResult(BaseModel):
+    """Result returned by a tool's execute function."""
+
+    content: str
+    is_error: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Skill Tool
+# ---------------------------------------------------------------------------
+
+
+class SkillTool(BaseModel):
+    """A tool the skill exposes to the AI."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    definition: ToolDefinition
+    execute: Callable[..., Awaitable[ToolResult]] = Field(
+        description="Async function that executes the tool"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Entity
+# ---------------------------------------------------------------------------
+
+
+class Entity(BaseModel):
+    """An entity in the platform's entity graph."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    type: str
+    name: str
+    tags: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Manager Protocols (interfaces skill authors implement against)
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class MemoryManager(Protocol):
+    """Read/write/search the shared memory system."""
+
+    async def read(self, name: str) -> str | None: ...
+    async def write(self, name: str, content: str) -> None: ...
+    async def search(self, query: str) -> list[dict[str, str]]: ...
+    async def list(self) -> list[str]: ...
+    async def delete(self, name: str) -> None: ...
+
+
+@runtime_checkable
+class SessionManager(Protocol):
+    """Current session manager."""
+
+    @property
+    def id(self) -> str: ...
+    def get(self, key: str) -> Any: ...
+    def set(self, key: str, value: Any) -> None: ...
+
+
+@runtime_checkable
+class ToolRegistry(Protocol):
+    """Register/unregister AI tools at runtime."""
+
+    def register(self, tool: SkillTool) -> None: ...
+    def unregister(self, name: str) -> None: ...
+    def list(self) -> list[str]: ...
+
+
+@runtime_checkable
+class EntityManager(Protocol):
+    """Query the platform entity graph."""
+
+    async def get_by_tag(self, tag: str, type: str | None = None) -> list[Entity]: ...
+    async def get_by_id(self, id: str) -> Entity | None: ...
+    async def search(self, query: str) -> list[Entity]: ...
+
+
+# ---------------------------------------------------------------------------
+# Skill Context (Protocol — passed to every hook)
+# ---------------------------------------------------------------------------
+
+
+@runtime_checkable
+class SkillContext(Protocol):
+    """Context object passed to skill lifecycle hooks."""
+
+    memory: MemoryManager
+    session: SessionManager
+    tools: ToolRegistry
+    entities: EntityManager
+    data_dir: str
+
+    async def read_data(self, filename: str) -> str: ...
+    async def write_data(self, filename: str, content: str) -> None: ...
+    def log(self, message: str) -> None: ...
+    def get_state(self) -> Any: ...
+    def set_state(self, partial: dict[str, Any]) -> None: ...
+    def emit_event(self, event_name: str, data: Any) -> None: ...
+
+
+# ---------------------------------------------------------------------------
+# Hook type aliases
+# ---------------------------------------------------------------------------
+
+LoadHook = Callable[[SkillContext], Awaitable[None]]
+UnloadHook = Callable[[SkillContext], Awaitable[None]]
+SessionHook = Callable[[SkillContext, str], Awaitable[None]]
+MessageHook = Callable[[SkillContext, str], Awaitable[str | None]]
+TickHook = Callable[[SkillContext], Awaitable[None]]
+
+
+# ---------------------------------------------------------------------------
+# Skill Hooks
+# ---------------------------------------------------------------------------
+
+
+class SkillHooks(BaseModel):
+    """Lifecycle hooks for a skill."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    on_load: Optional[LoadHook] = None
+    on_unload: Optional[UnloadHook] = None
+    on_session_start: Optional[SessionHook] = None
+    on_session_end: Optional[SessionHook] = None
+    on_before_message: Optional[MessageHook] = None
+    on_after_response: Optional[MessageHook] = None
+    on_memory_flush: Optional[LoadHook] = None
+    on_tick: Optional[TickHook] = None
+
+
+# ---------------------------------------------------------------------------
+# Skill Tier & Runtime Config
+# ---------------------------------------------------------------------------
+
+
+class SkillRuntimeConfig(BaseModel):
+    """Runtime configuration for subprocess skills."""
+
+    model_config = ConfigDict(frozen=True)
+
+    command: str = Field(description='Command to execute (e.g., "python3")')
+    args: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Skill Definition (the main export from skill.py)
+# ---------------------------------------------------------------------------
+
+
+class SkillDefinition(BaseModel):
+    """Top-level skill definition — the `skill` object exported by skill.py."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    name: str = Field(description="Skill name (lowercase-hyphens, matches directory)")
+    description: str = Field(description="Brief description")
+    version: str = Field(default="1.0.0", description="Semver version string")
+    tier: str | None = Field(default=None, description='"bundled" or "runtime"')
+    runtime: SkillRuntimeConfig | None = None
+    hooks: SkillHooks | None = None
+    tools: list[SkillTool] = Field(default_factory=list)
+    tick_interval: int | None = Field(
+        default=None,
+        description="Periodic tick interval in milliseconds (minimum 1000)",
+    )

@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-01-31T18:51:06.939002+00:00",
+  "version": "1.0.0",
+  "skills": [
+    {
+      "name": "telegram",
+      "description": "",
+      "icon": null,
+      "executionStyle": "integration",
+      "version": null,
+      "tools": [],
+      "hooks": [],
+      "tickInterval": null,
+      "path": "skills/telegram"
+    }
+  ]
+}
