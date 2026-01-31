@@ -5,7 +5,7 @@ Thank you for contributing to the AlphaHuman skills ecosystem. This guide covers
 ## Ways to Contribute
 
 1. **Create a new skill** — Add capabilities to the AlphaHuman agent
-2. **Improve an existing skill** — Better instructions, more examples, bug fixes
+2. **Improve an existing skill** — Better tools, bug fixes, more handlers
 3. **Improve tooling** — Enhance dev tools, CI, documentation
 4. **Add examples** — Show patterns others can follow
 
@@ -19,7 +19,7 @@ git clone https://github.com/YOUR-USERNAME/alphahuman-skills.git
 cd alphahuman-skills
 
 # Install dev tools
-cd dev && npm install
+pip install -e dev/
 
 # Create a branch
 git checkout -b skill/my-skill-name
@@ -28,49 +28,44 @@ git checkout -b skill/my-skill-name
 ### 2. Scaffold
 
 ```bash
-npx tsx scaffold/new-skill.ts
+python -m dev.scaffold.new_skill my-skill
 ```
 
-Or manually copy `TEMPLATE/` to `skills/your-skill-name/`.
+Or manually copy `examples/tool-skill/` to `skills/your-skill-name/`.
 
-### 3. Write SKILL.md
+### 3. Write skill.py
 
-Every skill needs a `SKILL.md` with:
+Every skill needs a `skill.py` that exports a `SkillDefinition`:
 
-- **YAML frontmatter**: `name` (lowercase-hyphens) and `description` (one sentence)
-- **Overview**: What the skill does (2-3 sentences)
-- **When to Use**: At least 3 trigger conditions
-- **Instructions**: Numbered, detailed, unambiguous steps
-- **Output Format**: Exact format with placeholders
-- **Examples**: At least 2 realistic user/agent exchanges
-- **Limitations**: Honest list of what the skill can't do
-
-### 4. Write skill.ts (Optional)
-
-If your skill needs custom tools, periodic tasks, or message transforms:
-
-- Default export a `SkillDefinition`
-- `name` must match directory name
+- `name` must be lowercase-hyphens matching the directory name
+- `description` — one sentence explaining what the skill does
 - `version` must be semver (X.Y.Z)
-- Tools need JSON Schema parameters and return `{ content: string }`
-- `tickInterval` minimum is 1000ms
+- `hooks` — lifecycle handlers (on_load, on_tick, etc.)
+- `tools` — list of AI-callable tools with JSON Schema parameters
+
+### 4. Write setup.py (Optional)
+
+If your skill needs interactive configuration (API keys, auth flows):
+
+- Export `on_setup_start(ctx)` → returns the first `SetupStep`
+- Export `on_setup_submit(ctx, step_id, values)` → returns `SetupResult` (next/error/complete)
+- Export `on_setup_cancel(ctx)` → cleanup on user abort
+- Set `has_setup=True` in the `SkillDefinition`
 
 ### 5. Validate
 
 ```bash
-cd dev
-
-# Structure and frontmatter checks
-npm run validate
-
-# Type checking
-npx tsc --noEmit
+# Structure and type checks
+python -m dev.validate.validator
 
 # Security scan
-npm run scan
+python -m dev.security.scan_secrets
 
-# Test harness (coded skills)
-npx tsx harness/runner.ts ../skills/my-skill --verbose
+# Test harness (runs hooks + tools with mock context)
+python -m dev.harness.runner skills/my-skill --verbose
+
+# Test setup flow interactively
+python test-setup.py skills/my-skill
 ```
 
 ### 6. Submit
@@ -89,42 +84,39 @@ Open a pull request. Fill out the PR template completely.
 - **Hyphens for spaces**: `on-chain-lookup`, not `on_chain_lookup`
 - **Descriptive**: `whale-watcher`, not `ww`
 - **No prefixes**: `price-tracker`, not `skill-price-tracker`
-- **Directory match**: `name` in SKILL.md and skill.ts must match the directory name
+- **Directory match**: `name` in skill.py must match the directory name
 
 ## Code Standards
 
-### skill.ts
+### skill.py
 
-- No npm dependencies — skills must be self-contained
+- No pip dependencies beyond the skill's declared `dependencies` in manifest.json
 - No `eval()`, `Function()`, or dynamic code execution
-- No direct filesystem access — use `ctx.readData()` / `ctx.writeData()`
-- No network requests — use platform-provided tools
-- No `process.env` access
-- No `localStorage` / `sessionStorage`
+- No direct filesystem access outside `data_dir` — use `ctx.read_data()` / `ctx.write_data()`
 - All hooks must complete within 10 seconds
-- Use `try/catch` for operations that might fail
+- Use `try/except` for operations that might fail
+- Tools must return `ToolResult(content=...)` with a string
 
-### SKILL.md
+### setup.py
 
-- Clear, specific instructions the AI can follow literally
-- Include financial disclaimers for any skill that touches prices, yields, or investment
-- Show complete agent responses in examples (not placeholders)
-- State limitations honestly
+- Setup state should be module-level (transient, not persisted)
+- Each step validates by actually testing the configuration (e.g., connecting to an API)
+- On completion, persist config via `ctx.write_data("config.json", ...)`
+- Handle cancel gracefully — clean up connections and transient state
 
 ## What Gets Rejected
 
-1. **Missing sections** — SKILL.md must have all required sections
-2. **Vague instructions** — "Try to find prices" is too vague
-3. **Hardcoded secrets** — API keys, tokens, private keys in code
-4. **Dangerous code** — eval(), Function(), dynamic requires
-5. **Name mismatches** — Directory name must match frontmatter and skill.ts name
-6. **Failing validation** — `npm run validate` must pass
-7. **Security issues** — `npm run scan` must not report errors
-8. **No examples** — SKILL.md must show realistic usage
+1. **Missing skill.py** — every skill needs a `skill.py` with a `skill` export
+2. **Hardcoded secrets** — API keys, tokens, private keys in code
+3. **Dangerous code** — eval(), exec(), dynamic imports from user input
+4. **Name mismatches** — directory name must match skill.py name
+5. **Failing validation** — `python -m dev.validate.validator` must pass
+6. **Security issues** — `python -m dev.security.scan_secrets` must not report errors
+7. **Broken setup flow** — if `has_setup=True`, setup hooks must work correctly
 
 ## PR Review Process
 
-1. **Automated CI** runs validation, type checking, security scanning, and test harness
+1. **Automated CI** runs validation, security scanning, and test harness
 2. **Maintainer review** checks quality, clarity, and safety
 3. **Feedback round** — you may be asked to make changes
 4. **Merge** — skill becomes available to AlphaHuman users
@@ -132,5 +124,4 @@ Open a pull request. Fill out the PR template completely.
 ## Getting Help
 
 - Check [docs/](docs/) for detailed guides
-- Use [prompts/](prompts/) if you need help writing SKILL.md
 - Open an issue for questions or feature requests
