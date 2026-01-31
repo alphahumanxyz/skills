@@ -107,6 +107,37 @@ class SkillServer:
         result = await self._reverse_rpc("entities/search", params)
         return result.get("results", []) if isinstance(result, dict) else []
 
+    async def upsert_relationship(
+        self,
+        *,
+        source_id: str,
+        target_id: str,
+        type: str,
+        source: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        params: dict[str, Any] = {
+            "sourceId": source_id,
+            "targetId": target_id,
+            "type": type,
+            "source": source,
+        }
+        if metadata is not None:
+            params["metadata"] = metadata
+        await self._reverse_rpc("entities/upsertRelationship", params)
+
+    async def get_relationships(
+        self,
+        entity_id: str,
+        relationship_type: str | None = None,
+        direction: str = "outgoing",
+    ) -> list[Any]:
+        params: dict[str, Any] = {"entityId": entity_id, "direction": direction}
+        if relationship_type is not None:
+            params["type"] = relationship_type
+        result = await self._reverse_rpc("entities/getRelationships", params)
+        return result.get("results", []) if isinstance(result, dict) else []
+
     def log(self, message: str) -> None:
         sys.stderr.write(f"[skill] {message}\n")
         sys.stderr.flush()
@@ -379,6 +410,11 @@ class SkillServer:
 
             async def search(self, query: str) -> list:
                 return await server.search_entities(query)
+
+            async def get_relationships(
+                self, entity_id: str, type: str | None = None, direction: str = "outgoing"
+            ) -> list:
+                return await server.get_relationships(entity_id, type, direction)
 
         class _Context:
             memory = _Memory()

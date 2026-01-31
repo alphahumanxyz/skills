@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from dev.types.skill_types import Entity, SkillTool
+from dev.types.skill_types import Entity, Relationship, SkillTool
 
 
 # ---------------------------------------------------------------------------
@@ -29,6 +29,7 @@ class MockContextOptions:
     initial_data: dict[str, str] = field(default_factory=dict)
     initial_memory: dict[str, str] = field(default_factory=dict)
     initial_entities: list[Entity] = field(default_factory=list)
+    initial_relationships: list[Relationship] = field(default_factory=list)
     initial_state: dict[str, Any] = field(default_factory=dict)
     session_id: str = "test-session-001"
     data_dir: str = "/mock/data"
@@ -51,6 +52,7 @@ class MockInspector:
         registered_tools: dict[str, SkillTool],
         emitted_events: list[dict[str, Any]],
         session_values: dict[str, Any],
+        relationship_store: list[Relationship] | None = None,
     ) -> None:
         self._logs = logs
         self._data_store = data_store
@@ -59,6 +61,7 @@ class MockInspector:
         self._registered_tools = registered_tools
         self._emitted_events = emitted_events
         self._session_values = session_values
+        self._relationship_store = relationship_store if relationship_store is not None else []
 
     def get_logs(self) -> list[str]:
         return list(self._logs)
@@ -81,6 +84,9 @@ class MockInspector:
     def get_session_values(self) -> dict[str, Any]:
         return dict(self._session_values)
 
+    def get_relationships(self) -> list[Relationship]:
+        return list(self._relationship_store)
+
 
 # ---------------------------------------------------------------------------
 # Factory
@@ -98,6 +104,7 @@ def create_mock_context(
     data_store: dict[str, str] = dict(opts.initial_data)
     memory_store: dict[str, str] = dict(opts.initial_memory)
     entity_store: list[Entity] = list(opts.initial_entities)
+    relationship_store: list[Relationship] = list(opts.initial_relationships)
     logs: list[str] = []
     registered_tools: dict[str, SkillTool] = {}
     emitted_events: list[dict[str, Any]] = []
@@ -176,6 +183,21 @@ def create_mock_context(
                 if q in e.name.lower() or q in str(e.metadata).lower()
             ]
 
+        async def get_relationships(
+            self, entity_id: str, type: str | None = None, direction: str = "outgoing"
+        ) -> list[Relationship]:
+            results: list[Relationship] = []
+            for r in relationship_store:
+                if type is not None and r.type != type:
+                    continue
+                if direction == "outgoing" and r.source_id == entity_id:
+                    results.append(r)
+                elif direction == "incoming" and r.target_id == entity_id:
+                    results.append(r)
+                elif direction == "both" and (r.source_id == entity_id or r.target_id == entity_id):
+                    results.append(r)
+            return results
+
     # --- Context ---
     class _Context:
         memory = _Memory()
@@ -215,6 +237,7 @@ def create_mock_context(
         registered_tools=registered_tools,
         emitted_events=emitted_events,
         session_values=session_values,
+        relationship_store=relationship_store,
     )
 
     return ctx, inspector

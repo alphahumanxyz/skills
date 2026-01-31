@@ -10,7 +10,7 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable, Callable, Awaitable, Optional
+from typing import Any, Literal, Protocol, runtime_checkable, Callable, Awaitable, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -82,6 +82,67 @@ class Entity(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Entity Schema Declarations
+# ---------------------------------------------------------------------------
+
+
+class EntityPropertySchema(BaseModel):
+    """Describes a property on an entity type."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str = Field(description="Property name")
+    type: str = Field(description="JSON Schema type: string, number, boolean, array, object")
+    description: str
+    optional: bool = False
+
+
+class EntityTypeDeclaration(BaseModel):
+    """Declares an entity type a skill produces."""
+
+    model_config = ConfigDict(frozen=True)
+
+    type: str = Field(description='Namespaced type identifier, e.g. "telegram.contact"')
+    label: str = Field(description='Human-readable label, e.g. "Telegram Contact"')
+    description: str
+    properties: list[EntityPropertySchema] = Field(default_factory=list)
+
+
+class RelationshipTypeDeclaration(BaseModel):
+    """Declares a relationship type between entity types."""
+
+    model_config = ConfigDict(frozen=True)
+
+    type: str = Field(description='Relationship identifier, e.g. "member_of"')
+    source_type: str = Field(description='Source entity type, e.g. "telegram.contact"')
+    target_type: str = Field(description='Target entity type, e.g. "telegram.group"')
+    description: str
+    cardinality: Literal[
+        "one_to_one", "one_to_many", "many_to_one", "many_to_many"
+    ] = "many_to_many"
+
+
+class EntitySchema(BaseModel):
+    """Full entity schema for a skill — declares what entity and relationship types it surfaces."""
+
+    model_config = ConfigDict(frozen=True)
+
+    entity_types: list[EntityTypeDeclaration] = Field(default_factory=list)
+    relationship_types: list[RelationshipTypeDeclaration] = Field(default_factory=list)
+
+
+class Relationship(BaseModel):
+    """A concrete edge between two entities."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source_id: str
+    target_id: str
+    type: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
 # Manager Protocols (interfaces skill authors implement against)
 # ---------------------------------------------------------------------------
 
@@ -123,6 +184,9 @@ class EntityManager(Protocol):
     async def get_by_tag(self, tag: str, type: str | None = None) -> list[Entity]: ...
     async def get_by_id(self, id: str) -> Entity | None: ...
     async def search(self, query: str) -> list[Entity]: ...
+    async def get_relationships(
+        self, entity_id: str, type: str | None = None, direction: str = "outgoing"
+    ) -> list[Relationship]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -225,4 +289,8 @@ class SkillDefinition(BaseModel):
     has_setup: bool = Field(
         default=False,
         description="Whether this skill has an interactive setup flow",
+    )
+    entity_schema: EntitySchema | None = Field(
+        default=None,
+        description="Declares entity and relationship types this skill surfaces",
     )

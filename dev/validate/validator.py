@@ -214,6 +214,53 @@ def validate_skill_py(skill_py_path: Path, dir_name: str) -> SkillResult:
             "Setup hooks defined but has_setup is False — hooks will not be called"
         )
 
+    # --- Validate entity schema ---
+    if skill.entity_schema is not None:
+        es = skill.entity_schema
+
+        # Unique entity type identifiers
+        entity_type_ids: set[str] = set()
+        for et in es.entity_types:
+            if et.type in entity_type_ids:
+                result.errors.append(
+                    f'Duplicate entity type "{et.type}" in entity_schema'
+                )
+            entity_type_ids.add(et.type)
+
+            # Warn if type doesn't use skill-name prefix
+            if skill.name and "." in et.type:
+                prefix = et.type.split(".")[0]
+                if prefix != skill.name:
+                    result.warnings.append(
+                        f'Entity type "{et.type}" does not use skill name '
+                        f'"{skill.name}" as prefix (convention: "{skill.name}.xxx")'
+                    )
+            elif skill.name and "." not in et.type:
+                result.warnings.append(
+                    f'Entity type "{et.type}" is not namespaced '
+                    f'(convention: "{skill.name}.{et.type}")'
+                )
+
+        # Unique relationship type identifiers + source/target validation
+        rel_type_ids: set[str] = set()
+        for rt in es.relationship_types:
+            if rt.type in rel_type_ids:
+                result.errors.append(
+                    f'Duplicate relationship type "{rt.type}" in entity_schema'
+                )
+            rel_type_ids.add(rt.type)
+
+            if rt.source_type not in entity_type_ids:
+                result.errors.append(
+                    f'Relationship "{rt.type}" references unknown source_type '
+                    f'"{rt.source_type}"'
+                )
+            if rt.target_type not in entity_type_ids:
+                result.errors.append(
+                    f'Relationship "{rt.type}" references unknown target_type '
+                    f'"{rt.target_type}"'
+                )
+
     return result
 
 

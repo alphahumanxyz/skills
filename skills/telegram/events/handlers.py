@@ -36,6 +36,7 @@ from ..db.queries import (
     insert_event,
     upsert_chat,
 )
+from ..entities import _chat_entity_type, _chat_metadata, _user_metadata, SOURCE
 
 log = logging.getLogger("skill.telegram.events")
 
@@ -91,6 +92,35 @@ async def register_event_handlers(client: TelegramClient) -> None:
                 })
             except Exception:
                 log.exception("Failed to persist new message to SQLite")
+
+            # Incrementally update chat entity with new unread count
+            try:
+                from ..server import get_entity_callbacks
+                upsert_entity_fn, upsert_rel_fn = get_entity_callbacks()
+                if upsert_entity_fn:
+                    updated_chat = store.get_chat_by_id(chat_id)
+                    if updated_chat:
+                        await upsert_entity_fn(
+                            type=_chat_entity_type(updated_chat),
+                            source=SOURCE,
+                            source_id=updated_chat.id,
+                            title=updated_chat.title or f"Chat {updated_chat.id}",
+                            metadata=_chat_metadata(updated_chat),
+                        )
+
+                    # Upsert sender as contact if not already known
+                    if telegram_msg.from_id:
+                        sender = store.get_user(telegram_msg.from_id)
+                        if sender:
+                            await upsert_entity_fn(
+                                type="telegram.contact",
+                                source=SOURCE,
+                                source_id=sender.id,
+                                title=sender.first_name or f"User {sender.id}",
+                                metadata=_user_metadata(sender),
+                            )
+            except Exception:
+                log.debug("Failed to emit entity updates on new message", exc_info=True)
 
         except Exception:
             log.exception("Error in on_new_message handler")
@@ -210,6 +240,23 @@ async def register_event_handlers(client: TelegramClient) -> None:
                 })
             except Exception:
                 log.exception("Failed to persist chat action to SQLite")
+
+            # Update chat entity with new participants count
+            try:
+                from ..server import get_entity_callbacks
+                upsert_entity_fn, upsert_rel_fn = get_entity_callbacks()
+                if upsert_entity_fn and chat_id:
+                    refreshed_chat = store.get_chat_by_id(chat_id)
+                    if refreshed_chat:
+                        await upsert_entity_fn(
+                            type=_chat_entity_type(refreshed_chat),
+                            source=SOURCE,
+                            source_id=refreshed_chat.id,
+                            title=refreshed_chat.title or f"Chat {refreshed_chat.id}",
+                            metadata=_chat_metadata(refreshed_chat),
+                        )
+            except Exception:
+                log.debug("Failed to emit entity updates on chat action", exc_info=True)
 
         except Exception:
             log.exception("Error in on_chat_action handler")

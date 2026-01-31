@@ -23,6 +23,7 @@ from .state import store
 from .state.sync import init_host_sync
 from .db.connection import init_db, close_db, get_db
 from .db.summaries import generate_summaries
+from .entities import emit_initial_entities, emit_summaries
 from .events.handlers import register_event_handlers
 
 log = logging.getLogger("skill.telegram.server")
@@ -48,12 +49,17 @@ def create_mcp_server() -> Server:
 async def on_skill_load(
     params: dict[str, Any],
     set_state_fn: Any = None,
+    upsert_entity_fn: Any = None,
+    upsert_relationship_fn: Any = None,
 ) -> None:
     """Called when the host loads this skill. Initializes Telethon + SQLite."""
     api_id = int(os.environ.get("TELEGRAM_API_ID", params.get("apiId", "0")))
     api_hash = os.environ.get("TELEGRAM_API_HASH", params.get("apiHash", ""))
     session_string = params.get("sessionString", "")
     data_dir = params.get("dataDir", "data")
+
+    # Store entity callbacks for use in event handlers and tick
+    _store_entity_callbacks(upsert_entity_fn, upsert_relationship_fn)
 
     if not api_id or not api_hash:
         log.error("Missing TELEGRAM_API_ID or TELEGRAM_API_HASH")
@@ -85,6 +91,13 @@ async def on_skill_load(
 
             # Register event handlers for real-time updates
             await register_event_handlers(client.get_client())
+
+            # Emit initial entities after successful auth
+            if upsert_entity_fn and upsert_relationship_fn:
+                try:
+                    await emit_initial_entities(upsert_entity_fn, upsert_relationship_fn)
+                except Exception:
+                    log.exception("Failed to emit initial entities")
         else:
             store.set_auth_status("not_authenticated")
     except Exception:
@@ -111,13 +124,47 @@ async def on_skill_unload() -> None:
     log.info("Skill unloaded")
 
 
+# ---------------------------------------------------------------------------
+# Entity callback storage
+# ---------------------------------------------------------------------------
+
+_upsert_entity_fn: Any = None
+_upsert_relationship_fn: Any = None
+
+
+def _store_entity_callbacks(
+    upsert_entity: Any = None,
+    upsert_relationship: Any = None,
+) -> None:
+    global _upsert_entity_fn, _upsert_relationship_fn
+    _upsert_entity_fn = upsert_entity
+    _upsert_relationship_fn = upsert_relationship
+
+
+def get_entity_callbacks() -> tuple[Any, Any]:
+    """Return the stored entity callbacks (for use by event handlers)."""
+    return _upsert_entity_fn, _upsert_relationship_fn
+
+
 async def on_skill_tick() -> None:
-    """Called periodically (every 20 minutes). Generates summaries."""
+    """Called periodically (every 20 minutes). Generates summaries + emits entities."""
     try:
         db = await get_db()
         await generate_summaries(db, store)
     except Exception:
         log.exception("Error during tick")
+
+    # Emit summary entities and refresh chat/contact entities
+    if _upsert_entity_fn and _upsert_relationship_fn:
+        try:
+            await emit_summaries(_upsert_entity_fn, _upsert_relationship_fn)
+        except Exception:
+            log.exception("Error emitting summary entities")
+
+        try:
+            await emit_initial_entities(_upsert_entity_fn, _upsert_relationship_fn)
+        except Exception:
+            log.exception("Error refreshing entities on tick")
 
 
 async def run_server() -> None:
