@@ -6,13 +6,13 @@ Reads the graph from skills/telegram/data/entity_graph.json (written by
 test-entities.py) and provides an interactive explorer.
 
 Usage:
-    python debug-graph.py                # Interactive mode
-    python debug-graph.py --stats        # Print stats and exit
-    python debug-graph.py --dump         # Dump all entities
-    python debug-graph.py --find <query> # Search entities by title/id
-    python debug-graph.py --node <id>    # Inspect a single node + edges
-    python debug-graph.py --type <type>  # List entities of a given type
-    python debug-graph.py --dot          # Export DOT (Graphviz) format
+    python scripts/debug-graph.py                # Interactive mode
+    python scripts/debug-graph.py --stats        # Print stats and exit
+    python scripts/debug-graph.py --dump         # Dump all entities
+    python scripts/debug-graph.py --find <query> # Search entities by title/id
+    python scripts/debug-graph.py --node <id>    # Inspect a single node + edges
+    python scripts/debug-graph.py --type <type>  # List entities of a given type
+    python scripts/debug-graph.py --dot          # Export DOT (Graphviz) format
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from typing import Any
 # Path setup
 # ---------------------------------------------------------------------------
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 GRAPH_PATH = ROOT / "skills" / "telegram" / "data" / "entity_graph.json"
 
 # ---------------------------------------------------------------------------
@@ -427,7 +427,7 @@ def main() -> None:
 
     if not GRAPH_PATH.exists():
         print(f"\n  {red('No graph file found at')} {GRAPH_PATH}")
-        print(f"  {dim('Run test-entities.py first to generate the graph.')}\n")
+        print(f"  {dim('Run scripts/test-entities.py first to generate the graph.')}\n")
         sys.exit(1)
 
     data = json.loads(GRAPH_PATH.read_text())

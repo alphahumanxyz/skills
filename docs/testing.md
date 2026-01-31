@@ -15,10 +15,10 @@ python -m dev.harness.runner skills/my-skill --verbose
 python -m dev.security.scan_secrets
 
 # Test setup flow interactively
-python test-setup.py skills/my-skill
+python scripts/test-setup.py skills/my-skill
 
 # Interactive server REPL (browse and call tools live)
-python test-server.py
+python scripts/test-server.py
 ```
 
 ## Validation (`python -m dev.validate.validator`)
@@ -120,12 +120,12 @@ Summary
   OK 8 passed   X 0 failed   ! 0 warnings
 ```
 
-## Interactive Setup Tester (`python test-setup.py`)
+## Interactive Setup Tester (`python scripts/test-setup.py`)
 
 Tests a skill's interactive setup flow with real terminal input.
 
 ```bash
-python test-setup.py skills/telegram
+python scripts/test-setup.py skills/telegram
 ```
 
 Features:
@@ -135,12 +135,12 @@ Features:
 - Persists config to the skill's `data/` directory on completion
 - Cancel with Ctrl+C at any point
 
-## Interactive Server REPL (`python test-server.py`)
+## Interactive Server REPL (`python scripts/test-server.py`)
 
 Browse and call all tools in a running skill server.
 
 ```bash
-python test-server.py
+python scripts/test-server.py
 ```
 
 Features:

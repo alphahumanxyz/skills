@@ -7,10 +7,10 @@ loads the skill, and provides an interactive REPL to browse and
 call any of the 75+ tools.
 
 Usage:
-    python test-server.py [skills/telegram]
+    python scripts/test-server.py [skills/telegram]
 
     # With env vars (skips credential prompts):
-    TELEGRAM_API_ID=12345 TELEGRAM_API_HASH=abc... python test-server.py
+    TELEGRAM_API_ID=12345 TELEGRAM_API_HASH=abc... python scripts/test-server.py
 
 The script looks for a saved session in skills/telegram/data/config.json
 (written by test-setup.py). If none exists, it runs the setup flow first.
@@ -31,7 +31,7 @@ from typing import Any
 # Path setup
 # ---------------------------------------------------------------------------
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -155,7 +155,7 @@ async def run_setup_if_needed() -> tuple[int, str, str]:
     # Import and run test-setup inline
     import subprocess
     result = subprocess.run(
-        [sys.executable, str(ROOT / "test-setup.py"), str(SKILL_DIR)],
+        [sys.executable, str(ROOT / "scripts" / "test-setup.py"), str(SKILL_DIR)],
         cwd=str(ROOT),
     )
     if result.returncode != 0:
@@ -534,7 +534,7 @@ async def main_async() -> int:
 
     if state.auth_status != "authenticated":
         print(red(f"  Authentication failed (status: {state.auth_status})"))
-        print(yellow("  Try running: python test-setup.py skills/telegram"))
+        print(yellow("  Try running: python scripts/test-setup.py skills/telegram"))
         await on_skill_unload()
         return 1
 

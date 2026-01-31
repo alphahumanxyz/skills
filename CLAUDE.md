@@ -71,8 +71,12 @@ skills/                          # Repo root
 │   ├── refine-skill.md
 │   └── categories/
 ├── docs/                        # Developer documentation
-├── test-setup.py                # Interactive setup flow tester
-├── test-server.py               # Interactive server REPL for tools
+├── scripts/                     # Developer scripts
+│   ├── test-setup.py            # Interactive setup flow tester
+│   ├── test-server.py           # Interactive server REPL for tools
+│   ├── test-entities.py         # Entity emission tester (live Telegram)
+│   ├── debug-graph.py           # Entity graph inspector / REPL
+│   └── update-catalog.py        # Skills catalog builder
 ├── .github/                     # CI/CD and PR templates
 ├── CONTRIBUTING.md              # Contribution guidelines
 └── README.md                    # Project README
@@ -92,10 +96,13 @@ python -m dev.validate.validator
 python -m dev.harness.runner skills/telegram --verbose
 
 # Test a skill's interactive setup flow
-python test-setup.py skills/telegram
+python scripts/test-setup.py skills/telegram
 
 # Interactive server REPL — connect, browse tools, call them live
-python test-server.py
+python scripts/test-server.py
+
+# Update the skills catalog
+python scripts/update-catalog.py
 
 # Security scan all skills
 python -m dev.security.scan_secrets

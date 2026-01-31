@@ -7,7 +7,7 @@ connects to the account, and verifies that entities are emitted.
 After load, runs one tick to test summary emission.
 
 Usage:
-    python test-entities.py [--tick] [--verbose]
+    python scripts/test-entities.py [--tick] [--verbose]
 
     --tick     Also run on_skill_tick to test summary emission
     --verbose  Show full entity metadata
@@ -34,7 +34,7 @@ from typing import Any
 # skills/ to sys.path.
 # ---------------------------------------------------------------------------
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -234,7 +234,7 @@ async def main_async() -> int:
 
     # Load config
     if not CONFIG_PATH.exists():
-        print(red("  No config found. Run test-setup.py first."))
+        print(red("  No config found. Run scripts/test-setup.py first."))
         return 1
 
     config = json.loads(CONFIG_PATH.read_text())
@@ -243,7 +243,7 @@ async def main_async() -> int:
     session_string = config.get("session_string", "")
 
     if not api_id or not api_hash or not session_string:
-        print(red("  Incomplete config. Run test-setup.py first."))
+        print(red("  Incomplete config. Run scripts/test-setup.py first."))
         return 1
 
     print(dim(f"  API ID: {api_id}"))
@@ -276,7 +276,7 @@ async def main_async() -> int:
 
     if state.auth_status != "authenticated":
         print(red(f"  Authentication failed (status: {state.auth_status})"))
-        print(yellow("  Try running: python test-setup.py skills/telegram"))
+        print(yellow("  Try running: python scripts/test-setup.py skills/telegram"))
         await on_skill_unload()
         return 1
 

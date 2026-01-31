@@ -6,8 +6,8 @@ Loads a skill, calls its setup hooks, and renders each step as a
 terminal form. Collects user input and drives the flow to completion.
 
 Usage:
-    python test-setup.py <skill-dir>
-    python test-setup.py skills/telegram
+    python scripts/test-setup.py <skill-dir>
+    python scripts/test-setup.py skills/telegram
 
 The script expects the skill directory to contain a skill.py (bundled
 skills) or a setup.py module with on_setup_start / on_setup_submit /
@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 # Ensure repo root is importable
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -370,8 +370,8 @@ def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if not args:
         print(
-            "Usage: python test-setup.py <skill-dir>\n"
-            "       python test-setup.py skills/telegram",
+            "Usage: python scripts/test-setup.py <skill-dir>\n"
+            "       python scripts/test-setup.py skills/telegram",
             file=sys.stderr,
         )
         sys.exit(1)

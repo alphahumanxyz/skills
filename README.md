@@ -80,10 +80,10 @@ python -m dev.validate.validator
 python -m dev.harness.runner skills/my-skill --verbose
 
 # Test a skill's interactive setup flow
-python test-setup.py skills/my-skill
+python scripts/test-setup.py skills/my-skill
 
 # Interactive server REPL, connect, browse tools, call them live
-python test-server.py
+python scripts/test-server.py
 ```
 
 ## skill.py Format
@@ -156,7 +156,7 @@ async def on_setup_cancel(ctx):
 
 Field types: `text`, `number`, `password`, `select`, `multiselect`, `boolean`.
 
-Test interactively: `python test-setup.py skills/my-skill`
+Test interactively: `python scripts/test-setup.py skills/my-skill`
 
 ## Lifecycle Hooks
 
@@ -350,11 +350,11 @@ All tools live in `dev/`. Install once: `pip install -e dev/`
 ```bash
 python -m dev.validate.validator                    # Validate all skills
 python -m dev.harness.runner skills/my-skill         # Test a specific skill
-python test-setup.py skills/my-skill                 # Test setup flow interactively
-python test-server.py                                # Interactive server REPL (Telegram)
+python scripts/test-setup.py skills/my-skill           # Test setup flow interactively
+python scripts/test-server.py                        # Interactive server REPL (Telegram)
+python scripts/update-catalog.py                     # Build skills catalog
 python -m dev.security.scan_secrets                  # Security scan all skills
 python -m dev.scaffold.new_skill                     # Scaffold a new skill
-python -m dev.catalog.build_catalog                  # Build skills catalog
 ```
 
 Or use CLI entry points: `skill-validate`, `skill-test`, `skill-scan`, `skill-new`, `skill-catalog`.
@@ -393,8 +393,12 @@ skills/                          # Repo root
 ├── prompts/                     # AI prompt templates for non-coders
 │   └── categories/              # Domain-specific generators
 ├── docs/                        # Developer documentation
-├── test-setup.py                # Interactive setup flow tester
-├── test-server.py               # Interactive server REPL for tools
+├── scripts/                     # Developer scripts
+│   ├── test-setup.py            # Interactive setup flow tester
+│   ├── test-server.py           # Interactive server REPL for tools
+│   ├── test-entities.py         # Entity emission tester (live Telegram)
+│   ├── debug-graph.py           # Entity graph inspector / REPL
+│   └── update-catalog.py        # Skills catalog builder
 ├── .github/                     # CI workflows + PR template
 ├── CONTRIBUTING.md              # How to contribute
 └── CLAUDE.md                    # Guidance for Claude Code
