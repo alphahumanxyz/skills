@@ -170,7 +170,8 @@ def validate_skill_py(skill_py_path: Path, dir_name: str) -> SkillResult:
         result.warnings.append(f'{prefix} ("{defn.name or "?"}"): missing description')
 
       params = defn.parameters
-      if not params or params.get("type") != "object":
+      params_valid = params and params.get("type") == "object"
+      if not params_valid:
         result.errors.append(
           f'{prefix} ("{defn.name or "?"}"): parameters must be {{"type": "object", ...}}'
         )

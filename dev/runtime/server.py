@@ -282,14 +282,18 @@ class SkillServer:
     if method == "skill/beforeMessage":
       msg = p.get("message", "")
       if self._hooks and self._hooks.on_before_message:
-        transformed_msg: str | None = await self._hooks.on_before_message(self._create_context(), msg)
+        transformed_msg: str | None = await self._hooks.on_before_message(
+          self._create_context(), msg
+        )
         return {"message": transformed_msg}
       return {"message": None}
 
     if method == "skill/afterResponse":
       response = p.get("response", "")
       if self._hooks and self._hooks.on_after_response:
-        transformed_response: str | None = await self._hooks.on_after_response(self._create_context(), response)
+        transformed_response: str | None = await self._hooks.on_after_response(
+          self._create_context(), response
+        )
         return {"response": transformed_response}
       return {"response": None}
 
@@ -322,14 +326,19 @@ class SkillServer:
       step_id = p.get("stepId", "")
       values = p.get("values", {})
       from dev.types.setup_types import SetupResult
-      result: SetupResult = await self._hooks.on_setup_submit(self._create_context(), step_id, values)
+
+      setup_result: SetupResult = await self._hooks.on_setup_submit(
+        self._create_context(), step_id, values
+      )
       payload: dict[str, Any] = {
-        "status": result.status,
-        "nextStep": self._serialize_step(result.next_step) if result.next_step else None,
-        "errors": [{"field": e.field, "message": e.message} for e in result.errors]
-        if result.errors
+        "status": setup_result.status,
+        "nextStep": self._serialize_step(setup_result.next_step)
+        if setup_result.next_step
         else None,
-        "message": result.message,
+        "errors": [{"field": e.field, "message": e.message} for e in setup_result.errors]
+        if setup_result.errors
+        else None,
+        "message": setup_result.message,
       }
       return payload
 

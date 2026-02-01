@@ -76,9 +76,7 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
 
     # Keyboard operations
     elif tool_name == "keyboard_type":
-      result = _desktop_client.keyboard_type(
-        args.get("text"), interval=args.get("interval", 0.05)
-      )
+      result = _desktop_client.keyboard_type(args.get("text"), interval=args.get("interval", 0.05))
     elif tool_name == "keyboard_press":
       result = _desktop_client.keyboard_press(args.get("key"))
     elif tool_name == "keyboard_release":

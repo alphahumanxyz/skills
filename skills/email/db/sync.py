@@ -168,10 +168,18 @@ async def refresh_folder_list(
     for f in folders:
       name = f["name"]
       await upsert_folder(db, account_id, name, delimiter=f.get("delimiter", "/"))
+      flags_val: str | list[str] | None = f.get("flags", [])
+      flags_list: list[str] = (
+        flags_val
+        if isinstance(flags_val, list)
+        else [flags_val]
+        if isinstance(flags_val, str)
+        else []
+      )
       folder_dict[name] = EmailFolder(
         name=name,
         delimiter=f.get("delimiter", "/"),
-        flags=f.get("flags", []),
+        flags=flags_list,
       )
 
     store.set_folders(folder_dict)

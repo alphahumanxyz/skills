@@ -14,12 +14,14 @@ try:
   from pynput.mouse import Button, Listener as MouseListener
   from pynput.keyboard import Key, Listener as KeyboardListener
   from PIL import ImageGrab
+
   PYNPUT_AVAILABLE = True
 except ImportError:
   PYNPUT_AVAILABLE = False
   # Create dummy classes for type checking when pynput is not available
   # Use different names to avoid redefinition errors
   from typing import TYPE_CHECKING
+
   if TYPE_CHECKING:
     from pynput.mouse import Button  # type: ignore[import-untyped]
     from pynput.keyboard import Key  # type: ignore[import-untyped]
@@ -30,6 +32,7 @@ except ImportError:
       left = None
       right = None
       middle = None
+
     class Key:  # type: ignore[no-redef]
       enter = None
       esc = None
@@ -57,6 +60,7 @@ except ImportError:
       f10 = None
       f11 = None
       f12 = None
+
     class ImageGrab:  # type: ignore[no-redef]
       @staticmethod
       def grab(*args: Any, **kwargs: Any) -> Any:

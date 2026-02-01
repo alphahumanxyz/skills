@@ -288,7 +288,9 @@ def main() -> None:
       print(f"  {icon} {rel_path}:")
       for finding in findings:
         f_icon = FAIL if finding.severity == "error" else WARN
-        print(f"    {f_icon} L{finding.line}:{finding.column} [{finding.pattern}] {finding.description}")
+        print(
+          f"    {f_icon} L{finding.line}:{finding.column} [{finding.pattern}] {finding.description}"
+        )
         if verbose:
           print(f"      {finding.snippet}")
 

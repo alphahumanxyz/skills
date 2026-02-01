@@ -86,13 +86,9 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
         multiple=args.get("multiple", False),
       )
     elif tool_name == "check":
-      result = await _browser_client.check(
-        args.get("selector"), checked=args.get("checked", True)
-      )
+      result = await _browser_client.check(args.get("selector"), checked=args.get("checked", True))
     elif tool_name == "hover":
-      result = await _browser_client.hover(
-        args.get("selector"), timeout=args.get("timeout", 30000)
-      )
+      result = await _browser_client.hover(args.get("selector"), timeout=args.get("timeout", 30000))
     elif tool_name == "scroll":
       result = await _browser_client.scroll(
         selector=args.get("selector"),
@@ -110,9 +106,7 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
         selector=args.get("selector"), outer_html=args.get("outer_html", True)
       )
     elif tool_name == "get_attribute":
-      result = await _browser_client.get_attribute(
-        args.get("selector"), args.get("attribute")
-      )
+      result = await _browser_client.get_attribute(args.get("selector"), args.get("attribute"))
     elif tool_name == "screenshot":
       result = await _browser_client.screenshot(
         selector=args.get("selector"),
@@ -123,9 +117,7 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
 
     # JavaScript execution
     elif tool_name == "evaluate":
-      result = await _browser_client.evaluate(
-        args.get("script"), arg=args.get("arg")
-      )
+      result = await _browser_client.evaluate(args.get("script"), arg=args.get("arg"))
 
     # Waiting
     elif tool_name == "wait_for_selector":
@@ -161,17 +153,13 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
     elif tool_name == "get_local_storage":
       result = await _browser_client.get_local_storage(key=args.get("key"))
     elif tool_name == "set_local_storage":
-      result = await _browser_client.set_local_storage(
-        args.get("key"), args.get("value")
-      )
+      result = await _browser_client.set_local_storage(args.get("key"), args.get("value"))
     elif tool_name == "clear_local_storage":
       result = await _browser_client.clear_local_storage()
     elif tool_name == "get_session_storage":
       result = await _browser_client.get_session_storage(key=args.get("key"))
     elif tool_name == "set_session_storage":
-      result = await _browser_client.set_session_storage(
-        args.get("key"), args.get("value")
-      )
+      result = await _browser_client.set_session_storage(args.get("key"), args.get("value"))
     elif tool_name == "clear_session_storage":
       result = await _browser_client.clear_session_storage()
 
@@ -197,9 +185,7 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
     elif tool_name == "get_pages":
       result = await _browser_client.get_pages()
     elif tool_name == "switch_page":
-      result = await _browser_client.switch_page(
-        index=args.get("index"), url=args.get("url")
-      )
+      result = await _browser_client.switch_page(index=args.get("index"), url=args.get("url"))
     elif tool_name == "close_page":
       result = await _browser_client.close_page()
 

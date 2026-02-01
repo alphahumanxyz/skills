@@ -130,7 +130,9 @@ def extract_skill_py_fallback(skill_py_path: Path) -> dict[str, Any] | None:
                             if isinstance(kw.value, ast.Call):
                               for def_kw in kw.value.keywords:
                                 if def_kw.arg == "name":
-                                  if isinstance(def_kw.value, ast.Constant) and isinstance(def_kw.value.value, str):
+                                  if isinstance(def_kw.value, ast.Constant) and isinstance(
+                                    def_kw.value.value, str
+                                  ):
                                     tools.append(def_kw.value.value)
 
                   # Also check for variable reference (e.g., tools=_TOOLS)
@@ -147,10 +149,14 @@ def extract_skill_py_fallback(skill_py_path: Path) -> dict[str, Any] | None:
                                   for kw in elt.keywords:
                                     if kw.arg == "definition" and isinstance(kw.value, ast.Call):
                                       for def_kw in kw.value.keywords:
-                                        if def_kw.arg == "name" and isinstance(
-                                          def_kw.value,
-                                          ast.Constant,
-                                        ) and isinstance(def_kw.value.value, str):
+                                        if (
+                                          def_kw.arg == "name"
+                                          and isinstance(
+                                            def_kw.value,
+                                            ast.Constant,
+                                          )
+                                          and isinstance(def_kw.value.value, str)
+                                        ):
                                           tools.append(def_kw.value.value)
 
               # Look for hooks= argument
@@ -168,7 +174,9 @@ def extract_skill_py_fallback(skill_py_path: Path) -> dict[str, Any] | None:
               # Look for tick_interval= argument
               for keyword in node.value.keywords:
                 if keyword.arg == "tick_interval":
-                  if isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, int):
+                  if isinstance(keyword.value, ast.Constant) and isinstance(
+                    keyword.value.value, int
+                  ):
                     tick_ms_ast: int = keyword.value.value
                     result["tick_interval_minutes"] = round(tick_ms_ast / 60_000, 1)
 

@@ -116,7 +116,8 @@ async def create_channel(args: dict[str, Any]) -> ToolResult:
     if not isinstance(title, str) or not title:
       return ToolResult(content="Title is required", is_error=True)
     description = args.get("description") if isinstance(args.get("description"), str) else None
-    megagroup = args.get("megagroup") if isinstance(args.get("megagroup"), bool) else False
+    megagroup_val = args.get("megagroup")
+    megagroup = bool(megagroup_val) if isinstance(megagroup_val, bool) else False
 
     result = await chat_api.create_channel(title, description, megagroup)
     return ToolResult(

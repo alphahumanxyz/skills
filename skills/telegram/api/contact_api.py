@@ -33,7 +33,7 @@ from telethon.tl.functions.contacts import (
 from ..client.telethon_client import get_client
 from ..client.builders import build_user
 from ..state import store
-from ..state.types import TelegramUser
+from ..state.types import TelegramUser, TelegramMessage
 from ..helpers import enforce_rate_limit
 
 log = logging.getLogger("skill.telegram.api.contact")
@@ -290,11 +290,11 @@ async def get_contact_chats(limit: int = 20) -> ApiResult[list[Any]]:
     return ApiResult(data=[], from_cache=True)
 
 
-async def get_last_interaction(user_id: str) -> ApiResult[Any | None]:
+async def get_last_interaction(user_id: str) -> ApiResult[TelegramUser | None]:
   """Get last interaction with a user (from cache)."""
   try:
     state = store.get_state()
-    all_messages: list[TelegramUser] = []
+    all_messages: list[TelegramMessage] = []
     for chat_msgs in state.messages.values():
       for msg in chat_msgs.values():
         if msg.from_id == user_id:
@@ -302,7 +302,12 @@ async def get_last_interaction(user_id: str) -> ApiResult[Any | None]:
 
     if all_messages:
       all_messages.sort(key=lambda m: m.date, reverse=True)
-      return ApiResult(data=all_messages[0], from_cache=True)
+      # Get the user from the last message
+      last_msg = all_messages[0]
+      # Find the user in users map
+      user = state.users.get(user_id)
+      if user:
+        return ApiResult(data=user, from_cache=True)
 
     return ApiResult(data=None, from_cache=True)
   except Exception:

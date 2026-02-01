@@ -138,24 +138,26 @@ class FileAnalyzer:
       # Section header comments (with separators or long descriptive comments)
       if stripped.startswith("#") and ("---" in stripped or "==" in stripped or len(stripped) > 50):
         if current_section:
-          section_dict: dict[str, Any] = {
-            "name": current_section,
-            "start": section_start,
-            "end": i - 1,
-          }
-          sections.append(section_dict)
+          sections.append(
+            {
+              "name": current_section,
+              "start": section_start,
+              "end": i - 1,
+            }
+          )
         current_section = stripped.strip("#").strip()
         section_start = i
 
     # If we found explicit sections, use them
     if sections or current_section:
       if current_section:
-        section_dict: dict[str, Any] = {
-          "name": current_section,
-          "start": section_start,
-          "end": len(self.lines),
-        }
-        sections.append(section_dict)
+        sections.append(
+          {
+            "name": current_section,
+            "start": section_start,
+            "end": len(self.lines),
+          }
+        )
       return sections
 
     # Otherwise, group by classes or function prefixes
@@ -163,12 +165,12 @@ class FileAnalyzer:
       # Split by classes
       sections = []
       for cls in classes:
-        section_dict: dict[str, Any] = {
+        cls_section: dict[str, Any] = {
           "name": f"Class: {cls['name']}",
           "start": cls["line"],
           "end": cls["end_line"],
         }
-        sections.append(section_dict)
+        sections.append(cls_section)
       return sections
 
     # Group functions by prefix if we have many functions
@@ -209,12 +211,13 @@ class FileAnalyzer:
           current_end = func["end_line"]
         else:
           # Start new section
-          section_dict: dict[str, Any] = {
-            "name": f"{current_prefix}_functions",
-            "start": current_start,
-            "end": current_end,
-          }
-          sections.append(section_dict)
+          sections.append(
+            {
+              "name": f"{current_prefix}_functions",
+              "start": current_start,
+              "end": current_end,
+            }
+          )
           current_prefix = prefix
           current_start = func["line"]
           current_end = func["end_line"]
@@ -226,7 +229,7 @@ class FileAnalyzer:
             "name": f"{current_prefix}_functions",
             "start": current_start,
             "end": current_end,
-          }  # type: ignore[dict-item]
+          }
         )
 
       return sections

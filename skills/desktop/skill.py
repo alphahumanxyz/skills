@@ -19,11 +19,15 @@ from dev.types.skill_types import (
 from .tools import ALL_TOOLS
 from .handlers.desktop_handlers import dispatch_tool, set_desktop_client
 
-try:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
   from .client.desktop_client import DesktopClient
-except ImportError:
-  # DesktopClient not available (pynput not installed)
-  DesktopClient = None  # type: ignore[assignment]
+else:
+  try:
+    from .client.desktop_client import DesktopClient
+  except ImportError:
+    DesktopClient = None  # type: ignore[assignment, misc]
 
 log = logging.getLogger("skill.desktop.skill")
 
@@ -74,13 +78,13 @@ async def _on_load(ctx: Any) -> None:
   """Initialize desktop client."""
   global _desktop_client
 
-  if DesktopClient is None:  # type: ignore[comparison-overlap]
+  if DesktopClient is None:
     log.error("DesktopClient not available: pynput is not installed")
     _desktop_client = None
     return
 
   try:
-    _desktop_client = DesktopClient()  # type: ignore[misc]
+    _desktop_client = DesktopClient()  # type: ignore[misc, call-arg]
     set_desktop_client(_desktop_client)
     log.info("Desktop client initialized")
   except Exception as exc:

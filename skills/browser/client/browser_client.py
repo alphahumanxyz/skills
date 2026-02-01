@@ -93,7 +93,9 @@ class BrowserClient:
     import subprocess
     import sys
 
-    log.info("Installing Playwright browser '%s' (this may take a few minutes)...", self.browser_type)
+    log.info(
+      "Installing Playwright browser '%s' (this may take a few minutes)...", self.browser_type
+    )
 
     # Run playwright install in a subprocess (it's a sync operation)
     # We'll run it in a thread pool to avoid blocking the event loop
@@ -391,9 +393,7 @@ class BrowserClient:
     except Exception as e:
       return {"success": False, "error": str(e)}
 
-  async def get_html(
-    self, selector: str | None = None, outer_html: bool = True
-  ) -> dict[str, Any]:
+  async def get_html(self, selector: str | None = None, outer_html: bool = True) -> dict[str, Any]:
     """Get HTML content."""
     page = self._get_current_page()
     try:
@@ -643,9 +643,7 @@ class BrowserClient:
     except Exception as e:
       return {"success": False, "error": str(e)}
 
-  async def reload(
-    self, wait_until: str = "load", timeout: int = 30000
-  ) -> dict[str, Any]:
+  async def reload(self, wait_until: str = "load", timeout: int = 30000) -> dict[str, Any]:
     """Reload page."""
     page = self._get_current_page()
     try:
@@ -712,9 +710,7 @@ class BrowserClient:
     else:
       return {"success": False, "error": "Must provide index or url"}
 
-  async def handle_dialog(
-    self, action: str, prompt_text: str | None = None
-  ) -> dict[str, Any]:
+  async def handle_dialog(self, action: str, prompt_text: str | None = None) -> dict[str, Any]:
     """Handle browser dialogs."""
     page = self._get_current_page()
 

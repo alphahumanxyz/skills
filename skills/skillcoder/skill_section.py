@@ -24,20 +24,26 @@ from typing import Any
 
 TOOL_CATEGORY_OPTIONS: list[Any] = []
 
+
 async def _on_load(ctx: SkillContext) -> None:
   pass
+
 
 async def _on_session_start(ctx: SkillContext, session_id: str) -> None:
   pass
 
+
 async def _on_before_message(ctx: SkillContext, content: str) -> str | None:
   return None
+
 
 async def _on_unload(ctx: SkillContext) -> None:
   pass
 
+
 async def _on_status(ctx: SkillContext) -> dict[str, Any]:
   return {}
+
 
 _TOOLS: list[SkillTool] = []
 

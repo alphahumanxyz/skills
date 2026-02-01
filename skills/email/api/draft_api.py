@@ -58,8 +58,11 @@ async def save_draft(
     raise RuntimeError("IMAP not connected")
 
   # Build the MIME message
+  from email.mime.text import MIMEText
+  from email.mime.multipart import MIMEMultipart
+
   if html_body:
-    msg = MIMEMultipart("alternative")
+    msg: MIMEMultipart | MIMEText = MIMEMultipart("alternative")
     msg.attach(MIMEText(body, "plain", "utf-8"))
     msg.attach(MIMEText(html_body, "html", "utf-8"))
   else:
