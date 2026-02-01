@@ -102,7 +102,18 @@ async def _on_load(ctx: Any) -> None:
   async def set_state_fn(partial: dict[str, Any]) -> None:
     ctx.set_state(partial)
 
-  await on_skill_load(params, set_state_fn=set_state_fn)
+  # Extract server-level callbacks if available (SkillServer runtime)
+  upsert_entity_fn = getattr(ctx, "_upsert_entity", None)
+  upsert_relationship_fn = getattr(ctx, "_upsert_relationship", None)
+  request_summarization_fn = getattr(ctx, "_request_summarization", None)
+
+  await on_skill_load(
+    params,
+    set_state_fn=set_state_fn,
+    upsert_entity_fn=upsert_entity_fn,
+    upsert_relationship_fn=upsert_relationship_fn,
+    request_summarization_fn=request_summarization_fn,
+  )
 
 
 async def _on_unload(ctx: Any) -> None:

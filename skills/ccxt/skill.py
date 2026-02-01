@@ -149,6 +149,9 @@ async def _on_disconnect(ctx: Any) -> None:
 # ---------------------------------------------------------------------------
 
 skill = SkillDefinition(
+  name="ccxt",
+  description="Cryptocurrency exchange trading connector via CCXT — connect to multiple exchanges simultaneously for trading, balance checks, market data, and order management.",
+  version="1.0.0",
   hooks=SkillHooks(
     on_load=_on_load,
     on_unload=_on_unload,

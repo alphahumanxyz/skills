@@ -261,6 +261,72 @@ async def emit_summaries(
   log.info("Emitted %d summary entities", len(rows))
 
 
+async def apply_summarization_results(
+  response: dict[str, Any],
+  upsert_entity_fn: UpsertEntityFn,
+  upsert_relationship_fn: UpsertRelationshipFn,
+) -> None:
+  """Process AI summarization response — create topic entities + relationships."""
+
+  # Create topic entities
+  for topic in response.get("topics", []):
+    try:
+      await upsert_entity_fn(
+        type="telegram.topic",
+        source=SOURCE,
+        source_id=topic["id"],
+        title=topic["name"],
+        summary=topic.get("description"),
+        metadata=topic.get("metadata", {}),
+      )
+    except Exception:
+      log.debug("Failed to upsert topic entity %s", topic.get("id"), exc_info=True)
+
+  # Create relationships
+  for conn in response.get("connections", []):
+    try:
+      await upsert_relationship_fn(
+        source_id=conn["sourceId"],
+        target_id=conn["targetId"],
+        type=conn["type"],
+        source=SOURCE,
+        metadata=conn.get("metadata", {}),
+      )
+    except Exception:
+      log.debug(
+        "Failed to upsert relationship %s -> %s",
+        conn.get("sourceId"),
+        conn.get("targetId"),
+        exc_info=True,
+      )
+
+  # Store AI summaries as enhanced summary entities
+  for summary in response.get("summaries", []):
+    try:
+      await upsert_entity_fn(
+        type="telegram.ai_summary",
+        source=SOURCE,
+        source_id=f"ai_summary:{summary['chatId']}:{int(time.time())}",
+        title=f"AI Summary — {summary.get('chatTitle', summary['chatId'])}",
+        summary=summary["summary"],
+        metadata={"chat_id": summary["chatId"]},
+      )
+    except Exception:
+      log.debug(
+        "Failed to upsert AI summary for chat %s", summary.get("chatId"), exc_info=True
+      )
+
+  topic_count = len(response.get("topics", []))
+  conn_count = len(response.get("connections", []))
+  summary_count = len(response.get("summaries", []))
+  log.info(
+    "Applied AI summarization: %d topics, %d connections, %d summaries",
+    topic_count,
+    conn_count,
+    summary_count,
+  )
+
+
 def _extract_chat_ids_from_summary(content: dict[str, Any], summary_type: str) -> list[str]:
   """Extract chat IDs referenced in a summary's content."""
   chat_ids: list[str] = []

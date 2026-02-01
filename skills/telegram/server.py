@@ -24,7 +24,7 @@ from .state import store
 from .state.sync import init_host_sync
 from .db.connection import init_db, close_db, get_db
 from .db.summaries import generate_summaries
-from .entities import emit_initial_entities, emit_summaries
+from .entities import apply_summarization_results, emit_initial_entities, emit_summaries
 from .events.handlers import register_event_handlers
 from .sync.initial_sync import run_initial_sync
 
@@ -53,6 +53,7 @@ async def on_skill_load(
   set_state_fn: Any = None,
   upsert_entity_fn: Any = None,
   upsert_relationship_fn: Any = None,
+  request_summarization_fn: Any = None,
 ) -> None:
   """Called when the host loads this skill. Initializes Telethon + SQLite."""
   raw_api_id = os.environ.get("TELEGRAM_API_ID", params.get("apiId", "0")) or "0"
@@ -72,8 +73,9 @@ async def on_skill_load(
     (os.environ.get("TELEGRAM_API_HASH", "") or "<not set>")[:8],
   )
 
-  # Store entity callbacks for use in event handlers and tick
+  # Store entity callbacks and summarization callback for use in event handlers and tick
   _store_entity_callbacks(upsert_entity_fn, upsert_relationship_fn)
+  _store_summarization_callback(request_summarization_fn)
 
   if not api_id or not api_hash:
     log.error("Missing TELEGRAM_API_ID or TELEGRAM_API_HASH")
@@ -159,6 +161,7 @@ async def on_skill_unload() -> None:
 
 _upsert_entity_fn: Any = None
 _upsert_relationship_fn: Any = None
+_request_summarization_fn: Any = None
 
 
 def _store_entity_callbacks(
@@ -168,6 +171,11 @@ def _store_entity_callbacks(
   global _upsert_entity_fn, _upsert_relationship_fn
   _upsert_entity_fn = upsert_entity
   _upsert_relationship_fn = upsert_relationship
+
+
+def _store_summarization_callback(request_summarization: Any = None) -> None:
+  global _request_summarization_fn
+  _request_summarization_fn = request_summarization
 
 
 def get_entity_callbacks() -> tuple[Any, Any]:
@@ -195,6 +203,15 @@ async def on_skill_tick() -> None:
   except Exception:
     log.exception("Error during tick")
 
+  # AI summarization via host reverse RPC
+  if _request_summarization_fn and _upsert_entity_fn and _upsert_relationship_fn:
+    try:
+      db = await get_db()
+      await _run_ai_summarization(db)
+    except Exception:
+      log.warning("AI summarization failed (host may not implement intelligence/summarize)")
+      log.debug("AI summarization error details:", exc_info=True)
+
   # Emit summary entities and refresh chat/contact entities
   if _upsert_entity_fn and _upsert_relationship_fn:
     try:
@@ -206,6 +223,65 @@ async def on_skill_tick() -> None:
       await emit_initial_entities(_upsert_entity_fn, _upsert_relationship_fn)
     except Exception:
       log.exception("Error refreshing entities on tick")
+
+
+# ---------------------------------------------------------------------------
+# AI Summarization pipeline
+# ---------------------------------------------------------------------------
+
+
+async def _run_ai_summarization(db: Any) -> None:
+  """Collect recent messages and send to host for AI summarization."""
+  from .db.queries import get_recent_messages_for_summarization
+
+  messages = await get_recent_messages_for_summarization(db)
+  if not messages:
+    log.debug("No recent messages for AI summarization")
+    return
+
+  chats = _build_chat_context()
+  current_user = _build_current_user_context()
+
+  log.info("Sending %d messages to host for AI summarization", len(messages))
+  response = await _request_summarization_fn(
+    messages=messages, chats=chats, current_user=current_user
+  )
+
+  if response and (_upsert_entity_fn and _upsert_relationship_fn):
+    await apply_summarization_results(
+      response, _upsert_entity_fn, _upsert_relationship_fn
+    )
+
+
+def _build_chat_context() -> list[dict[str, Any]]:
+  """Build chat metadata list from current state for summarization context."""
+  state = store.get_state()
+  chats: list[dict[str, Any]] = []
+  for chat_id in state.chats_order:
+    chat = state.chats.get(chat_id)
+    if not chat:
+      continue
+    chats.append({
+      "id": chat.id,
+      "title": chat.title,
+      "type": chat.type,
+      "participants_count": chat.participants_count,
+      "unread_count": chat.unread_count,
+    })
+  return chats
+
+
+def _build_current_user_context() -> dict[str, Any] | None:
+  """Build current user metadata for summarization context."""
+  state = store.get_state()
+  user = state.current_user
+  if not user:
+    return None
+  return {
+    "id": user.id,
+    "first_name": user.first_name,
+    "username": user.username,
+  }
 
 
 async def run_server() -> None:

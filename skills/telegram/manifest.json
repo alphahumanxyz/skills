@@ -93,6 +93,24 @@
           { "name": "unread_count", "type": "number", "description": "Unread messages in the thread" },
           { "name": "is_pinned", "type": "boolean", "description": "Whether the thread is pinned" }
         ]
+      },
+      {
+        "type": "telegram.topic",
+        "label": "Discussion Topic",
+        "description": "A topic or subject extracted by AI from chat messages.",
+        "properties": [
+          { "name": "name", "type": "string", "description": "Topic name" },
+          { "name": "description", "type": "string", "description": "Topic description", "optional": true }
+        ]
+      },
+      {
+        "type": "telegram.ai_summary",
+        "label": "AI Summary",
+        "description": "An AI-generated natural language summary of chat activity.",
+        "properties": [
+          { "name": "chat_id", "type": "string", "description": "Chat this summary covers" },
+          { "name": "summary", "type": "string", "description": "AI-generated summary text" }
+        ]
       }
     ],
     "relationship_types": [
@@ -143,6 +161,27 @@
         "source_type": "telegram.summary",
         "target_type": "telegram.dm",
         "description": "Summary covers activity in this DM.",
+        "cardinality": "many_to_many"
+      },
+      {
+        "type": "discusses",
+        "source_type": "telegram.group",
+        "target_type": "telegram.topic",
+        "description": "Chat is actively discussing this topic.",
+        "cardinality": "many_to_many"
+      },
+      {
+        "type": "interested_in",
+        "source_type": "telegram.contact",
+        "target_type": "telegram.topic",
+        "description": "Contact has shown interest in this topic (based on message activity).",
+        "cardinality": "many_to_many"
+      },
+      {
+        "type": "interacts_with",
+        "source_type": "telegram.contact",
+        "target_type": "telegram.contact",
+        "description": "Two contacts interact frequently across chats.",
         "cardinality": "many_to_many"
       }
     ]

@@ -538,6 +538,11 @@ class SkillServer:
       tools = _Tools()
       entities = _Entities()
 
+      # Expose server-level callbacks for skills that need direct access
+      _upsert_entity = staticmethod(server.upsert_entity)
+      _upsert_relationship = staticmethod(server.upsert_relationship)
+      _request_summarization = staticmethod(server.request_summarization)
+
       @property
       def data_dir(self) -> str:
         return server._data_dir or f"skills/{(server._manifest or {}).get('id', 'unknown')}/data"
@@ -592,7 +597,26 @@ class SkillServer:
       sys.stdout.write(data)
       sys.stdout.flush()
 
-  async def _reverse_rpc(self, method: str, params: Any = None) -> Any:
+  async def request_summarization(
+    self,
+    *,
+    messages: list[dict[str, Any]],
+    chats: list[dict[str, Any]],
+    current_user: dict[str, Any] | None = None,
+  ) -> dict[str, Any]:
+    """Send messages to host for AI summarization. Returns summaries + graph suggestions."""
+    result = await self._reverse_rpc(
+      "intelligence/summarize",
+      {
+        "messages": messages,
+        "chats": chats,
+        "currentUser": current_user,
+      },
+      timeout=120.0,
+    )
+    return result if isinstance(result, dict) else {}
+
+  async def _reverse_rpc(self, method: str, params: Any = None, timeout: float = 30.0) -> Any:
     msg_id = self._next_id
     self._next_id += 1
     request = {"jsonrpc": "2.0", "id": msg_id, "method": method}
@@ -605,7 +629,7 @@ class SkillServer:
     self._write_message(request)
 
     try:
-      return await asyncio.wait_for(future, timeout=30.0)
+      return await asyncio.wait_for(future, timeout=timeout)
     except asyncio.TimeoutError:
       self._pending.pop(msg_id, None)
       raise RuntimeError(f"Reverse RPC timeout: {method}")

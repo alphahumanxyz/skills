@@ -1,22 +1,37 @@
 {
-  "generatedAt": "2026-02-01T02:31:48.810231+00:00",
+  "generatedAt": "2026-02-01T02:39:56.613394+00:00",
   "version": "1.0.0",
   "skills": [
     {
       "name": "ccxt",
-      "description": "",
+      "description": "Cryptocurrency exchange trading connector via CCXT \u2014 connect to multiple exchanges simultaneously for trading, balance checks, market data, and order management.",
       "icon": null,
-      "version": null,
-      "tools": [],
+      "version": "1.0.0",
+      "tools": [
+        "list_exchanges",
+        "get_exchange_info",
+        "test_connection",
+        "get_available_exchanges",
+        "update_exchange_settings",
+        "fetch_ticker",
+        "fetch_tickers",
+        "fetch_orderbook",
+        "fetch_trades",
+        "fetch_ohlcv",
+        "fetch_markets",
+        "fetch_balance",
+        "create_order",
+        "cancel_order",
+        "fetch_order",
+        "fetch_orders",
+        "fetch_open_orders",
+        "fetch_closed_orders",
+        "fetch_my_trades"
+      ],
       "hooks": [
         "on_load",
         "on_unload",
-        "on_tick",
-        "on_status",
-        "on_disconnect",
-        "on_setup_start",
-        "on_setup_submit",
-        "on_setup_cancel"
+        "on_tick"
       ],
       "tickIntervalMinutes": null,
       "path": "skills/ccxt"
@@ -70,25 +85,6 @@
       ],
       "tickIntervalMinutes": 5.0,
       "path": "skills/email"
-    },
-    {
-      "name": "enable_chat_tools",
-      "description": "14 tools \u2014 create/archive/mute chats, join/leave groups, manage invite links",
-      "icon": null,
-      "version": "2.0.0",
-      "tools": [],
-      "hooks": [
-        "on_load",
-        "on_unload",
-        "on_tick",
-        "on_status",
-        "on_setup_start",
-        "on_setup_submit",
-        "on_setup_cancel",
-        "on_disconnect"
-      ],
-      "tickIntervalMinutes": 20.0,
-      "path": "skills/telegram"
     },
     {
       "name": "github",
@@ -286,18 +282,34 @@
       "path": "skills/slack"
     },
     {
-      "name": "wallet",
-      "description": "Web3 wallet connector \u2014 manage EVM and Solana wallets from seed phrases",
+      "name": "telegram",
+      "description": "Telegram integration via Telethon MTProto \u2014 75+ tools for chats, messages, contacts, admin, media, and settings.",
       "icon": null,
-      "version": "1.0.0",
+      "version": "2.0.0",
       "tools": [],
       "hooks": [
         "on_load",
         "on_unload",
-        "on_status",
-        "on_setup_start",
-        "on_setup_submit",
-        "on_setup_cancel"
+        "on_tick"
+      ],
+      "tickIntervalMinutes": 20.0,
+      "path": "skills/telegram"
+    },
+    {
+      "name": "wallet",
+      "description": "Web3 wallet connector \u2014 manage EVM and Solana wallets from seed phrases",
+      "icon": null,
+      "version": "1.0.0",
+      "tools": [
+        "list_wallets",
+        "list_networks",
+        "get_balance",
+        "send_transaction",
+        "sign_message"
+      ],
+      "hooks": [
+        "on_load",
+        "on_unload"
       ],
       "tickIntervalMinutes": null,
       "path": "skills/wallet"

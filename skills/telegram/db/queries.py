@@ -267,3 +267,37 @@ async def get_all_channel_pts(db: aiosqlite.Connection) -> dict[str, int]:
   cursor = await db.execute("SELECT channel_id, pts FROM channel_pts")
   rows = await cursor.fetchall()
   return {row[0]: row[1] for row in rows}
+
+
+# ---------------------------------------------------------------------------
+# AI Summarization support
+# ---------------------------------------------------------------------------
+
+
+async def get_recent_messages_for_summarization(
+  db: aiosqlite.Connection,
+  since: float | None = None,
+  limit: int = 1000,
+) -> list[dict[str, Any]]:
+  """Fetch recent messages with content for AI summarization.
+
+  Returns a flat list with chat_id for grouping.
+  Only includes messages with non-empty text content.
+  """
+  if since is None:
+    since = time.time() - 1200  # last 20 minutes
+
+  cursor = await db.execute(
+    """SELECT m.id, m.chat_id, m.date, m.message, m.from_id, m.from_name,
+              m.is_outgoing, m.reply_to_message_id, m.thread_id,
+              c.title AS chat_title, c.type AS chat_type
+       FROM messages m
+       LEFT JOIN chats c ON m.chat_id = c.id
+       WHERE m.date >= ? AND m.message IS NOT NULL AND m.message != ''
+       ORDER BY m.chat_id, m.date ASC
+       LIMIT ?""",
+    (since, limit),
+  )
+  rows = await cursor.fetchall()
+  columns = [desc[0] for desc in cursor.description]
+  return [dict(zip(columns, row, strict=False)) for row in rows]
