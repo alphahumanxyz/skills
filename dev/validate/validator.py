@@ -111,9 +111,15 @@ def validate_skill_py(skill_py_path: Path, dir_name: str) -> SkillResult:
     if not skill.name or not isinstance(skill.name, str):
         result.errors.append("Missing or invalid `name` (must be a non-empty string)")
     else:
-        if not NAME_PATTERN.match(skill.name):
+        if "_" in skill.name:
             result.errors.append(
-                f'Invalid name "{skill.name}" — must be lowercase-hyphens (e.g., "my-skill")'
+                f'Invalid name "{skill.name}" — skill names cannot contain underscores. '
+                f'Underscores are reserved for tool namespacing (skillId__toolName). Use hyphens instead (e.g., "my-skill").'
+            )
+        elif not NAME_PATTERN.match(skill.name):
+            result.errors.append(
+                f'Invalid name "{skill.name}" — must be lowercase-hyphens (e.g., "my-skill"). '
+                f'Underscores are not allowed as they are reserved for tool namespacing.'
             )
         if skill.name != dir_name:
             result.warnings.append(
