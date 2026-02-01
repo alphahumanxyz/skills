@@ -136,10 +136,13 @@ async def _fetch_and_save_update_state(client: TelegramClient) -> None:
     """Fetch current update state from Telegram and persist."""
     try:
         state = await client(GetStateRequest())
-        await save_update_state(state.pts, state.qts, state.date, state.seq)
+        date_val = state.date
+        if hasattr(date_val, "timestamp"):
+            date_val = int(date_val.timestamp())
+        await save_update_state(state.pts, state.qts, int(date_val), state.seq)
         log.info(
             "Update state: pts=%d qts=%d date=%d seq=%d",
-            state.pts, state.qts, state.date, state.seq,
+            state.pts, state.qts, int(date_val), state.seq,
         )
     except Exception:
         log.exception("Failed to fetch update state")
