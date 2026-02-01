@@ -143,5 +143,5 @@ skill-catalog
 - `on_before_message` and `on_after_response` can transform content by returning a string; other hooks cannot
 - Hooks have a 10-second timeout — keep them fast
 - Skills cannot access other skills' data directories
-- Skill names must be lowercase-hyphens and match the directory name
+- **No underscores in skill names** — skill names must be lowercase-hyphens (e.g., `my-skill`, not `my_skill`). Underscores are reserved for tool namespacing (`skillId__toolName`). If a skill name contains an underscore, replace it with a dash. The validator and scaffolder both enforce this.
 - Skills with `has_setup=True` must implement `on_setup_start` and `on_setup_submit` hooks
