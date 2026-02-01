@@ -1,10 +1,48 @@
 {
-  "generatedAt": "2026-01-31T22:33:58.672153+00:00",
+  "generatedAt": "2026-02-01T02:23:54.417209+00:00",
   "version": "1.0.0",
   "skills": [
     {
-      "name": "email",
-      "description": "Email integration via IMAP/SMTP \u2014 35 tools for reading, sending, searching, and managing email across Gmail, Outlook, Yahoo, iCloud, and custom servers.",
+      "name": "ccxt",
+      "description": "",
+      "icon": null,
+      "version": null,
+      "tools": [],
+      "hooks": [
+        "on_load",
+        "on_unload",
+        "on_tick",
+        "on_status",
+        "on_disconnect",
+        "on_setup_start",
+        "on_setup_submit",
+        "on_setup_cancel"
+      ],
+      "tickIntervalMinutes": null,
+      "path": "skills/ccxt"
+    },
+    {
+      "name": "enable_chat_tools",
+      "description": "14 tools \u2014 create/archive/mute chats, join/leave groups, manage invite links",
+      "icon": null,
+      "version": "2.0.0",
+      "tools": [],
+      "hooks": [
+        "on_load",
+        "on_unload",
+        "on_tick",
+        "on_status",
+        "on_setup_start",
+        "on_setup_submit",
+        "on_setup_cancel",
+        "on_disconnect"
+      ],
+      "tickIntervalMinutes": 20.0,
+      "path": "skills/telegram"
+    },
+    {
+      "name": "enable_folder_tools",
+      "description": "5 tools \u2014 create, rename, delete, list, and get folder status",
       "icon": null,
       "version": "1.0.0",
       "tools": [],
@@ -12,16 +50,18 @@
         "on_load",
         "on_unload",
         "on_tick",
+        "on_status",
         "on_setup_start",
         "on_setup_submit",
-        "on_setup_cancel"
+        "on_setup_cancel",
+        "on_disconnect"
       ],
       "tickIntervalMinutes": 5.0,
       "path": "skills/email"
     },
     {
-      "name": "github",
-      "description": "GitHub integration via PyGithub \u2014 72 tools for repos, issues, PRs, releases, gists, actions, search, notifications, and raw API access.",
+      "name": "enable_repo_tools",
+      "description": "12 tools \u2014 create, delete, fork, clone repos, manage collaborators and topics",
       "icon": null,
       "version": "1.0.0",
       "tools": [],
@@ -29,9 +69,11 @@
         "on_load",
         "on_unload",
         "on_tick",
+        "on_status",
         "on_setup_start",
         "on_setup_submit",
-        "on_setup_cancel"
+        "on_setup_cancel",
+        "on_disconnect"
       ],
       "tickIntervalMinutes": 5.0,
       "path": "skills/github"
@@ -119,21 +161,59 @@
       "path": "skills/skill-generator"
     },
     {
-      "name": "telegram",
-      "description": "Telegram integration via Telethon MTProto \u2014 75+ tools for chats, messages, contacts, admin, media, and settings.",
+      "name": "slack",
+      "description": "Slack workspace integration \u2014 send messages, manage channels, search conversations, and interact with Slack workspaces.",
       "icon": null,
-      "version": "2.0.0",
+      "version": "1.0.0",
+      "tools": [
+        "list_channels",
+        "get_channel",
+        "create_channel",
+        "join_channel",
+        "leave_channel",
+        "archive_channel",
+        "unarchive_channel",
+        "set_channel_topic",
+        "set_channel_purpose",
+        "get_channel_members",
+        "send_message",
+        "get_messages",
+        "edit_message",
+        "delete_message",
+        "get_message_permalink",
+        "list_users",
+        "get_user",
+        "get_user_by_email",
+        "open_dm",
+        "list_dms",
+        "search_messages",
+        "search_all",
+        "get_workspace_info"
+      ],
+      "hooks": [
+        "on_load",
+        "on_unload",
+        "on_tick"
+      ],
+      "tickIntervalMinutes": 5.0,
+      "path": "skills/slack"
+    },
+    {
+      "name": "wallet",
+      "description": "Web3 wallet connector \u2014 manage EVM and Solana wallets from seed phrases",
+      "icon": null,
+      "version": "1.0.0",
       "tools": [],
       "hooks": [
         "on_load",
         "on_unload",
-        "on_tick",
+        "on_status",
         "on_setup_start",
         "on_setup_submit",
         "on_setup_cancel"
       ],
-      "tickIntervalMinutes": 20.0,
-      "path": "skills/telegram"
+      "tickIntervalMinutes": null,
+      "path": "skills/wallet"
     }
   ]
 }
