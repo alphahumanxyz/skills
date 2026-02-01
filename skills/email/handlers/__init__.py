@@ -24,4 +24,5 @@ async def dispatch_tool(name: str, arguments: dict[str, Any]) -> ToolResult:
   handler = DISPATCH.get(name)
   if handler is None:
     return ToolResult(content=f"Unknown tool: {name}", is_error=True)
-  return await handler(arguments)
+  result: ToolResult = await handler(arguments)
+  return result

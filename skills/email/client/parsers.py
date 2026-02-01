@@ -96,7 +96,7 @@ def parse_raw_email(raw: bytes, uid: int) -> ParsedEmail:
         att_index += 1
       elif content_type == "text/plain" and not body_text:
         payload = part.get_payload(decode=True)
-        if payload:
+        if payload and isinstance(payload, bytes):
           charset = part.get_content_charset() or "utf-8"
           try:
             body_text = payload.decode(charset, errors="replace")
@@ -104,7 +104,7 @@ def parse_raw_email(raw: bytes, uid: int) -> ParsedEmail:
             body_text = payload.decode("utf-8", errors="replace")
       elif content_type == "text/html" and not body_html:
         payload = part.get_payload(decode=True)
-        if payload:
+        if payload and isinstance(payload, bytes):
           charset = part.get_content_charset() or "utf-8"
           try:
             body_html = payload.decode(charset, errors="replace")
@@ -113,7 +113,7 @@ def parse_raw_email(raw: bytes, uid: int) -> ParsedEmail:
   else:
     content_type = msg.get_content_type()
     payload = msg.get_payload(decode=True)
-    if payload:
+    if payload and isinstance(payload, bytes):
       charset = msg.get_content_charset() or "utf-8"
       try:
         decoded = payload.decode(charset, errors="replace")

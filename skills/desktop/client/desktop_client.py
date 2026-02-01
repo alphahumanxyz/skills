@@ -10,49 +10,57 @@ import time
 from typing import Any
 
 try:
-  from pynput import keyboard, mouse
-  from pynput.mouse import Button, Listener as MouseListener
-  from pynput.keyboard import Key, Listener as KeyboardListener
-  from PIL import ImageGrab
+  from pynput import keyboard, mouse  # type: ignore[import-untyped]
+  from pynput.mouse import Button, Listener as MouseListener  # type: ignore[import-untyped]
+  from pynput.keyboard import Key, Listener as KeyboardListener  # type: ignore[import-untyped]
+  from PIL import ImageGrab  # type: ignore[import-not-found]
   PYNPUT_AVAILABLE = True
 except ImportError:
   PYNPUT_AVAILABLE = False
   # Create dummy classes for type checking when pynput is not available
-  class Button:
-    left = None
-    right = None
-    middle = None
-  class Key:
-    enter = None
-    esc = None
-    tab = None
-    space = None
-    backspace = None
-    delete = None
-    up = None
-    down = None
-    left = None
-    right = None
-    ctrl = None
-    alt = None
-    shift = None
-    cmd = None
-    f1 = None
-    f2 = None
-    f3 = None
-    f4 = None
-    f5 = None
-    f6 = None
-    f7 = None
-    f8 = None
-    f9 = None
-    f10 = None
-    f11 = None
-    f12 = None
-  class ImageGrab:
-    @staticmethod
-    def grab(*args, **kwargs):
-      raise ImportError("Pillow is not installed")
+  # Use different names to avoid redefinition errors
+  from typing import TYPE_CHECKING
+  if TYPE_CHECKING:
+    from pynput.mouse import Button  # type: ignore[import-untyped]
+    from pynput.keyboard import Key  # type: ignore[import-untyped]
+    from PIL import ImageGrab  # type: ignore[import-not-found]
+  else:
+    # Runtime fallback classes
+    class Button:  # type: ignore[no-redef]
+      left = None
+      right = None
+      middle = None
+    class Key:  # type: ignore[no-redef]
+      enter = None
+      esc = None
+      tab = None
+      space = None
+      backspace = None
+      delete = None
+      up = None
+      down = None
+      left = None
+      right = None
+      ctrl = None
+      alt = None
+      shift = None
+      cmd = None
+      f1 = None
+      f2 = None
+      f3 = None
+      f4 = None
+      f5 = None
+      f6 = None
+      f7 = None
+      f8 = None
+      f9 = None
+      f10 = None
+      f11 = None
+      f12 = None
+    class ImageGrab:  # type: ignore[no-redef]
+      @staticmethod
+      def grab(*args: Any, **kwargs: Any) -> Any:
+        raise ImportError("Pillow is not installed")
 
 
 class DesktopClient:

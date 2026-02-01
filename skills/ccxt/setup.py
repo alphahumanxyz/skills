@@ -42,8 +42,11 @@ async def _load_existing_exchanges(ctx: Any) -> list[dict[str, Any]]:
   try:
     raw = await ctx.read_data("config.json")
     if raw:
-      config = json.loads(raw)
-      return config.get("exchanges", [])
+      config: dict[str, Any] = json.loads(raw)
+      exchanges = config.get("exchanges", [])
+      if isinstance(exchanges, list):
+        return exchanges
+      return []
   except Exception:
     pass
   return []

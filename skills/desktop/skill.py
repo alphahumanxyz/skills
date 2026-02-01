@@ -23,7 +23,7 @@ try:
   from .client.desktop_client import DesktopClient
 except ImportError:
   # DesktopClient not available (pynput not installed)
-  DesktopClient = None
+  DesktopClient = None  # type: ignore[assignment]
 
 log = logging.getLogger("skill.desktop.skill")
 
@@ -74,13 +74,13 @@ async def _on_load(ctx: Any) -> None:
   """Initialize desktop client."""
   global _desktop_client
 
-  if DesktopClient is None:
+  if DesktopClient is None:  # type: ignore[comparison-overlap]
     log.error("DesktopClient not available: pynput is not installed")
     _desktop_client = None
     return
 
   try:
-    _desktop_client = DesktopClient()
+    _desktop_client = DesktopClient()  # type: ignore[misc]
     set_desktop_client(_desktop_client)
     log.info("Desktop client initialized")
   except Exception as exc:

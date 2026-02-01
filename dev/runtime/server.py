@@ -159,7 +159,7 @@ class SkillServer:
       transport,
       protocol,
       reader,
-      loop,  # type: ignore[arg-type]
+      loop,
     )
 
     while True:
@@ -282,15 +282,15 @@ class SkillServer:
     if method == "skill/beforeMessage":
       msg = p.get("message", "")
       if self._hooks and self._hooks.on_before_message:
-        result = await self._hooks.on_before_message(self._create_context(), msg)
-        return {"message": result if isinstance(result, str) else None}
+        result: str | None = await self._hooks.on_before_message(self._create_context(), msg)
+        return {"message": result}
       return {"message": None}
 
     if method == "skill/afterResponse":
       response = p.get("response", "")
       if self._hooks and self._hooks.on_after_response:
-        result = await self._hooks.on_after_response(self._create_context(), response)
-        return {"response": result if isinstance(result, str) else None}
+        result: str | None = await self._hooks.on_after_response(self._create_context(), response)
+        return {"response": result}
       return {"response": None}
 
     if method == "skill/tick":
@@ -299,7 +299,7 @@ class SkillServer:
       return {"ok": True}
 
     if method == "skill/status":
-      if not self._hooks or not self._hooks.on_status:
+      if not self._hooks or not self._hooks.on_status:  # type: ignore[truthy-function]
         raise ValueError("Skill must implement on_status hook")
       status = await self._hooks.on_status(self._create_context())
       return {"status": status}
@@ -321,7 +321,8 @@ class SkillServer:
         raise ValueError("Skill does not implement setup flow")
       step_id = p.get("stepId", "")
       values = p.get("values", {})
-      result = await self._hooks.on_setup_submit(self._create_context(), step_id, values)
+      from dev.types.setup_types import SetupResult
+      result: SetupResult = await self._hooks.on_setup_submit(self._create_context(), step_id, values)
       payload: dict[str, Any] = {
         "status": result.status,
         "nextStep": self._serialize_step(result.next_step) if result.next_step else None,

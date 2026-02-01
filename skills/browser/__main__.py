@@ -4,9 +4,10 @@ Browser skill entry point.
 Runs the skill server using the standard runtime.
 """
 
-from dev.runtime.server import run_skill_server
+from dev.runtime.server import SkillServer
 
 from .skill import skill
 
 if __name__ == "__main__":
-  run_skill_server(skill)
+  server = SkillServer(skill)
+  server.start()

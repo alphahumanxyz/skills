@@ -8,7 +8,7 @@ GramJS entities but the conversion pattern is the same.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Literal, cast
 
 from telethon.tl.types import (
   User,
@@ -54,7 +54,7 @@ def build_peer_id(peer: Any) -> str:
   return ""
 
 
-def get_chat_type(entity: Any) -> str:
+def get_chat_type(entity: Any) -> Literal["private", "group", "supergroup", "channel"]:
   """Determine chat type from a Telethon entity."""
   if entity is None:
     return "private"

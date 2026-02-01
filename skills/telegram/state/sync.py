@@ -11,7 +11,7 @@ import logging
 from typing import Any, Callable, Awaitable
 
 from .store import get_state, subscribe
-from .types import TelegramHostState
+from .types import TelegramHostState, TelegramChat
 
 log = logging.getLogger("skill.telegram.sync")
 
@@ -45,7 +45,7 @@ def _on_state_change() -> None:
 def _build_host_state() -> TelegramHostState:
   s = get_state()
   total_unread = sum(
-    (s.chats.get(cid) or TelegramHostState()).unread_count
+    (s.chats.get(cid) or TelegramChat(id="", type="private")).unread_count
     for cid in s.chats_order
     if cid in s.chats
   )

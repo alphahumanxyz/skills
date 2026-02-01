@@ -69,7 +69,7 @@ class MTProtoClient:
     if self._is_connected:
       return
     async with self._connect_lock:
-      if self._is_connected:
+      if self._is_connected:  # type: ignore[unreachable]
         return
       await self._do_connect()
 

@@ -380,5 +380,5 @@ def _parse_list_response(line: str) -> dict[str, str] | None:
     return None
 
   flags_str, delimiter, name = m.group(1), m.group(2), m.group(3)
-  flags = [f.strip() for f in flags_str.split() if f.strip()]
+  flags: list[str] = [f.strip() for f in flags_str.split() if f.strip()]
   return {"name": name.strip('"'), "delimiter": delimiter, "flags": flags}

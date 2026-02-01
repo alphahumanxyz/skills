@@ -19,7 +19,8 @@ def validate_email_address(value: Any, param_name: str) -> str:
   value = value.strip()
   if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", value):
     raise ValidationError(f"Invalid email address for {param_name}: {value}")
-  return value
+  # Type narrowing: value is guaranteed to be str at this point
+  return str(value)
 
 
 def validate_email_list(value: Any, param_name: str) -> list[str]:
