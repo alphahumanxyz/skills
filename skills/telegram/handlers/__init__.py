@@ -21,7 +21,10 @@ for mod in (chat, message, contact, admin, media, settings, search):
 
 async def dispatch_tool(name: str, arguments: dict[str, Any]) -> ToolResult:
     """Look up and execute a tool handler by name."""
-    handler = DISPATCH.get(name)
+    # Convert tool name from hyphenated (e.g., "get-chats") to underscore format (e.g., "get_chats")
+    # for Python function name lookup
+    handler_name = name.replace("-", "_")
+    handler = DISPATCH.get(handler_name)
     if handler is None:
         return ToolResult(content=f"Unknown tool: {name}", is_error=True)
     return await handler(arguments)
