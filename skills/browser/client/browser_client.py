@@ -49,7 +49,7 @@ class BrowserClient:
     if self.playwright is None:
       self.playwright = await async_playwright().start()
       browser_launcher = getattr(self.playwright, self.browser_type)
-      
+
       try:
         self.browser = await browser_launcher.launch(headless=self.headless)
       except Exception as e:
@@ -72,7 +72,7 @@ class BrowserClient:
         else:
           # Some other error, re-raise it
           raise
-      
+
       self.context = await self.browser.new_context()
       # Set up network request interception
       self.context.on("request", self._on_request)
@@ -86,19 +86,19 @@ class BrowserClient:
   async def _ensure_browsers_installed(self) -> None:
     """
     Ensure Playwright browsers are installed.
-    
+
     This runs playwright install in a subprocess to download browser binaries.
     Runs in a thread executor to avoid blocking the event loop.
     """
     import subprocess
     import sys
-    
+
     log.info("Installing Playwright browser '%s' (this may take a few minutes)...", self.browser_type)
-    
+
     # Run playwright install in a subprocess (it's a sync operation)
     # We'll run it in a thread pool to avoid blocking the event loop
     loop = asyncio.get_event_loop()
-    
+
     def install():
       """Install browsers synchronously."""
       try:
@@ -134,7 +134,7 @@ class BrowserClient:
       except Exception as e:
         log.error("Failed to install Playwright browsers: %s", e)
         raise RuntimeError(f"Browser installation failed: {e}")
-    
+
     # Run installation in executor to avoid blocking
     await loop.run_in_executor(None, install)
     log.info("Browser installation complete")

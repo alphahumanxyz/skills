@@ -21,7 +21,7 @@ def run_mypy(exclude: list[str] = None) -> tuple[int, str]:
     if exclude:
         for item in exclude:
             cmd.extend(["--exclude", item])
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path.cwd())
     return result.returncode, result.stdout + result.stderr
 
@@ -29,12 +29,12 @@ def run_mypy(exclude: list[str] = None) -> tuple[int, str]:
 def categorize_errors(output: str) -> dict[str, list[str]]:
     """Categorize mypy errors by type."""
     categories = defaultdict(list)
-    
+
     for line in output.split('\n'):
         if 'error:' in line:
             error_type = line.split('error:')[1].strip().split('[')[0].strip()
             categories[error_type].append(line)
-    
+
     return dict(categories)
 
 
@@ -43,13 +43,13 @@ def print_summary(categories: dict[str, list[str]]):
     print("=" * 60)
     print("MYPY ERROR SUMMARY")
     print("=" * 60)
-    
+
     total = sum(len(errors) for errors in categories.values())
     print(f"\nTotal errors: {total}\n")
-    
+
     # Sort by count
     sorted_cats = sorted(categories.items(), key=lambda x: len(x[1]), reverse=True)
-    
+
     for error_type, errors in sorted_cats:
         count = len(errors)
         print(f"{error_type}: {count}")
@@ -72,17 +72,17 @@ def main():
         default=['skill-coder'],
         help='Directories to exclude'
     )
-    
+
     args = parser.parse_args()
-    
+
     exit_code, output = run_mypy(exclude=args.exclude)
-    
+
     if args.summary:
         categories = categorize_errors(output)
         print_summary(categories)
     else:
         print(output)
-    
+
     sys.exit(exit_code)
 
 

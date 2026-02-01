@@ -73,6 +73,9 @@ warn_unreachable = true
 strict_equality = true
 show_error_codes = true
 pretty = true
+exclude = [
+    ".*skill-coder.*",
+]
 
 [[tool.mypy.overrides]]
 module = [
