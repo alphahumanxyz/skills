@@ -124,7 +124,7 @@ async def update_exchange_settings(args: dict[str, Any]) -> ToolResult:
     try:
         exchange_id = req_string(args, "exchange_id")
         settings = req_list(args, "settings")
-        
+
         manager = get_ccxt_manager()
         if not manager:
             return ToolResult(

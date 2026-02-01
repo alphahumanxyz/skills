@@ -25,7 +25,7 @@ async def fetch_balance(args: dict[str, Any]) -> ToolResult:
 
         balance = await exchange.fetch_balance()
         lines = [f"Balance for {exchange_id}:"]
-        
+
         # Show non-zero balances
         for currency, amounts in balance.items():
             if currency in ["info", "free", "used", "total"]:

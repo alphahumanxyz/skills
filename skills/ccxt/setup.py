@@ -338,7 +338,7 @@ async def _handle_exchange_add(
 
     password = str(values.get("password", "")).strip()
     sandbox = bool(values.get("sandbox", False))
-    
+
     # Parse settings/options
     options: dict[str, Any] = {}
     settings_json = str(values.get("settings", "")).strip()
