@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
+from .validation import ValidationError
+
 log = logging.getLogger("skill.calendar.helpers")
 
 
@@ -123,8 +125,6 @@ def log_and_format_error(
   error_code = f"{prefix}-ERR-{hash_val:03d}"
 
   log.error("[MCP] Error in %s - Code: %s - %s", function_name, error_code, error)
-
-  from .validation import ValidationError
 
   if isinstance(error, ValidationError):
     user_message = str(error)

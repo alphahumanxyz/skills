@@ -8,7 +8,7 @@ from typing import Any
 
 from ..api import calendar_api
 from ..helpers import ErrorCategory, ToolResult, format_calendar, log_and_format_error
-from ..validation import opt_bool
+from ..validation import opt_bool, require_string
 
 
 async def list_calendars(args: dict[str, Any]) -> ToolResult:
@@ -28,8 +28,6 @@ async def list_calendars(args: dict[str, Any]) -> ToolResult:
 
 async def get_calendar(args: dict[str, Any]) -> ToolResult:
   try:
-    from ..validation import require_string
-
     calendar_id = require_string(args, "calendar_id")
 
     calendar = await calendar_api.get_calendar(calendar_id)

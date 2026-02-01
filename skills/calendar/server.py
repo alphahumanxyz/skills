@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from .client.google_client import GoogleCalendarClient
@@ -27,12 +28,9 @@ async def on_skill_load(params: dict[str, Any], set_state_fn: Any | None = None)
 
   try:
     # Read config from data directory
-    import os
-
-    config_path = os.path.join(data_dir, "config.json")
-    if os.path.exists(config_path):
-      with open(config_path) as f:
-        config = json.load(f)
+    config_path = Path(data_dir) / "config.json"
+    if config_path.exists():
+      config = json.loads(config_path.read_text())
 
     provider = config.get("provider", "")
 
