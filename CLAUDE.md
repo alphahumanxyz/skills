@@ -199,6 +199,8 @@ The repository uses automated code quality checks that run on pre-push:
 - **Ruff** — Fast Python linter and formatter
 - **MyPy** — Static type checker
 
+**IMPORTANT: Always run `ruff check .` and `ruff format .` after making changes and fix any errors before considering the task complete.**
+
 ### Setup
 
 Install development dependencies:
@@ -210,11 +212,14 @@ pip install -r requirements-dev.txt
 ### Manual Usage
 
 ```bash
-# Run linter
+# Run linter (must pass before finishing)
 ruff check .
 
-# Format code
+# Format code (run this to auto-fix formatting)
 ruff format .
+
+# Verify formatting without modifying files
+ruff format --check .
 
 # Type checking
 mypy .
