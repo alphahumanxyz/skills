@@ -7,9 +7,6 @@ Tools are organised by domain in the tools/ subdirectory and combined into ALL_T
 
 from __future__ import annotations
 
-from .tools.calendar import calendar_tools
-from .tools.event import event_tools
-
-ALL_TOOLS = calendar_tools + event_tools
+from .tools import ALL_TOOLS
 
 __all__ = ["ALL_TOOLS"]

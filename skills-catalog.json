@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-01T03:07:40.933677+00:00",
+  "generatedAt": "2026-02-01T03:34:42.162808+00:00",
   "version": "1.0.0",
   "skills": [
     {
@@ -9,6 +9,15 @@
       "version": "1.0.0",
       "tools": [
         "navigate",
+        "go_back",
+        "go_forward",
+        "reload",
+        "get_url",
+        "get_title",
+        "close_page",
+        "new_page",
+        "get_pages",
+        "switch_page",
         "click",
         "fill",
         "type",
@@ -22,8 +31,6 @@
         "get_html",
         "get_attribute",
         "evaluate",
-        "wait_for_selector",
-        "wait_for_url",
         "get_cookies",
         "set_cookie",
         "clear_cookies",
@@ -35,15 +42,8 @@
         "clear_session_storage",
         "intercept_request",
         "get_network_logs",
-        "go_back",
-        "go_forward",
-        "reload",
-        "get_url",
-        "get_title",
-        "close_page",
-        "new_page",
-        "get_pages",
-        "switch_page",
+        "wait_for_selector",
+        "wait_for_url",
         "handle_dialog",
         "upload_file",
         "download_file"
@@ -54,6 +54,29 @@
       ],
       "tickIntervalMinutes": null,
       "path": "skills/browser"
+    },
+    {
+      "name": "calendar",
+      "description": "Calendar integration for viewing and managing events \u2014 supports Google Calendar, Outlook, and CalDAV calendars. Create, update, delete, and search events across multiple calendars.",
+      "icon": null,
+      "version": "1.0.0",
+      "tools": [
+        "list_calendars",
+        "get_calendar",
+        "list_events",
+        "get_event",
+        "create_event",
+        "update_event",
+        "delete_event",
+        "search_events"
+      ],
+      "hooks": [
+        "on_load",
+        "on_unload",
+        "on_tick"
+      ],
+      "tickIntervalMinutes": 5.0,
+      "path": "skills/calendar"
     },
     {
       "name": "ccxt",
@@ -292,6 +315,26 @@
       ],
       "tickIntervalMinutes": 5.0,
       "path": "skills/notion"
+    },
+    {
+      "name": "onepassword",
+      "description": "Access credentials from local 1Password vault using the 1Password CLI. List items, get passwords, retrieve fields, and search for credentials. Requires 1Password CLI (op) to be installed and authenticated.",
+      "icon": null,
+      "version": "1.0.0",
+      "tools": [
+        "list_items",
+        "get_item",
+        "get_password",
+        "get_field",
+        "search_items"
+      ],
+      "hooks": [
+        "on_load",
+        "on_unload",
+        "on_tick"
+      ],
+      "tickIntervalMinutes": 5.0,
+      "path": "skills/onepassword"
     },
     {
       "name": "otter",

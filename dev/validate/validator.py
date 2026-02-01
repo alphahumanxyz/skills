@@ -88,6 +88,25 @@ def validate_skill_py(skill_py_path: Path, dir_name: str) -> SkillResult:
     repo_root = skill_py_path.parent.parent.parent
     if str(repo_root) not in sys.path:
       sys.path.insert(0, str(repo_root))
+    # Set __package__ for relative imports to work
+    # skill_py_path is like: /path/to/repo/skills/skills/calendar/skill.py
+    # repo_root is: /path/to/repo/skills
+    # Package should be: skills.calendar
+    skill_dir = skill_py_path.parent
+    # Get relative path from repo_root to skill_dir
+    try:
+      rel_path = skill_dir.relative_to(repo_root)
+      if rel_path.parts:
+        # Build package name: skills.calendar
+        module.__package__ = ".".join(rel_path.parts)
+    except ValueError:
+      # If relative_to fails, try to find skills in the path
+      parts = skill_dir.parts
+      if "skills" in parts:
+        skills_idx = parts.index("skills")
+        package_parts = parts[skills_idx:]
+        if len(package_parts) > 1:
+          module.__package__ = ".".join(package_parts)
     spec.loader.exec_module(module)
   except Exception as exc:
     result.errors.append(f"Failed to import skill.py: {exc}")

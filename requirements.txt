@@ -4,12 +4,13 @@ pydantic>=2.0
 aiosqlite>=0.20.0
 
 # Skill-specific dependencies
+-r skills/browser/requirements.txt
+-r skills/calendar/requirements.txt
+-r skills/ccxt/requirements.txt
 -r skills/email/requirements.txt
 -r skills/github/requirements.txt
 -r skills/notion/requirements.txt
 -r skills/otter/requirements.txt
--r skills/telegram/requirements.txt
 -r skills/slack/requirements.txt
--r skills/ccxt/requirements.txt
+-r skills/telegram/requirements.txt
 -r skills/wallet/requirements.txt
--r skills/browser/requirements.txt

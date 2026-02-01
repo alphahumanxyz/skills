@@ -62,7 +62,7 @@ STEP_GOOGLE_OAUTH = SetupStep(
   fields=[
     SetupField(
       name="credentials_json",
-      type="textarea",
+      type="text",
       label="OAuth Credentials JSON",
       description="Paste the contents of your OAuth credentials JSON file",
       required=True,
