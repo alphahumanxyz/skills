@@ -22,7 +22,6 @@ import asyncio
 import json
 import logging
 import os
-import readline  # enables arrow-key history in input()
 import sys
 from pathlib import Path
 from typing import Any
@@ -195,13 +194,13 @@ def build_tool_index(
 ]:
   """Group tools by category and build lookup index."""
   from telegram.tools import (
-    chat_tools,
-    message_tools,
-    contact_tools,
     admin_tools,
+    chat_tools,
+    contact_tools,
+    message_tools,
     profile_media_tools,
-    settings_tools,
     search_tools,
+    settings_tools,
   )
 
   groups = {
@@ -527,9 +526,9 @@ async def main_async() -> int:
   # 2. Import and initialize the skill
   print(dim("  Loading skill..."))
 
+  from telegram.handlers import dispatch_tool
   from telegram.server import on_skill_load, on_skill_unload
   from telegram.tools import ALL_TOOLS
-  from telegram.handlers import dispatch_tool
 
   data_dir = str(DATA_DIR)
   DATA_DIR.mkdir(parents=True, exist_ok=True)

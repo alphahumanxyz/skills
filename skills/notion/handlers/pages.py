@@ -9,11 +9,10 @@ from ..client import get_client
 from ..helpers import (
   ToolResult,
   enforce_rate_limit,
+  extract_title,
   format_api_error,
   format_page_summary,
-  extract_title,
   make_rich_text,
-  results_to_json,
 )
 
 log = logging.getLogger("skill.notion.handlers.pages")
@@ -92,10 +91,7 @@ async def notion_create_page(args: dict[str, Any]) -> ToolResult:
 
   try:
     # Build parent
-    if parent_type == "database":
-      parent = {"database_id": parent_id}
-    else:
-      parent = {"page_id": parent_id}
+    parent = {"database_id": parent_id} if parent_type == "database" else {"page_id": parent_id}
 
     # Build properties
     properties: dict[str, Any] = {}

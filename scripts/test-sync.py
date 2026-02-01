@@ -45,6 +45,7 @@ import importlib.metadata  # noqa: F401
 if str(SKILL_DIR.parent) not in sys.path:
   sys.path.insert(0, str(SKILL_DIR.parent))
 
+import contextlib
 import logging
 
 logging.basicConfig(
@@ -194,10 +195,8 @@ async def main_async() -> int:
   listen_seconds = 0
   for i, arg in enumerate(sys.argv):
     if arg == "--listen" and i + 1 < len(sys.argv):
-      try:
+      with contextlib.suppress(ValueError):
         listen_seconds = int(sys.argv[i + 1])
-      except ValueError:
-        pass
 
   print()
   print(bold("  Initial Sync + Update Handler Test"))
@@ -218,7 +217,7 @@ async def main_async() -> int:
     return 1
 
   print(dim(f"  API ID: {api_id}"))
-  print(dim(f"  Session: found"))
+  print(dim("  Session: found"))
   print()
 
   # -----------------------------------------------------------------------

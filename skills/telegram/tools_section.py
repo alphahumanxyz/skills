@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from mcp.types import Tool
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+  from mcp.types import Tool
 
 # Tool lists (to be populated from individual tool modules)
 # For now, using empty lists to fix import errors

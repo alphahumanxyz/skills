@@ -7,11 +7,11 @@ Ported from handlers/search.ts.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from ..api import search_api
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
 from ..validation import opt_number, opt_string
 
 
@@ -54,7 +54,7 @@ async def search_messages(args: dict[str, Any]) -> ToolResult:
     for m in result.data:
       date = m.get("date")
       if date and isinstance(date, (int, float)):
-        date_str = datetime.fromtimestamp(date, tz=timezone.utc).isoformat()
+        date_str = datetime.fromtimestamp(date, tz=UTC).isoformat()
       elif date:
         date_str = str(date)
       else:

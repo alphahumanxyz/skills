@@ -9,11 +9,12 @@ import logging
 import time
 from collections import deque
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Literal
 
-from .state.types import ParsedEmail, EmailAddress, EmailFolder
+if TYPE_CHECKING:
+  from .state.types import EmailAddress, EmailFolder, ParsedEmail
 
 log = logging.getLogger("skill.email.helpers")
 
@@ -41,7 +42,7 @@ def format_email_summary(email: ParsedEmail) -> str:
     from_str = email.from_addr.display_name or email.from_addr.email
   date_str = ""
   if email.date:
-    date_str = datetime.fromtimestamp(email.date, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
+    date_str = datetime.fromtimestamp(email.date, tz=UTC).strftime("%Y-%m-%d %H:%M")
   read_flag = "" if email.is_read else "[UNREAD] "
   flag_flag = "[*] " if email.is_flagged else ""
   attach_flag = " [+att]" if email.has_attachments else ""
@@ -67,7 +68,7 @@ def format_email_detail(email: ParsedEmail) -> str:
     lines.append(f"CC: {cc_str}")
   lines.append(f"Subject: {email.subject}")
   if email.date:
-    lines.append(f"Date: {datetime.fromtimestamp(email.date, tz=timezone.utc).isoformat()}")
+    lines.append(f"Date: {datetime.fromtimestamp(email.date, tz=UTC).isoformat()}")
 
   flags = []
   if not email.is_read:

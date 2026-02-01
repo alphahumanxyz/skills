@@ -11,10 +11,10 @@ import logging
 from telethon import TelegramClient, events
 
 from ..client.builders import build_peer_id
-from ..state import store
 from ..db.connection import get_db
 from ..db.queries import insert_event
-from ..entities import _chat_entity_type, _chat_metadata, SOURCE
+from ..entities import SOURCE, _chat_entity_type, _chat_metadata
+from ..state import store
 
 log = logging.getLogger("skill.telegram.events.chat")
 
@@ -77,7 +77,7 @@ async def register_chat_handlers(client: TelegramClient) -> None:
       try:
         from ..server import get_entity_callbacks
 
-        upsert_entity_fn, upsert_rel_fn = get_entity_callbacks()
+        upsert_entity_fn, _upsert_rel_fn = get_entity_callbacks()
         if upsert_entity_fn and chat_id:
           refreshed_chat = store.get_chat_by_id(chat_id)
           if refreshed_chat:

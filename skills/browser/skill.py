@@ -14,12 +14,14 @@ from dev.types.skill_types import (
   SkillHooks,
   SkillTool,
   ToolDefinition,
+)
+from dev.types.skill_types import (
   ToolResult as SkillToolResult,
 )
 
-from .tools import ALL_TOOLS
-from .handlers.browser_handlers import dispatch_tool, set_browser_client
 from .client.browser_client import BrowserClient
+from .handlers.browser_handlers import dispatch_tool, set_browser_client
+from .tools import ALL_TOOLS
 
 log = logging.getLogger("skill.browser.skill")
 

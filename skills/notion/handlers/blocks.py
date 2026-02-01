@@ -9,11 +9,10 @@ from ..client import get_client
 from ..helpers import (
   ToolResult,
   enforce_rate_limit,
+  extract_title,
   format_api_error,
   format_block_text,
   make_rich_text,
-  extract_title,
-  results_to_json,
 )
 
 log = logging.getLogger("skill.notion.handlers.blocks")
@@ -216,7 +215,7 @@ async def notion_append_text(args: dict[str, Any]) -> ToolResult:
     if block_type == "to_do":
       block[block_type]["checked"] = False
 
-    response = await client.blocks.children.append(block_id=page_id, children=[block])
+    await client.blocks.children.append(block_id=page_id, children=[block])
 
     return ToolResult(content=f"Text appended as {block_type} block.")
   except Exception as e:

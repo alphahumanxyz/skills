@@ -11,11 +11,19 @@ import logging
 
 from ..db.connection import get_db
 from ..db.queries import (
-  get_update_state as db_get_update_state,
-  set_update_state as db_set_update_state,
-  get_channel_pts as db_get_channel_pts,
-  set_channel_pts as db_set_channel_pts,
   get_all_channel_pts as db_get_all_channel_pts,
+)
+from ..db.queries import (
+  get_channel_pts as db_get_channel_pts,
+)
+from ..db.queries import (
+  get_update_state as db_get_update_state,
+)
+from ..db.queries import (
+  set_channel_pts as db_set_channel_pts,
+)
+from ..db.queries import (
+  set_update_state as db_set_update_state,
 )
 from ..state import store
 

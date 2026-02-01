@@ -130,7 +130,7 @@ async def _handle_token(ctx: Any, values: dict[str, Any]) -> SetupResult:
     )
 
   # Validate by calling the API
-  from notion_client import AsyncClient, APIResponseError
+  from notion_client import APIResponseError, AsyncClient
 
   client = AsyncClient(auth=token)
   try:

@@ -6,12 +6,11 @@ Ported from handlers/contact.ts.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ..api import contact_api
-from ..helpers import ToolResult, format_entity, log_and_format_error, ErrorCategory
-from ..validation import validate_id, opt_number
+from ..helpers import ErrorCategory, ToolResult, format_entity, log_and_format_error
+from ..validation import opt_number, validate_id
 
 
 async def list_contacts(args: dict[str, Any]) -> ToolResult:

@@ -13,10 +13,9 @@ import os
 import py_compile
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 
-def check_file(filepath: Path, verbose: bool = False) -> Tuple[bool, str]:
+def check_file(filepath: Path, verbose: bool = False) -> tuple[bool, str]:
   """
   Check a single Python file for syntax errors.
 
@@ -35,7 +34,7 @@ def check_file(filepath: Path, verbose: bool = False) -> Tuple[bool, str]:
     return False, f"✗ {filepath.relative_to(Path.cwd())}: Unexpected error - {e}"
 
 
-def find_python_files(directory: Path, exclude_dirs: List[str] | None = None) -> List[Path]:
+def find_python_files(directory: Path, exclude_dirs: list[str] | None = None) -> list[Path]:
   """
   Find all Python files in a directory tree.
 

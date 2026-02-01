@@ -9,7 +9,7 @@ import os
 
 import aiosqlite
 
-from .schema import SCHEMA_SQL, PRAGMA_SQL
+from .schema import PRAGMA_SQL, SCHEMA_SQL
 
 log = logging.getLogger("skill.email.db")
 

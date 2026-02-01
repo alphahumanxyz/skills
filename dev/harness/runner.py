@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Any
 
 from dev.harness.mock_context import MockContextOptions, create_mock_context
+from dev.types.setup_types import SetupResult, SetupStep
 from dev.types.skill_types import SkillDefinition
-from dev.types.setup_types import SetupStep, SetupResult
 
 # ---------------------------------------------------------------------------
 # Console helpers

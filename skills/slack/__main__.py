@@ -19,16 +19,16 @@ logging.basicConfig(
 
 def main() -> None:
   if "--mcp" in sys.argv:
-    import asyncio
-    from .skill import skill
-
     # MCP mode not implemented for Slack — fall through to SkillServer
     from dev.runtime.server import SkillServer
+
+    from .skill import skill
 
     server = SkillServer(skill)
     server.start()
   else:
     from dev.runtime.server import SkillServer
+
     from .skill import skill
 
     server = SkillServer(skill)

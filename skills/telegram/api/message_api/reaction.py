@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import logging
 
+from telethon.tl.functions.messages import SendReactionRequest
+from telethon.tl.types import ReactionEmoji
+
 from ...client.telethon_client import get_client
 from ...helpers import enforce_rate_limit
-from telethon.tl.types import ReactionEmoji
-from telethon.tl.functions.messages import SendReactionRequest
 
 log = logging.getLogger("skill.telegram.api.message_api.reaction")
 

@@ -9,42 +9,45 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any, TypeVar, Generic
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from telethon.tl.types import (
-  Channel,
-  Chat,
-  User,
-  InputPeerEmpty,
-  InputChannel,
-  InputUser,
-  InputChatPhotoEmpty,
-  ChatInviteExported,
-)
-from telethon.tl.functions.messages import (
-  GetDialogsRequest,
-  CreateChatRequest,
-  EditChatTitleRequest,
-  EditChatPhotoRequest,
-  DeleteChatUserRequest,
-  ExportChatInviteRequest,
-  ImportChatInviteRequest,
-  AddChatUserRequest,
-)
 from telethon.tl.functions.channels import (
   CreateChannelRequest,
   InviteToChannelRequest,
-  EditTitleRequest as ChannelEditTitleRequest,
-  EditPhotoRequest as ChannelEditPhotoRequest,
-  LeaveChannelRequest,
   JoinChannelRequest,
+  LeaveChannelRequest,
+)
+from telethon.tl.functions.channels import (
+  EditPhotoRequest as ChannelEditPhotoRequest,
+)
+from telethon.tl.functions.channels import (
+  EditTitleRequest as ChannelEditTitleRequest,
+)
+from telethon.tl.functions.messages import (
+  AddChatUserRequest,
+  CreateChatRequest,
+  DeleteChatUserRequest,
+  EditChatPhotoRequest,
+  EditChatTitleRequest,
+  ExportChatInviteRequest,
+  ImportChatInviteRequest,
+)
+from telethon.tl.types import (
+  Channel,
+  ChatInviteExported,
+  InputChannel,
+  InputChatPhotoEmpty,
+  InputUser,
+  User,
 )
 
+from ..client.builders import build_chat
 from ..client.telethon_client import get_client
-from ..client.builders import build_chat, build_user
-from ..state import store
-from ..state.types import TelegramChat
 from ..helpers import enforce_rate_limit
+from ..state import store
+
+if TYPE_CHECKING:
+  from ..state.types import TelegramChat
 
 log = logging.getLogger("skill.telegram.api.chat")
 

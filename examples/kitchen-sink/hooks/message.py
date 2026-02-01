@@ -4,7 +4,10 @@ Message hooks — transform messages before/after AI processing.
 
 from __future__ import annotations
 
-from dev.types.skill_types import SkillContext
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+  from dev.types.skill_types import SkillContext
 
 
 async def on_before_message(ctx: SkillContext, message: str) -> str | None:

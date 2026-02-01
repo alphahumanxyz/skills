@@ -20,10 +20,11 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from dev.types.skill_types import SkillDefinition, SkillTool, SkillOptionDefinition
-from dev.types.setup_types import SetupStep, SetupResult
+if TYPE_CHECKING:
+  from dev.types.setup_types import SetupResult, SetupStep
+  from dev.types.skill_types import SkillDefinition, SkillOptionDefinition, SkillTool
 
 
 class SkillServer:
@@ -325,7 +326,6 @@ class SkillServer:
         raise ValueError("Skill does not implement setup flow")
       step_id = p.get("stepId", "")
       values = p.get("values", {})
-      from dev.types.setup_types import SetupResult
 
       setup_result: SetupResult = await self._hooks.on_setup_submit(
         self._create_context(), step_id, values
@@ -640,6 +640,6 @@ class SkillServer:
 
     try:
       return await asyncio.wait_for(future, timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
       self._pending.pop(msg_id, None)
       raise RuntimeError(f"Reverse RPC timeout: {method}")

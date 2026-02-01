@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
-from .state import store
-from .state.types import TelegramChat, TelegramUser
 from .db.connection import get_db
+from .state import store
+
+if TYPE_CHECKING:
+  from .state.types import TelegramChat, TelegramUser
 
 log = logging.getLogger("skill.telegram.entities")
 

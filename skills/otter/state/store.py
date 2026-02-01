@@ -6,16 +6,20 @@ Uses immutable Pydantic models. After each mutation, listeners are notified.
 
 from __future__ import annotations
 
-from typing import Callable
+import contextlib
+from typing import TYPE_CHECKING
 
 from .types import (
-  OtterState,
-  OtterSpeech,
-  OtterSpeaker,
-  OtterUser,
   OtterConnectionStatus,
+  OtterSpeaker,
+  OtterSpeech,
+  OtterState,
+  OtterUser,
   initial_state,
 )
+
+if TYPE_CHECKING:
+  from collections.abc import Callable
 
 _state: OtterState = initial_state()
 _listeners: list[Callable[[], None]] = []
@@ -34,10 +38,8 @@ def subscribe(listener: Callable[[], None]) -> Callable[[], None]:
   _listeners.append(listener)
 
   def unsubscribe() -> None:
-    try:
+    with contextlib.suppress(ValueError):
       _listeners.remove(listener)
-    except ValueError:
-      pass
 
   return unsubscribe
 

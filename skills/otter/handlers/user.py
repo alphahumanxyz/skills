@@ -4,14 +4,11 @@ User/speaker domain tool handlers.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ..api import speech_api
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
 from ..state import store
-from ..db.connection import get_db
-from ..db import queries
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
 
 
 async def get_otter_user(args: dict[str, Any]) -> ToolResult:

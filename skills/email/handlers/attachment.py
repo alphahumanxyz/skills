@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..api import attachment_api
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import validate_uid, opt_number, opt_string
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_number, opt_string, validate_uid
 
 
 async def list_attachments(args: dict[str, Any]) -> ToolResult:

@@ -5,14 +5,15 @@ Draft email operations API.
 from __future__ import annotations
 
 import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ..client.imap_client import get_imap_client
-from ..db.connection import get_db
-from ..db.queries import list_cached_emails, delete_cached_email
-from ..state.types import ParsedEmail
+
+if TYPE_CHECKING:
+  from email.mime.multipart import MIMEMultipart
+  from email.mime.text import MIMEText
+
+  from ..state.types import ParsedEmail
 
 log = logging.getLogger("skill.email.api.draft")
 
@@ -58,8 +59,8 @@ async def save_draft(
     raise RuntimeError("IMAP not connected")
 
   # Build the MIME message
-  from email.mime.text import MIMEText
   from email.mime.multipart import MIMEMultipart
+  from email.mime.text import MIMEText
 
   if html_body:
     msg: MIMEMultipart | MIMEText = MIMEMultipart("alternative")

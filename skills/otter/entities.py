@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
-from .state import store
-from .state.types import OtterSpeech, OtterSpeaker
 from .db.connection import get_db
+from .state import store
+
+if TYPE_CHECKING:
+  from .state.types import OtterSpeech
 
 log = logging.getLogger("skill.otter.entities")
 
@@ -71,7 +74,7 @@ async def emit_initial_entities(
       log.debug("Failed to upsert meeting entity %s", speech.speech_id, exc_info=True)
 
   # --- Emit speaker entities ---
-  for speaker_id, speaker in state.speakers.items():
+  for _speaker_id, speaker in state.speakers.items():
     try:
       await upsert_entity_fn(
         type="otter.speaker",
@@ -120,7 +123,7 @@ async def emit_summaries(
     log.debug("Cannot get DB for summary emission", exc_info=True)
     return
 
-  state = store.get_state()
+  store.get_state()
 
   try:
     cursor = await db.execute(

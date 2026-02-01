@@ -10,10 +10,12 @@ import time
 from typing import Any
 
 try:
-  from pynput import keyboard, mouse  # type: ignore[import-untyped]
-  from pynput.mouse import Button, Listener as MouseListener
-  from pynput.keyboard import Key, Listener as KeyboardListener
   from PIL import ImageGrab
+  from pynput import keyboard, mouse  # type: ignore[import-untyped]
+  from pynput.keyboard import Key
+  from pynput.keyboard import Listener as KeyboardListener
+  from pynput.mouse import Button
+  from pynput.mouse import Listener as MouseListener
 
   PYNPUT_AVAILABLE = True
 except ImportError:
@@ -23,9 +25,9 @@ except ImportError:
   from typing import TYPE_CHECKING
 
   if TYPE_CHECKING:
-    from pynput.mouse import Button  # type: ignore[import-untyped]
-    from pynput.keyboard import Key  # type: ignore[import-untyped]
     from PIL import ImageGrab  # type: ignore[import-not-found]
+    from pynput.keyboard import Key  # type: ignore[import-untyped]
+    from pynput.mouse import Button  # type: ignore[import-untyped]
   else:
     # Runtime fallback classes
     class Button:  # type: ignore[no-redef]

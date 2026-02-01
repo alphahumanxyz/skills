@@ -51,7 +51,7 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
   except Exception as exc:
     log.exception("Tool execution failed: %s", exc)
     return ToolResult(
-      content=f"Error: {str(exc)}",
+      content=f"Error: {exc!s}",
       is_error=True,
     )
 

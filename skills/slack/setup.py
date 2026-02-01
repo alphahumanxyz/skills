@@ -21,7 +21,7 @@ from dev.types.setup_types import (
   SetupStep,
 )
 
-from .client.slack_client import SlackClient, SlackAuthError
+from .client.slack_client import SlackAuthError, SlackClient
 
 log = logging.getLogger("skill.slack.setup")
 

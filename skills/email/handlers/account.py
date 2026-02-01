@@ -4,17 +4,17 @@ Account info and status tool handlers.
 
 from __future__ import annotations
 
-import time
+from datetime import UTC
 from typing import Any
 
 from ..api import folder_api, message_api
 from ..client.imap_client import get_imap_client
-from ..client.smtp_client import is_configured as smtp_is_configured, test_smtp_connection
+from ..client.smtp_client import is_configured as smtp_is_configured
 from ..db.connection import get_db
 from ..db.queries import search_contacts as db_search_contacts
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
 from ..state import store
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import opt_string, opt_number, opt_string_list, req_string
+from ..validation import opt_number, opt_string_list, req_string
 
 
 async def get_account_info(args: dict[str, Any]) -> ToolResult:
@@ -119,9 +119,9 @@ async def get_sync_status(args: dict[str, Any]) -> ToolResult:
       f"Syncing: {state.is_syncing}",
     ]
     if state.last_sync:
-      from datetime import datetime, timezone
+      from datetime import datetime
 
-      last = datetime.fromtimestamp(state.last_sync, tz=timezone.utc).isoformat()
+      last = datetime.fromtimestamp(state.last_sync, tz=UTC).isoformat()
       lines.append(f"Last sync: {last}")
     else:
       lines.append("Last sync: Never")

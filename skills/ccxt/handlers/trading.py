@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..client.ccxt_client import get_ccxt_manager
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import req_string, opt_string, opt_number, opt_list
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_list, opt_number, opt_string, req_string
 
 
 async def fetch_balance(args: dict[str, Any]) -> ToolResult:
@@ -122,7 +122,7 @@ async def cancel_order(args: dict[str, Any]) -> ToolResult:
     if not exchange:
       return ToolResult(content=f"Exchange '{exchange_id}' not found.", is_error=True)
 
-    result = await exchange.cancel_order(order_id, symbol)
+    await exchange.cancel_order(order_id, symbol)
     return ToolResult(content=f"Order {order_id} cancelled successfully.")
   except Exception as e:
     return log_and_format_error("cancel_order", e, ErrorCategory.TRADING)

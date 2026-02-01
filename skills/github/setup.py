@@ -7,6 +7,7 @@ is set and valid.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -71,7 +72,7 @@ async def on_setup_start(ctx: Any) -> SetupStep | SetupResult:
   env_token = os.environ.get("GITHUB_TOKEN", "").strip()
   if env_token:
     try:
-      from github import Github, Auth
+      from github import Auth, Github
 
       gh = Github(auth=Auth.Token(env_token))
       user = gh.get_user()
@@ -80,10 +81,8 @@ async def on_setup_start(ctx: Any) -> SetupStep | SetupResult:
 
       # Persist config
       config = {"token": env_token, "username": username}
-      try:
+      with contextlib.suppress(Exception):
         await ctx.write_data("config.json", json.dumps(config, indent=2))
-      except Exception:
-        pass
 
       log.info("Using GITHUB_TOKEN from environment — authenticated as %s", username)
       return SetupResult(
@@ -100,7 +99,7 @@ async def on_setup_start(ctx: Any) -> SetupStep | SetupResult:
       config = json.loads(raw)
       saved_token = config.get("token", "")
       if saved_token:
-        from github import Github, Auth
+        from github import Auth, Github
 
         gh = Github(auth=Auth.Token(saved_token))
         user = gh.get_user()
@@ -169,7 +168,7 @@ async def _handle_token(ctx: Any, values: dict[str, Any]) -> SetupResult:
 
   # Validate by calling the API
   try:
-    from github import Github, Auth, GithubException
+    from github import Auth, Github, GithubException
 
     gh = Github(auth=Auth.Token(raw_token))
     user = gh.get_user()

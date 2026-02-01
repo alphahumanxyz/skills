@@ -27,7 +27,7 @@ from dev.types.setup_types import (
   SetupStep,
 )
 
-from .client.providers import get_provider, PROVIDERS
+from .client.providers import get_provider
 from .client.smtp_client import test_smtp_connection
 
 log = logging.getLogger("skill.email.setup")
@@ -271,7 +271,7 @@ async def _handle_credentials(ctx: Any, values: dict[str, Any]) -> SetupResult:
 
   # Test IMAP connection
   try:
-    from aioimaplib import IMAP4_SSL, IMAP4
+    from aioimaplib import IMAP4, IMAP4_SSL
 
     if use_ssl:
       imap = IMAP4_SSL(host=imap_host, port=imap_port)

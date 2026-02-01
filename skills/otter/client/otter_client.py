@@ -92,7 +92,7 @@ class OtterClient:
           text = await resp.text()
           return {"text": text}
 
-      except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+      except (TimeoutError, aiohttp.ClientError) as e:
         if attempt < max_retries - 1:
           log.warning("Request failed (attempt %d): %s", attempt + 1, e)
           await asyncio.sleep(2**attempt)

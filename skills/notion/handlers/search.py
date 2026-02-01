@@ -9,8 +9,8 @@ from ..client import get_client
 from ..helpers import (
   ToolResult,
   enforce_rate_limit,
-  format_api_error,
   extract_title,
+  format_api_error,
 )
 
 log = logging.getLogger("skill.notion.handlers.search")

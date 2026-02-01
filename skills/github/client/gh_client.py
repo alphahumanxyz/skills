@@ -8,11 +8,15 @@ to keep the skill's async contract intact.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import functools
 import logging
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from github import Github, Auth, GithubException
+from github import Auth, Github, GithubException
+
+if TYPE_CHECKING:
+  from collections.abc import Callable
 
 log = logging.getLogger("skill.github.client")
 
@@ -72,10 +76,8 @@ class GhClient:
   async def close(self) -> None:
     """Close the underlying connection."""
     if self._gh:
-      try:
+      with contextlib.suppress(Exception):
         await _run_sync(self._gh.close)
-      except Exception:
-        pass
       self._gh = None
       self._is_authed = False
 

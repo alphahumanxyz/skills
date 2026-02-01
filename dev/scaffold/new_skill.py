@@ -163,7 +163,7 @@ def generate_skill_py(
     hooks_args.append("on_tick=on_tick")
   if state:
     hooks_args.append("on_unload=on_unload")
-  parts.append(f"    hooks=SkillHooks(")
+  parts.append("    hooks=SkillHooks(")
   for arg in hooks_args:
     parts.append(f"        {arg},")
   parts.append("    ),")
@@ -265,7 +265,7 @@ def main() -> None:
     print(f"    1. Edit {dim(f'skills/{name}/skill.py')} — implement hooks/tools")
     print(f"    2. Test: {dim(f'python -m dev.harness.runner skills/{name}')}")
     print(f"    3. Validate: {dim('python -m dev.validate.validator')}")
-    print(f"    4. Submit a pull request")
+    print("    4. Submit a pull request")
     print()
 
   except (KeyboardInterrupt, EOFError):

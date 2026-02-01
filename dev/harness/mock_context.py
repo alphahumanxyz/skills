@@ -12,10 +12,10 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from dev.types.skill_types import Entity, Relationship, SkillTool
-
+if TYPE_CHECKING:
+  from dev.types.skill_types import Entity, Relationship, SkillTool
 
 # ---------------------------------------------------------------------------
 # Options
@@ -182,11 +182,7 @@ def create_mock_context(
       for r in relationship_store:
         if type is not None and r.type != type:
           continue
-        if direction == "outgoing" and r.source_id == entity_id:
-          results.append(r)
-        elif direction == "incoming" and r.target_id == entity_id:
-          results.append(r)
-        elif direction == "both" and (r.source_id == entity_id or r.target_id == entity_id):
+        if (direction == "outgoing" and r.source_id == entity_id) or (direction == "incoming" and r.target_id == entity_id) or (direction == "both" and (r.source_id == entity_id or r.target_id == entity_id)):
           results.append(r)
       return results
 

@@ -14,9 +14,9 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from .tools import ALL_TOOLS
-from .handlers import dispatch_tool
 from .client.gh_client import create_client, get_client
+from .handlers import dispatch_tool
+from .tools import ALL_TOOLS
 
 log = logging.getLogger("skill.github.server")
 

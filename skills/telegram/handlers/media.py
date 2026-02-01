@@ -10,9 +10,9 @@ import json
 from typing import Any
 
 from ..api import settings_api
+from ..helpers import ErrorCategory, ToolResult, format_entity, log_and_format_error
 from ..state import store
-from ..helpers import ToolResult, format_entity, log_and_format_error, ErrorCategory
-from ..validation import validate_id, opt_number, opt_string
+from ..validation import opt_number, opt_string, validate_id
 
 
 async def get_me(args: dict[str, Any]) -> ToolResult:

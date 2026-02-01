@@ -6,15 +6,19 @@ State mutations are synchronous. After each mutation, listeners are notified.
 
 from __future__ import annotations
 
-from typing import Callable
+import contextlib
+from typing import TYPE_CHECKING
 
 from .types import (
-  EmailState,
   EmailAccount,
-  EmailFolder,
   EmailConnectionStatus,
+  EmailFolder,
+  EmailState,
   initial_state,
 )
+
+if TYPE_CHECKING:
+  from collections.abc import Callable
 
 _state: EmailState = initial_state()
 _listeners: list[Callable[[], None]] = []
@@ -33,10 +37,8 @@ def subscribe(listener: Callable[[], None]) -> Callable[[], None]:
   _listeners.append(listener)
 
   def unsubscribe() -> None:
-    try:
+    with contextlib.suppress(ValueError):
       _listeners.remove(listener)
-    except ValueError:
-      pass
 
   return unsubscribe
 

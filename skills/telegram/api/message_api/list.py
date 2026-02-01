@@ -7,9 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from telethon.tl.types import InputChannel
+
 from ...client.telethon_client import get_client
 from ...helpers import enforce_rate_limit
-from telethon.tl.types import InputChannel
 
 try:
   from telethon.tl.functions.channels import GetForumTopicsRequest

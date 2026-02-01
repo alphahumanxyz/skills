@@ -7,7 +7,7 @@ from typing import Any
 from ..helpers import ToolResult
 
 # Import all handler modules
-from . import folder, message, send, flag, attachment, draft, account
+from . import account, attachment, draft, flag, folder, message, send
 
 # Build dispatch table from handler modules
 DISPATCH: dict[str, Any] = {}

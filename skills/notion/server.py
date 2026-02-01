@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .client import create_client, get_client, close_client
+from .client import close_client, create_client, get_client
 from .entities import emit_initial_entities
 
 log = logging.getLogger("skill.notion.server")

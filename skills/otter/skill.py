@@ -8,27 +8,29 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import time
 from typing import Any
 
 from dev.types.skill_types import (
+  EntityPropertySchema,
+  EntitySchema,
+  EntityTypeDeclaration,
+  RelationshipTypeDeclaration,
   SkillDefinition,
   SkillHooks,
   SkillOptionDefinition,
   SkillTool,
   ToolDefinition,
-  ToolResult as SkillToolResult,
-  EntitySchema,
-  EntityTypeDeclaration,
-  EntityPropertySchema,
-  RelationshipTypeDeclaration,
 )
-from dev.types.setup_types import SetupStep, SetupResult
+from dev.types.skill_types import (
+  ToolResult as SkillToolResult,
+)
 
-from .setup import on_setup_start, on_setup_submit, on_setup_cancel
 from .handlers import dispatch_tool
+from .setup import on_setup_cancel, on_setup_start, on_setup_submit
 from .tools import TOOL_DEFINITIONS
 
 log = logging.getLogger("skill.otter.skill")
@@ -143,8 +145,8 @@ ENTITY_SCHEMA = EntitySchema(
 
 async def _on_load(ctx: Any) -> None:
   """Initialize Otter client + SQLite using SkillContext."""
-  from .client.otter_client import OtterClient
   from .api import speech_api
+  from .client.otter_client import OtterClient
   from .db.connection import init_db
   from .state import store
   from .state.sync import init_host_sync
@@ -219,7 +221,7 @@ async def _on_load(ctx: Any) -> None:
   try:
     from .entities import emit_initial_entities
 
-    upsert_fn = getattr(ctx.entities, "upsert", None) or getattr(ctx, "_server", {}) and None
+    upsert_fn = getattr(ctx.entities, "upsert", None) or (getattr(ctx, "_server", {}) and None)
     rel_fn = getattr(ctx.entities, "upsert_relationship", None)
     if upsert_fn and rel_fn:
       await emit_initial_entities(upsert_fn, rel_fn)
@@ -243,10 +245,8 @@ async def _on_unload(ctx: Any) -> None:
   except Exception:
     pass
 
-  try:
+  with contextlib.suppress(Exception):
     await close_db()
-  except Exception:
-    pass
 
   store.reset_state()
   log.info("Otter.ai skill unloaded")
@@ -255,9 +255,9 @@ async def _on_unload(ctx: Any) -> None:
 async def _on_tick(ctx: Any) -> None:
   """Periodic sync — fetch new meetings, update cache, emit entities."""
   from .api import speech_api
-  from .state import store
-  from .db.connection import get_db
   from .db import queries
+  from .db.connection import get_db
+  from .state import store
 
   state = store.get_state()
   if state.connection_status != "connected":
@@ -349,10 +349,8 @@ async def _on_disconnect(ctx: Any) -> None:
   except Exception:
     pass
 
-  try:
+  with contextlib.suppress(Exception):
     await close_db()
-  except Exception:
-    pass
 
   store.reset_state()
 

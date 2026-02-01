@@ -8,13 +8,13 @@ from typing import Any
 
 from ..api import message_api
 from ..helpers import (
-  ToolResult,
-  format_email_summary,
-  format_email_detail,
-  log_and_format_error,
   ErrorCategory,
+  ToolResult,
+  format_email_detail,
+  format_email_summary,
+  log_and_format_error,
 )
-from ..validation import validate_uid, opt_number, opt_string, opt_boolean
+from ..validation import opt_number, opt_string, validate_uid
 
 
 async def list_messages(args: dict[str, Any]) -> ToolResult:

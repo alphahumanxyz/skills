@@ -1,21 +1,14 @@
 from __future__ import annotations
-from dev.types.skill_types import (
-  SkillDefinition,
-  SkillContext,
-  SkillHooks,
-  SkillTool,
-  ToolDefinition,
-  ToolResult,
-)
-from dev.validate.validator import validate_skill_py, SkillResult as ValidatorResult
-from dev.security.scan_secrets import scan_content
+
 import json
-import logging
-import re
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
+
+from dev.security.scan_secrets import scan_content
+from dev.types.skill_types import (
+  ToolResult,
+)
+from dev.validate.validator import validate_skill_py
 
 """Section: Run validator via the validate_skill_py function directly"""
 
@@ -32,7 +25,6 @@ def _run_validator(skill_py: str, skill_name: str) -> dict[str, Any]:
   }
 
   # Also run security scan
-  from pathlib import Path
 
   skill_dir = Path(f"skills/{skill_name}")
   py_files = list(skill_dir.glob("*.py"))

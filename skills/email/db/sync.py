@@ -12,21 +12,21 @@ Polling strategy:
 from __future__ import annotations
 
 import logging
-import time
-from typing import Any
-
-import aiosqlite
+from typing import TYPE_CHECKING
 
 from ..client.imap_client import get_imap_client
-from .queries import (
-  upsert_emails_batch,
-  upsert_sync_state,
-  get_sync_state,
-  clear_folder_cache,
-  upsert_folder,
-  upsert_contact,
-)
 from ..state import store
+from .queries import (
+  clear_folder_cache,
+  get_sync_state,
+  upsert_contact,
+  upsert_emails_batch,
+  upsert_folder,
+  upsert_sync_state,
+)
+
+if TYPE_CHECKING:
+  import aiosqlite
 
 log = logging.getLogger("skill.email.db.sync")
 

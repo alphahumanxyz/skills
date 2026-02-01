@@ -14,14 +14,12 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, TYPE_CHECKING
-
-import aiosqlite
-
-if TYPE_CHECKING:
-  from ..state import store as store_mod
+from typing import TYPE_CHECKING, Any
 
 from ..db.queries import insert_summary, prune_old_data
+
+if TYPE_CHECKING:
+  import aiosqlite
 
 log = logging.getLogger("skill.telegram.db.summaries")
 

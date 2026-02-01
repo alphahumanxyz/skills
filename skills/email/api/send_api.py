@@ -5,12 +5,8 @@ Email sending operations API (send, reply, forward via SMTP).
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from ..client.smtp_client import send_email as smtp_send
-from ..client.imap_client import get_imap_client
-from ..db.connection import get_db
-from ..db.queries import get_cached_email
 from .message_api import get_account_id, get_message
 
 log = logging.getLogger("skill.email.api.send")

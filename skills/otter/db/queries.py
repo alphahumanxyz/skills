@@ -7,11 +7,12 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import aiosqlite
+if TYPE_CHECKING:
+  import aiosqlite
 
-from ..state.types import OtterSpeech, OtterSpeaker, OtterTranscriptSegment
+  from ..state.types import OtterSpeaker, OtterSpeech, OtterTranscriptSegment
 
 log = logging.getLogger("skill.otter.db.queries")
 

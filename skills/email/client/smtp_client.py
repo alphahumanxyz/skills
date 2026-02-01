@@ -7,13 +7,13 @@ Connect-per-send pattern: opens connection, sends, disconnects.
 from __future__ import annotations
 
 import logging
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiosmtplib
+
+if TYPE_CHECKING:
+  from email.mime.multipart import MIMEMultipart
+  from email.mime.text import MIMEText
 
 log = logging.getLogger("skill.email.client.smtp")
 
@@ -64,8 +64,8 @@ async def send_email(
   display_from = f"{from_name} <{from_addr}>" if from_name else from_addr
 
   # Build message
-  from email.mime.text import MIMEText
   from email.mime.multipart import MIMEMultipart
+  from email.mime.text import MIMEText
 
   if html_body:
     msg: MIMEMultipart | MIMEText = MIMEMultipart("alternative")

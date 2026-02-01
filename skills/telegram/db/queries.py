@@ -7,11 +7,12 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import aiosqlite
+if TYPE_CHECKING:
+  import aiosqlite
 
-from ..state.types import TelegramChat, TelegramMessage, TelegramUser
+  from ..state.types import TelegramChat, TelegramMessage, TelegramUser
 
 log = logging.getLogger("skill.telegram.db.queries")
 

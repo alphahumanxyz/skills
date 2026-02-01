@@ -6,20 +6,20 @@ into the unified SkillServer protocol.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dev.types.skill_types import (
   SkillDefinition,
   SkillHooks,
   SkillTool,
   ToolDefinition,
+)
+from dev.types.skill_types import (
   ToolResult as SkillToolResult,
 )
 
-from .tools import ALL_TOOLS
 from .handlers.desktop_handlers import dispatch_tool, set_desktop_client
-
-from typing import TYPE_CHECKING
+from .tools import ALL_TOOLS
 
 if TYPE_CHECKING:
   from .client.desktop_client import DesktopClient

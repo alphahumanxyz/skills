@@ -4,9 +4,10 @@ Status hook — return current skill status information.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from dev.types.skill_types import SkillContext
+if TYPE_CHECKING:
+  from dev.types.skill_types import SkillContext
 
 
 async def on_status(ctx: SkillContext) -> dict[str, Any]:

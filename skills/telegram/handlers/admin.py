@@ -10,8 +10,8 @@ import json
 from typing import Any
 
 from ..api import admin_api
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import validate_id, opt_number, opt_string
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_number, opt_string, validate_id
 
 
 async def get_participants(args: dict[str, Any]) -> ToolResult:

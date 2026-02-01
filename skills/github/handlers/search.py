@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..client.gh_client import get_client, run_sync
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory, truncate
-from ..validation import req_string, opt_string, opt_number
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_number, opt_string, req_string
 
 
 async def search_repos(args: dict[str, Any]) -> ToolResult:

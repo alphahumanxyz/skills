@@ -9,13 +9,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Callable, Awaitable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from telethon import TelegramClient
-from telethon.sessions import StringSession
 from telethon.errors import FloodWaitError
+from telethon.sessions import StringSession
 
 from ..state import store
+
+if TYPE_CHECKING:
+  from collections.abc import Awaitable, Callable
 
 log = logging.getLogger("skill.telegram.client")
 

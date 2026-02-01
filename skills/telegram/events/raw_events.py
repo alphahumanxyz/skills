@@ -13,40 +13,37 @@ from typing import Any
 
 from telethon import TelegramClient, events
 from telethon.tl.types import (
-  UpdateReadHistoryInbox,
-  UpdateReadHistoryOutbox,
-  UpdateReadChannelInbox,
-  UpdateReadChannelOutbox,
-  UpdateUserStatus,
-  UpdateDraftMessage,
-  UpdateDialogPinned,
-  UpdatePinnedDialogs,
-  UpdateChatParticipants,
-  UpdateNotifySettings,
-  UpdateUserTyping,
-  UpdateChatUserTyping,
-  UpdateChannelUserTyping,
-  UpdateChannel,
-  UpdatePinnedMessages,
-  UpdatePinnedChannelMessages,
-  UpdateDeleteMessages,
-  UpdateDeleteChannelMessages,
-  UpdateFolderPeers,
-  UpdateReadMessagesContents,
-  UpdateChannelReadMessagesContents,
-  PeerUser,
-  PeerChat,
-  PeerChannel,
-  NotifyPeer,
+  DialogPeer,
   DraftMessage,
   DraftMessageEmpty,
-  DialogPeer,
+  NotifyPeer,
+  UpdateChannel,
+  UpdateChannelReadMessagesContents,
+  UpdateChannelUserTyping,
+  UpdateChatParticipants,
+  UpdateChatUserTyping,
+  UpdateDeleteChannelMessages,
+  UpdateDeleteMessages,
+  UpdateDialogPinned,
+  UpdateDraftMessage,
+  UpdateFolderPeers,
+  UpdateNotifySettings,
+  UpdatePinnedChannelMessages,
+  UpdatePinnedDialogs,
+  UpdatePinnedMessages,
+  UpdateReadChannelInbox,
+  UpdateReadChannelOutbox,
+  UpdateReadHistoryInbox,
+  UpdateReadHistoryOutbox,
+  UpdateReadMessagesContents,
+  UpdateUserStatus,
+  UpdateUserTyping,
 )
 
 from ..client.builders import build_peer_id
-from ..state import store
 from ..db.connection import get_db
 from ..db.queries import insert_event
+from ..state import store
 
 log = logging.getLogger("skill.telegram.events.raw")
 
@@ -265,10 +262,7 @@ async def _handle_dialog_pinned(event: UpdateDialogPinned) -> None:
     return
 
   # Extract chat_id from DialogPeer
-  if isinstance(peer, DialogPeer):
-    chat_id = build_peer_id(peer.peer)
-  else:
-    chat_id = build_peer_id(peer)
+  chat_id = build_peer_id(peer.peer) if isinstance(peer, DialogPeer) else build_peer_id(peer)
 
   if not chat_id:
     return
@@ -294,10 +288,7 @@ async def _handle_pinned_dialogs(event: UpdatePinnedDialogs) -> None:
   order = getattr(event, "order", None) or []
   pinned_ids: list[str] = []
   for peer in order:
-    if isinstance(peer, DialogPeer):
-      cid = build_peer_id(peer.peer)
-    else:
-      cid = build_peer_id(peer)
+    cid = build_peer_id(peer.peer) if isinstance(peer, DialogPeer) else build_peer_id(peer)
     if cid:
       pinned_ids.append(cid)
 

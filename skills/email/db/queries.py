@@ -7,11 +7,12 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import aiosqlite
+from ..state.types import EmailAddress, EmailAttachment, EmailContact, ParsedEmail
 
-from ..state.types import EmailContact, ParsedEmail, EmailAddress, EmailAttachment
+if TYPE_CHECKING:
+  import aiosqlite
 
 log = logging.getLogger("skill.email.db.queries")
 

@@ -6,13 +6,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ..client.imap_client import get_imap_client
-from ..client.parsers import parse_raw_email
 from ..db.connection import get_db
 from ..db.queries import get_cached_email
-from ..state.types import ParsedEmail, EmailAttachment
+
+if TYPE_CHECKING:
+  from ..state.types import EmailAttachment
 
 log = logging.getLogger("skill.email.api.attachment")
 

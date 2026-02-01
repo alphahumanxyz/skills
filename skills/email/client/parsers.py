@@ -13,10 +13,9 @@ import logging
 import re
 import time
 from email.parser import BytesParser
-from email.message import EmailMessage
 from typing import Any
 
-from ..state.types import ParsedEmail, EmailAddress, EmailAttachment
+from ..state.types import EmailAddress, EmailAttachment, ParsedEmail
 
 log = logging.getLogger("skill.email.client.parsers")
 

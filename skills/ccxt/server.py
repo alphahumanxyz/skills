@@ -12,12 +12,11 @@ import logging
 from typing import Any
 
 from mcp.server import Server
-from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from .tools import ALL_TOOLS
+from .client.ccxt_client import create_ccxt_manager, set_ccxt_manager
 from .handlers import dispatch_tool
-from .client.ccxt_client import CcxtManager, create_ccxt_manager, set_ccxt_manager
+from .tools import ALL_TOOLS
 
 log = logging.getLogger("skill.ccxt.server")
 
@@ -44,7 +43,7 @@ async def on_skill_load(
   set_state_fn: Any = None,
 ) -> None:
   """Called when the host loads this skill. Initializes CCXT manager with configured exchanges."""
-  data_dir = params.get("dataDir", "data")
+  params.get("dataDir", "data")
 
   # Read config
   config: dict[str, Any] = params.get("config", {})

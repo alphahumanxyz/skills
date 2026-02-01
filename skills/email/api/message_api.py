@@ -6,22 +6,23 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING
 
 from ..client.imap_client import get_imap_client
 from ..db.connection import get_db
 from ..db.queries import (
-  list_cached_emails,
-  get_cached_email,
-  get_cached_email_by_message_id,
-  search_cached_emails,
-  get_thread_emails,
   count_emails,
   count_unread,
-  upsert_email,
+  get_cached_email,
+  get_thread_emails,
+  list_cached_emails,
+  search_cached_emails,
   upsert_contact,
+  upsert_email,
 )
-from ..state.types import ParsedEmail
+
+if TYPE_CHECKING:
+  from ..state.types import ParsedEmail
 
 log = logging.getLogger("skill.email.api.message")
 
@@ -234,7 +235,7 @@ async def get_recent_messages(
   # IMAP SINCE uses date only (not time), so we search a bit broader
   import datetime
 
-  since_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=hours)
+  since_date = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=hours)
   since_str = since_date.strftime("%d-%b-%Y")
 
   uids = await client.search_messages(f"SINCE {since_str}")

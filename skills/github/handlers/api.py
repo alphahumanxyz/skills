@@ -6,8 +6,8 @@ import json
 from typing import Any
 
 from ..client.gh_client import get_client, run_sync
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory, truncate
-from ..validation import req_string, opt_string
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error, truncate
+from ..validation import opt_string, req_string
 
 
 async def gh_api(args: dict[str, Any]) -> ToolResult:
@@ -28,10 +28,7 @@ async def gh_api(args: dict[str, Any]) -> ToolResult:
     input_data = None
 
     if body and method in ("POST", "PUT", "PATCH"):
-      if isinstance(body, str):
-        input_data = body
-      else:
-        input_data = json.dumps(body)
+      input_data = body if isinstance(body, str) else json.dumps(body)
       headers["Content-Type"] = "application/json"
 
     if method == "GET":
@@ -51,7 +48,7 @@ async def gh_api(args: dict[str, Any]) -> ToolResult:
         requester.requestJsonAndCheck, "PATCH", endpoint, headers=headers, input=input_data
       )
     elif method == "DELETE":
-      response_headers, data = await run_sync(
+      _response_headers, data = await run_sync(
         requester.requestJsonAndCheck, "DELETE", endpoint, headers=headers
       )
     else:

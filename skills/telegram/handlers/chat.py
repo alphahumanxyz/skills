@@ -10,8 +10,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..api import chat_api
-from ..helpers import ToolResult, format_entity, log_and_format_error, ErrorCategory
-from ..validation import validate_id, opt_number
+from ..helpers import ErrorCategory, ToolResult, format_entity, log_and_format_error
+from ..validation import opt_number, validate_id
 
 
 async def get_chats(args: dict[str, Any]) -> ToolResult:

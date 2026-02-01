@@ -7,6 +7,11 @@ Usage:
 
 from __future__ import annotations
 
+# Use absolute imports that work when skill.py is executed directly
+# The runtime adds the repo root to sys.path, so we can import from the skill directory
+import sys
+from pathlib import Path
+
 from dev.types.skill_types import (
   SkillDefinition,
   SkillHooks,
@@ -14,36 +19,31 @@ from dev.types.skill_types import (
   ToolDefinition,
 )
 
-# Use absolute imports that work when skill.py is executed directly
-# The runtime adds the repo root to sys.path, so we can import from the skill directory
-import sys
-from pathlib import Path
-
 # Add current directory to path for local imports
 _skill_dir = Path(__file__).parent
 if str(_skill_dir) not in sys.path:
   sys.path.insert(0, str(_skill_dir))
 
 from hooks import (
-  on_load,
-  on_unload,
-  on_session_start,
-  on_session_end,
-  on_tick,
-  on_before_message,
   on_after_response,
+  on_before_message,
+  on_load,
   on_memory_flush,
+  on_session_end,
+  on_session_start,
   on_status,
+  on_tick,
+  on_unload,
 )
-from setup import on_setup_start, on_setup_submit, on_setup_cancel
+from setup import on_setup_cancel, on_setup_start, on_setup_submit
 from tools import (
   execute_add_note,
-  execute_get_note,
-  execute_list_notes,
-  execute_search_memory,
-  execute_save_memory,
   execute_find_entities,
+  execute_get_note,
   execute_get_session_info,
+  execute_list_notes,
+  execute_save_memory,
+  execute_search_memory,
 )
 
 

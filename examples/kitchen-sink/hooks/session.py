@@ -4,15 +4,17 @@ Session lifecycle hooks — session start and end.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from dev.types.skill_types import SkillContext
+if TYPE_CHECKING:
+  from dev.types.skill_types import SkillContext
 
 
 def _now() -> str:
   """Get current timestamp."""
-  return datetime.now(timezone.utc).isoformat()
+  return datetime.now(UTC).isoformat()
 
 
 async def on_session_start(ctx: SkillContext, session_id: str) -> None:

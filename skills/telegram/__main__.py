@@ -20,11 +20,13 @@ logging.basicConfig(
 def main() -> None:
   if "--mcp" in sys.argv:
     import asyncio
+
     from .server import run_server
 
     asyncio.run(run_server())
   else:
     from dev.runtime.server import SkillServer
+
     from .skill import skill
 
     server = SkillServer(skill)

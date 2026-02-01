@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..client.ccxt_client import get_ccxt_manager
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import req_string, opt_string, opt_number, opt_string_list
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_number, opt_string_list, req_string
 
 
 async def fetch_ticker(args: dict[str, Any]) -> ToolResult:

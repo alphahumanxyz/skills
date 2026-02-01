@@ -21,14 +21,16 @@ import getpass
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 # Ensure repo root is importable
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
   sys.path.insert(0, str(ROOT))
 
-from dev.types.setup_types import SetupField, SetupResult, SetupStep
+
+if TYPE_CHECKING:
+  from dev.types.setup_types import SetupField, SetupResult, SetupStep
 
 # ---------------------------------------------------------------------------
 # Console helpers
@@ -319,7 +321,7 @@ async def run_setup(skill_dir: str) -> int:
   if str(abs_dir.parent) not in sys.path:
     sys.path.insert(0, str(abs_dir.parent))
 
-  on_start, on_submit, on_cancel = load_setup_hooks(abs_dir)
+  on_start, on_submit, _on_cancel = load_setup_hooks(abs_dir)
 
   data_dir = str(abs_dir / "data")
   ctx = _SetupMockContext(data_dir)

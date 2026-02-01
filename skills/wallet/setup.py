@@ -11,14 +11,14 @@ On completion, wallets and network configs are persisted via ctx.write_data("con
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
-import hashlib
 from typing import Any
 
-from mnemonic import Mnemonic
 from eth_account import Account
 from eth_account.hdaccount import seed_from_mnemonic
+from mnemonic import Mnemonic
 from solders.keypair import Keypair
 
 from dev.types.setup_types import (
@@ -341,8 +341,8 @@ async def _handle_networks(ctx: Any, values: dict[str, Any]) -> SetupResult:
     sol_networks = []
 
   # Check if networks match selected wallets
-  has_evm_wallets = any(k.startswith("evm_") for k in _wallet_selections.keys())
-  has_sol_wallets = any(k.startswith("sol_") for k in _wallet_selections.keys())
+  has_evm_wallets = any(k.startswith("evm_") for k in _wallet_selections)
+  has_sol_wallets = any(k.startswith("sol_") for k in _wallet_selections)
 
   if has_evm_wallets and not evm_networks:
     return SetupResult(

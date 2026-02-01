@@ -10,8 +10,8 @@ import json
 from typing import Any
 
 from ..api import settings_api
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import validate_id, opt_number, opt_string
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import validate_id
 
 
 async def mute_chat(args: dict[str, Any]) -> ToolResult:

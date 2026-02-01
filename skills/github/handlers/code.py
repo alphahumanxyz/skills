@@ -6,8 +6,8 @@ import base64
 from typing import Any
 
 from ..client.gh_client import get_client, run_sync
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory, truncate
-from ..validation import validate_repo_spec, req_string, opt_string
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error, truncate
+from ..validation import opt_string, req_string, validate_repo_spec
 
 
 async def view_file(args: dict[str, Any]) -> ToolResult:

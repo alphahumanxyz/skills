@@ -1,18 +1,6 @@
 from __future__ import annotations
-from dev.types.skill_types import (
-  SkillDefinition,
-  SkillContext,
-  SkillHooks,
-  SkillTool,
-  ToolDefinition,
-  ToolResult,
-)
-import json
-import logging
+
 import re
-import subprocess
-import sys
-from pathlib import Path
 from typing import Any
 
 """Section: Filter to likely tool names (exclude the skill name itself and common fields)"""

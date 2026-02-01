@@ -300,7 +300,7 @@ def interactive_repl(graph: EntityGraph) -> None:
   print()
   print(bold("  Entity Graph Explorer"))
   print()
-  print(f"  Commands:")
+  print("  Commands:")
   print(f"    {cyan('stats')}         — Show graph statistics")
   print(f"    {cyan('types')}         — List entity types")
   print(f"    {cyan('list <type>')}   — List entities of a type (e.g. list telegram.contact)")

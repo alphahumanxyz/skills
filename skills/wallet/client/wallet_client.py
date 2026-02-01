@@ -6,16 +6,16 @@ Handles wallet derivation, balance checking, transaction signing, and network in
 
 from __future__ import annotations
 
+import hashlib
 import logging
-from typing import Any
 from decimal import Decimal
+from typing import Any
 
-from web3 import Web3
 from eth_account import Account
 from eth_account.hdaccount import seed_from_mnemonic
 from mnemonic import Mnemonic
 from solders.keypair import Keypair
-import hashlib
+from web3 import Web3
 
 log = logging.getLogger("skill.wallet.client")
 

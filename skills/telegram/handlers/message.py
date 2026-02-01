@@ -6,12 +6,11 @@ Ported from handlers/message.ts.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ..api import message_api
-from ..helpers import ToolResult, format_message, log_and_format_error, ErrorCategory
-from ..validation import validate_id, validate_positive_int, opt_number, opt_string, opt_boolean
+from ..helpers import ErrorCategory, ToolResult, format_message, log_and_format_error
+from ..validation import opt_boolean, opt_number, opt_string, validate_id, validate_positive_int
 
 
 async def get_messages(args: dict[str, Any]) -> ToolResult:

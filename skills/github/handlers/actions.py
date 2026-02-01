@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import base64
 from typing import Any
 
 from ..client.gh_client import get_client, run_sync
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory, truncate
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error, truncate
 from ..validation import (
-  validate_repo_spec,
-  req_string,
-  opt_string,
   opt_number,
+  opt_string,
+  req_string,
   validate_positive_int,
+  validate_repo_spec,
 )
 
 
@@ -196,7 +195,7 @@ async def trigger_workflow(args: dict[str, Any]) -> ToolResult:
     except ValueError:
       wf_id = workflow_id
     workflow = await run_sync(repo.get_workflow, wf_id)
-    result = await run_sync(workflow.create_dispatch, ref, inputs)
+    await run_sync(workflow.create_dispatch, ref, inputs)
     return ToolResult(content=f"Workflow '{workflow.name}' triggered on {ref}.")
   except Exception as e:
     return log_and_format_error("trigger_workflow", e, ErrorCategory.ACTIONS)

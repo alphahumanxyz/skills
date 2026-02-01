@@ -16,7 +16,7 @@ import importlib.util
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -161,15 +161,14 @@ def extract_skill_py_fallback(skill_py_path: Path) -> dict[str, Any] | None:
 
               # Look for hooks= argument
               for keyword in node.value.keywords:
-                if keyword.arg == "hooks":
-                  if isinstance(keyword.value, ast.Call):
-                    # SkillHooks(...)
-                    for kw in keyword.value.keywords:
-                      hook_name = kw.arg
-                      if hook_name and kw.value is not None:
-                        # Check if it's not None
-                        if not (isinstance(kw.value, ast.Constant) and kw.value.value is None):
-                          hooks.append(hook_name)
+                if keyword.arg == "hooks" and isinstance(keyword.value, ast.Call):
+                  # SkillHooks(...)
+                  for kw in keyword.value.keywords:
+                    hook_name = kw.arg
+                    if hook_name and kw.value is not None:
+                      # Check if it's not None
+                      if not (isinstance(kw.value, ast.Constant) and kw.value.value is None):
+                        hooks.append(hook_name)
 
               # Look for tick_interval= argument
               for keyword in node.value.keywords:
@@ -415,7 +414,7 @@ def main() -> None:
 
   # 9. Write catalog
   catalog = {
-    "generatedAt": datetime.now(timezone.utc).isoformat(),
+    "generatedAt": datetime.now(UTC).isoformat(),
     "version": "1.0.0",
     "skills": catalog_entries,
   }

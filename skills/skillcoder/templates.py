@@ -151,7 +151,7 @@ def generate_skill_py(
         pname = p["name"]
         default = '""' if p.get("type", "string") == "string" else "None"
         lines.append(f'        {pname} = args.get("{pname}", {default})')
-      lines.append(f'        return ToolResult(content="OK")')
+      lines.append('        return ToolResult(content="OK")')
     else:
       lines.append('        return ToolResult(content="OK")')
 
@@ -215,7 +215,7 @@ def generate_skill_py(
 
 def generate_main_py(name: str) -> str:
   """Generate __main__.py for a skill."""
-  module_name = name.replace("-", "_")
+  name.replace("-", "_")
   return f'''"""Entry point for the {name} skill subprocess."""
 
 from __future__ import annotations

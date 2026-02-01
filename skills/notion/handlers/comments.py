@@ -8,10 +8,10 @@ from typing import Any
 from ..client import get_client
 from ..helpers import (
   ToolResult,
+  _rich_text_to_str,
   enforce_rate_limit,
   format_api_error,
   make_rich_text,
-  _rich_text_to_str,
 )
 
 log = logging.getLogger("skill.notion.handlers.comments")

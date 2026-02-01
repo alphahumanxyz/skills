@@ -4,9 +4,8 @@ Setup flow steps — on_setup_start, on_setup_submit, on_setup_cancel.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from dev.types.skill_types import SkillContext
 from dev.types.setup_types import (
   SetupField,
   SetupFieldError,
@@ -15,7 +14,10 @@ from dev.types.setup_types import (
   SetupStep,
 )
 
-from .handlers import _handle_profile_step, _handle_notifications_step
+from .handlers import _handle_notifications_step, _handle_profile_step
+
+if TYPE_CHECKING:
+  from dev.types.skill_types import SkillContext
 
 
 async def on_setup_start(ctx: SkillContext) -> SetupStep:

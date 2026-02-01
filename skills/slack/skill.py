@@ -18,12 +18,14 @@ from dev.types.skill_types import (
   SkillOptionDefinition,
   SkillTool,
   ToolDefinition,
+)
+from dev.types.skill_types import (
   ToolResult as SkillToolResult,
 )
 
-from .setup import on_setup_start, on_setup_submit, on_setup_cancel
-from .tools import TOOL_DEFINITIONS
 from .handlers import dispatch_tool
+from .setup import on_setup_cancel, on_setup_start, on_setup_submit
+from .tools import TOOL_DEFINITIONS
 
 log = logging.getLogger("skill.slack.skill")
 

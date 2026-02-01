@@ -8,23 +8,19 @@ GramJS entities but the conversion pattern is the same.
 from __future__ import annotations
 
 import logging
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 from telethon.tl.types import (
-  User,
+  Channel,
   Chat,
   ChatForbidden,
-  Channel,
   Message,
-  MessageService,
-  PeerUser,
-  PeerChat,
   PeerChannel,
-  Dialog,
+  PeerChat,
+  PeerUser,
 )
 
 from ..state.types import TelegramChat, TelegramMessage, TelegramUser
-from ..state import store
 
 log = logging.getLogger("skill.telegram.builders")
 

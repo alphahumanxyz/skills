@@ -4,7 +4,10 @@ Memory flush hook — handle memory compaction events.
 
 from __future__ import annotations
 
-from dev.types.skill_types import SkillContext
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+  from dev.types.skill_types import SkillContext
 
 
 async def on_memory_flush(ctx: SkillContext) -> None:

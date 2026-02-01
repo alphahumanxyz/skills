@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import Any
 
 from ..helpers import ToolResult
-
 from .account import (
   get_available_exchanges,
   get_exchange_info,
@@ -73,6 +72,6 @@ async def dispatch_tool(tool_name: str, args: dict[str, Any]) -> ToolResult:
     return result
   except Exception as e:
     return ToolResult(
-      content=f"Error executing {tool_name}: {str(e)}",
+      content=f"Error executing {tool_name}: {e!s}",
       is_error=True,
     )

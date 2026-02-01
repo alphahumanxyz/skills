@@ -7,8 +7,8 @@ from __future__ import annotations
 import logging
 
 from ...client.telethon_client import get_client
-from ...state import store
 from ...helpers import enforce_rate_limit
+from ...state import store
 
 log = logging.getLogger("skill.telegram.api.message_api.reply")
 

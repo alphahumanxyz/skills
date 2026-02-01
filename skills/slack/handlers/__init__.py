@@ -8,7 +8,7 @@ from typing import Any
 from ..helpers import ToolResult
 
 # Import all handler modules
-from . import channel, message, user, search, workspace
+from . import channel, message, search, user, workspace
 
 # Build dispatch table from handler modules (async functions only)
 DISPATCH: dict[str, Any] = {}

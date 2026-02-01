@@ -7,14 +7,16 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ..client.otter_client import OtterClient, OtterApiError, OtterAuthError
-from ..state import store
-from ..state.types import OtterSpeech, OtterSpeaker, OtterTranscriptSegment, OtterUser
-from ..db.connection import get_db
 from ..db import queries
+from ..db.connection import get_db
 from ..helpers import enforce_rate_limit
+from ..state import store
+from ..state.types import OtterSpeaker, OtterSpeech, OtterTranscriptSegment, OtterUser
+
+if TYPE_CHECKING:
+  from ..client.otter_client import OtterClient
 
 log = logging.getLogger("skill.otter.api.speech")
 

@@ -18,6 +18,8 @@ from playwright.async_api import (
   BrowserContext,
   Page,
   async_playwright,
+)
+from playwright.async_api import (
   TimeoutError as PlaywrightTimeoutError,
 )
 
@@ -585,13 +587,7 @@ class BrowserClient:
     async def handle_route(route: Any) -> None:
       if action == "abort":
         await route.abort()
-      elif action == "fulfill":
-        await route.fulfill(
-          status=response_status,
-          body=response_body or "",
-          headers=response_headers or {},
-        )
-      elif action == "respond":
+      elif action == "fulfill" or action == "respond":
         await route.fulfill(
           status=response_status,
           body=response_body or "",

@@ -4,21 +4,20 @@ Search domain tool handlers.
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from ..api import speech_api
-from ..db.connection import get_db
 from ..db import queries
+from ..db.connection import get_db
 from ..helpers import (
-  ToolResult,
-  log_and_format_error,
   ErrorCategory,
-  truncate_transcript,
+  ToolResult,
   format_duration,
+  log_and_format_error,
+  truncate_transcript,
 )
-from ..validation import req_string, opt_number
+from ..validation import opt_number, req_string
 
 
 async def search_meetings(args: dict[str, Any]) -> ToolResult:
@@ -68,7 +67,7 @@ async def search_meetings(args: dict[str, Any]) -> ToolResult:
     for s in speeches:
       date_str = ""
       if s.created_at:
-        date_str = datetime.fromtimestamp(s.created_at, tz=timezone.utc).strftime("%Y-%m-%d")
+        date_str = datetime.fromtimestamp(s.created_at, tz=UTC).strftime("%Y-%m-%d")
       duration_str = format_duration(s.duration) if s.duration else ""
       lines.append(f"[{s.speech_id}] {s.title or 'Untitled'} — {date_str} — {duration_str}")
 

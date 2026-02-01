@@ -7,7 +7,7 @@ from typing import Any
 from ..helpers import ToolResult
 
 # Import all handler modules
-from . import repo, issue, pr, search, code, release, gist, actions, notification, api
+from . import actions, api, code, gist, issue, notification, pr, release, repo, search
 
 # Build dispatch table from handler modules
 DISPATCH: dict[str, Any] = {}

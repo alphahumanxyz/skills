@@ -5,14 +5,16 @@ Load hook — initialize skill on startup.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
-from dev.types.skill_types import SkillContext
+if TYPE_CHECKING:
+  from dev.types.skill_types import SkillContext
 
 
 def _now() -> str:
   """Get current timestamp."""
-  return datetime.now(timezone.utc).isoformat()
+  return datetime.now(UTC).isoformat()
 
 
 async def _load_configuration(ctx: SkillContext) -> None:

@@ -9,7 +9,7 @@ from dev.types.skill_types import SkillContext, SkillTool, ToolDefinition, ToolR
 
 async def execute_dynamic_tool(args: dict) -> ToolResult:
   """Example dynamic tool that can be registered at runtime."""
-  ctx: SkillContext = args.pop("__context__")
+  args.pop("__context__")
   protocol = args.get("protocol", "")
 
   return ToolResult(content=f"Advanced analytics for {protocol} (dynamic tool example)")

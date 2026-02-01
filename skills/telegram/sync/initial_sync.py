@@ -16,10 +16,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from telethon import TelegramClient
 from telethon.tl.functions.messages import (
   GetDialogsRequest,
   GetHistoryRequest,
@@ -30,16 +28,20 @@ from telethon.tl.types import InputPeerEmpty
 
 from ..client.builders import (
   build_chat,
+  build_entity_map,
   build_message,
   build_user,
-  build_entity_map,
   extract_channel_pts_from_dialogs,
 )
-from ..state import store
-from ..state.types import TelegramChat, TelegramMessage, TelegramUser
 from ..db.connection import get_db
-from ..db.queries import upsert_chats_batch, upsert_users_batch, upsert_messages_batch
-from .update_state import save_update_state, save_channel_pts_batch
+from ..db.queries import upsert_chats_batch, upsert_messages_batch, upsert_users_batch
+from ..state import store
+from .update_state import save_channel_pts_batch, save_update_state
+
+if TYPE_CHECKING:
+  from telethon import TelegramClient
+
+  from ..state.types import TelegramChat, TelegramMessage, TelegramUser
 
 log = logging.getLogger("skill.telegram.sync.initial_sync")
 

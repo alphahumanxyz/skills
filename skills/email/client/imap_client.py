@@ -7,14 +7,17 @@ Singleton pattern with automatic reconnection.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from aioimaplib import IMAP4_SSL, IMAP4
+from aioimaplib import IMAP4, IMAP4_SSL
 
-from ..state.types import ParsedEmail
 from .parsers import parse_fetch_response, parse_full_message
+
+if TYPE_CHECKING:
+  from ..state.types import ParsedEmail
 
 log = logging.getLogger("skill.email.client.imap")
 
@@ -89,10 +92,8 @@ class ImapClient:
   async def disconnect(self) -> None:
     """Disconnect from the server."""
     if self._imap:
-      try:
+      with contextlib.suppress(Exception):
         await self._imap.logout()
-      except Exception:
-        pass
       self._imap = None
       self.is_connected = False
       self._current_folder = None

@@ -5,11 +5,10 @@ Email flag/manage operations API (mark read, flag, move, delete, archive).
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from ..client.imap_client import get_imap_client
 from ..db.connection import get_db
-from ..db.queries import update_email_flags, delete_cached_email, move_cached_email
+from ..db.queries import delete_cached_email, update_email_flags
 
 log = logging.getLogger("skill.email.api.flag")
 

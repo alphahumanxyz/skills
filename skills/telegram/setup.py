@@ -17,26 +17,26 @@ is invalid after restart).
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
 from typing import Any
 
 from telethon import TelegramClient
-from telethon.sessions import StringSession
 from telethon.errors import (
-  SessionPasswordNeededError,
+  ApiIdInvalidError,
+  PasswordHashInvalidError,
+  PhoneCodeExpiredError,
   PhoneCodeInvalidError,
   PhoneNumberInvalidError,
-  PasswordHashInvalidError,
-  ApiIdInvalidError,
-  PhoneCodeExpiredError,
+  SessionPasswordNeededError,
 )
+from telethon.sessions import StringSession
 
 from dev.types.setup_types import (
   SetupField,
   SetupFieldError,
-  SetupFieldOption,
   SetupResult,
   SetupStep,
 )
@@ -199,10 +199,8 @@ async def on_setup_cancel(ctx: Any) -> None:
   """Clean up transient state on cancel."""
   global _client
   if _client and _client.is_connected():
-    try:
+    with contextlib.suppress(Exception):
       await _client.disconnect()
-    except Exception:
-      pass
   _reset_state()
 
 

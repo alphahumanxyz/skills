@@ -9,6 +9,7 @@ Integrates with the SkillServer from dev.runtime.server for reverse RPC.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 from typing import Any
@@ -17,16 +18,16 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from .tools import ALL_TOOLS
-from .handlers import dispatch_tool
 from .client.telethon_client import create_client, get_client
-from .state import store
-from .state.sync import init_host_sync
-from .db.connection import init_db, close_db, get_db
+from .db.connection import close_db, get_db, init_db
 from .db.summaries import generate_summaries
 from .entities import apply_summarization_results, emit_initial_entities, emit_summaries
 from .events.handlers import register_event_handlers
+from .handlers import dispatch_tool
+from .state import store
+from .state.sync import init_host_sync
 from .sync.initial_sync import run_initial_sync
+from .tools import ALL_TOOLS
 
 log = logging.getLogger("skill.telegram.server")
 
@@ -127,10 +128,8 @@ async def on_skill_load(
       )
       # Disconnect to stop Telethon's background update loop from
       # spamming AuthKeyUnregisteredError on the stale session.
-      try:
+      with contextlib.suppress(Exception):
         await client.disconnect()
-      except Exception:
-        pass
   except Exception:
     log.exception("Failed to connect/authenticate")
     store.set_connection_status("error")

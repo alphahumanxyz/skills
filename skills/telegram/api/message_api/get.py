@@ -5,17 +5,19 @@ Message get functions — retrieve messages and drafts.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ...client.telethon_client import get_client
-from ...client.builders import build_message
-from ...state import store
-from ...state.types import TelegramMessage
-from ...helpers import enforce_rate_limit
+from telethon.tl.functions.messages import GetAllDraftsRequest, GetHistoryRequest
 from telethon.tl.types import Message
-from telethon.tl.functions.messages import GetHistoryRequest, GetAllDraftsRequest
 
+from ...client.builders import build_message
+from ...client.telethon_client import get_client
+from ...helpers import enforce_rate_limit
+from ...state import store
 from ..types import ApiResult
+
+if TYPE_CHECKING:
+  from ...state.types import TelegramMessage
 
 log = logging.getLogger("skill.telegram.api.message_api.get")
 

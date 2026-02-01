@@ -8,7 +8,6 @@ import logging
 from typing import Any
 
 from ..client.imap_client import get_imap_client
-from ..state.types import EmailFolder
 
 log = logging.getLogger("skill.email.api.folder")
 

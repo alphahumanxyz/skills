@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..api import folder_api
-from ..helpers import ToolResult, format_folder, log_and_format_error, ErrorCategory
-from ..validation import req_string, opt_string
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_string, req_string
 
 
 async def list_folders(args: dict[str, Any]) -> ToolResult:
@@ -58,7 +58,7 @@ async def rename_folder(args: dict[str, Any]) -> ToolResult:
     result = await folder_api.rename_folder(old_name, new_name)
     if result:
       return ToolResult(content=f'Folder renamed from "{old_name}" to "{new_name}".')
-    return ToolResult(content=f"Failed to rename folder.", is_error=True)
+    return ToolResult(content="Failed to rename folder.", is_error=True)
   except Exception as e:
     return log_and_format_error("rename_folder", e, ErrorCategory.FOLDER)
 

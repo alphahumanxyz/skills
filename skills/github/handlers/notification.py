@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..client.gh_client import get_client, run_sync
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import req_string, opt_boolean, opt_number
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_boolean, opt_number, req_string
 
 
 async def list_notifications(args: dict[str, Any]) -> ToolResult:

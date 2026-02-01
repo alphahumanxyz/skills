@@ -10,12 +10,12 @@ import asyncio
 import logging
 import time
 from collections import deque
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Literal, Union
+from typing import Literal
 
-from .state.types import TelegramChat, TelegramUser, TelegramMessage
+from .state.types import TelegramChat, TelegramMessage, TelegramUser
 
 log = logging.getLogger("skill.telegram.helpers")
 
@@ -55,7 +55,7 @@ class FormattedMessage:
   media_type: str | None = None
 
 
-def format_entity(entity: Union[TelegramChat, TelegramUser]) -> FormattedEntity:
+def format_entity(entity: TelegramChat | TelegramUser) -> FormattedEntity:
   if isinstance(entity, TelegramChat):
     chat_type = entity.type
     if chat_type == "supergroup":
@@ -83,7 +83,7 @@ def format_entity(entity: Union[TelegramChat, TelegramUser]) -> FormattedEntity:
 def format_message(message: TelegramMessage) -> FormattedMessage:
   result = FormattedMessage(
     id=message.id,
-    date=datetime.fromtimestamp(message.date, tz=timezone.utc).isoformat() if message.date else "",
+    date=datetime.fromtimestamp(message.date, tz=UTC).isoformat() if message.date else "",
     text=message.message or "",
   )
   if message.from_id:

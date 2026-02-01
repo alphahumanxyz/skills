@@ -21,7 +21,7 @@ from dev.types.setup_types import (
   SetupStep,
 )
 
-from .client.otter_client import OtterClient, OtterAuthError
+from .client.otter_client import OtterAuthError, OtterClient
 
 log = logging.getLogger("skill.otter.setup")
 

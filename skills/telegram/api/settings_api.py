@@ -9,53 +9,48 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
-from typing import Any, TypeVar, Generic
+from typing import Any, Generic, TypeVar
 
+from telethon.tl.functions.account import (
+  GetPrivacyRequest,
+  SetPrivacyRequest,
+  UpdateNotifySettingsRequest,
+  UpdateProfileRequest,
+)
+from telethon.tl.functions.bots import SetBotCommandsRequest
+from telethon.tl.functions.folders import EditPeerFoldersRequest
+from telethon.tl.functions.photos import (
+  DeletePhotosRequest,
+  GetUserPhotosRequest,
+  UpdateProfilePhotoRequest,
+)
 from telethon.tl.types import (
-  User,
-  InputUser,
-  InputChannel,
-  InputPeerChannel,
-  InputPeerUser,
-  InputNotifyPeer,
-  InputPeerNotifySettings,
-  InputFolderPeer,
-  InputPhoto,
-  InputPhotoEmpty,
   BotCommand,
   BotCommandScopeDefault,
   BotCommandScopePeer,
-  InputPrivacyKeyStatusTimestamp,
+  InputFolderPeer,
+  InputNotifyPeer,
+  InputPeerNotifySettings,
+  InputPhoto,
+  InputPhotoEmpty,
   InputPrivacyKeyChatInvite,
-  InputPrivacyKeyPhoneCall,
-  InputPrivacyKeyPhoneP2P,
   InputPrivacyKeyForwards,
-  InputPrivacyKeyProfilePhoto,
+  InputPrivacyKeyPhoneCall,
   InputPrivacyKeyPhoneNumber,
+  InputPrivacyKeyPhoneP2P,
+  InputPrivacyKeyProfilePhoto,
+  InputPrivacyKeyStatusTimestamp,
   InputPrivacyValueAllowAll,
   InputPrivacyValueAllowContacts,
   InputPrivacyValueDisallowAll,
+  InputUser,
   photos,
-  messages,
 )
-from telethon.tl.functions.account import (
-  UpdateNotifySettingsRequest,
-  GetPrivacyRequest,
-  SetPrivacyRequest,
-  UpdateProfileRequest,
-)
-from telethon.tl.functions.folders import EditPeerFoldersRequest
-from telethon.tl.functions.photos import (
-  GetUserPhotosRequest,
-  DeletePhotosRequest,
-  UpdateProfilePhotoRequest,
-)
-from telethon.tl.functions.bots import SetBotCommandsRequest
 
-from ..client.telethon_client import get_client
 from ..client.builders import build_user
-from ..state import store
+from ..client.telethon_client import get_client
 from ..helpers import enforce_rate_limit
+from ..state import store
 
 log = logging.getLogger("skill.telegram.api.settings")
 
@@ -77,7 +72,7 @@ async def mute_chat(chat_id: str, mute_for: int | None = None) -> ApiResult[bool
     client = mtproto.get_client()
     entity = await client.get_input_entity(chat_id)
 
-    mute_until = (int(math.floor(___import_time() / 1000)) + mute_for) if mute_for else 2147483647
+    mute_until = (math.floor(___import_time() / 1000) + mute_for) if mute_for else 2147483647
 
     await mtproto.invoke(
       UpdateNotifySettingsRequest(

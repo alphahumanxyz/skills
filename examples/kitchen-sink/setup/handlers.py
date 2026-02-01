@@ -5,10 +5,9 @@ Setup step handlers — process each step's form submission.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
-from dev.types.skill_types import SkillContext
 from dev.types.setup_types import (
   SetupField,
   SetupFieldError,
@@ -19,10 +18,13 @@ from dev.types.setup_types import (
 
 from .validation import _validate_alert_threshold
 
+if TYPE_CHECKING:
+  from dev.types.skill_types import SkillContext
+
 
 def _now() -> str:
   """Get current timestamp."""
-  return datetime.now(timezone.utc).isoformat()
+  return datetime.now(UTC).isoformat()
 
 
 async def _handle_profile_step(ctx: SkillContext, values: dict[str, Any]) -> SetupResult:

@@ -21,7 +21,6 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -160,7 +159,7 @@ class EntityCollector:
     """Print a summary of collected entities and relationships."""
     # Group entities by type
     by_type: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for key, entity in self.entities.items():
+    for _key, entity in self.entities.items():
       by_type[entity["type"]].append(entity)
 
     print()
@@ -258,7 +257,7 @@ async def main_async() -> int:
   # Load skill
   print(dim("  Loading skill with entity callbacks..."))
 
-  from telegram.server import on_skill_load, on_skill_unload, on_skill_tick
+  from telegram.server import on_skill_load, on_skill_tick, on_skill_unload
   from telegram.state import store
 
   data_dir = str(DATA_DIR)
@@ -369,14 +368,6 @@ async def main_async() -> int:
     print(f"  {green('PASS')} Entities emitted: {len(collector.entities)}")
 
   # Check entity types match schema
-  expected_types = {
-    "telegram.contact",
-    "telegram.group",
-    "telegram.channel",
-    "telegram.dm",
-    "telegram.summary",
-    "telegram.thread",
-  }
   actual_types = {e["type"] for e in collector.entities.values()}
   base_types = actual_types - {"telegram.summary", "telegram.thread"}
   if base_types:

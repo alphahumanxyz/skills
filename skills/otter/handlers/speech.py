@@ -4,21 +4,20 @@ Speech/meeting domain tool handlers.
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from ..api import speech_api
-from ..db.connection import get_db
 from ..db import queries
+from ..db.connection import get_db
 from ..helpers import (
-  ToolResult,
-  log_and_format_error,
   ErrorCategory,
-  truncate_transcript,
+  ToolResult,
   format_duration,
+  log_and_format_error,
+  truncate_transcript,
 )
-from ..validation import req_string, opt_string, opt_number
+from ..validation import opt_number, opt_string, req_string
 
 
 async def list_meetings(args: dict[str, Any]) -> ToolResult:
@@ -34,7 +33,7 @@ async def list_meetings(args: dict[str, Any]) -> ToolResult:
     for s in speeches:
       date_str = ""
       if s.created_at:
-        date_str = datetime.fromtimestamp(s.created_at, tz=timezone.utc).strftime(
+        date_str = datetime.fromtimestamp(s.created_at, tz=UTC).strftime(
           "%Y-%m-%d %H:%M UTC"
         )
       duration_str = format_duration(s.duration) if s.duration else "unknown"
@@ -64,7 +63,7 @@ async def get_meeting(args: dict[str, Any]) -> ToolResult:
     # Format output
     date_str = ""
     if speech.created_at:
-      date_str = datetime.fromtimestamp(speech.created_at, tz=timezone.utc).strftime(
+      date_str = datetime.fromtimestamp(speech.created_at, tz=UTC).strftime(
         "%Y-%m-%d %H:%M UTC"
       )
     duration_str = format_duration(speech.duration) if speech.duration else "unknown"

@@ -7,17 +7,18 @@ from __future__ import annotations
 import logging
 import random
 
-from ...client.telethon_client import get_client
-from ...helpers import enforce_rate_limit
+from telethon.tl.functions.messages import SendMediaRequest
 from telethon.tl.types import (
+  InputMediaPoll,
   Poll,
   PollAnswer,
   TextWithEntities,
-  InputMediaPoll,
-  Updates,
   UpdateMessageID,
+  Updates,
 )
-from telethon.tl.functions.messages import SendMediaRequest
+
+from ...client.telethon_client import get_client
+from ...helpers import enforce_rate_limit
 
 log = logging.getLogger("skill.telegram.api.message_api.poll")
 

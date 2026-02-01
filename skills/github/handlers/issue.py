@@ -5,14 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 from ..client.gh_client import get_client, run_sync
-from ..helpers import ToolResult, format_issue_line, log_and_format_error, ErrorCategory, truncate
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error, truncate
 from ..validation import (
-  validate_repo_spec,
-  req_string,
-  opt_string,
   opt_number,
+  opt_string,
   opt_string_list,
+  req_string,
   validate_positive_int,
+  validate_repo_spec,
 )
 
 

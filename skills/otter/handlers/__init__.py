@@ -8,7 +8,7 @@ from typing import Any
 from ..helpers import ToolResult
 
 # Import all handler modules
-from . import speech, search, user
+from . import search, speech, user
 
 # Build dispatch table from handler modules (async functions only)
 DISPATCH: dict[str, Any] = {}

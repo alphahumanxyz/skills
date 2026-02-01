@@ -14,13 +14,15 @@ from dev.types.skill_types import (
   SkillHooks,
   SkillTool,
   ToolDefinition,
+)
+from dev.types.skill_types import (
   ToolResult as SkillToolResult,
 )
 
-from .setup import on_setup_start, on_setup_submit, on_setup_cancel
-from .tools import ALL_TOOLS
-from .handlers.wallet_handlers import dispatch_tool, set_wallet_client
 from .client.wallet_client import WalletClient
+from .handlers.wallet_handlers import dispatch_tool, set_wallet_client
+from .setup import on_setup_cancel, on_setup_start, on_setup_submit
+from .tools import ALL_TOOLS
 
 log = logging.getLogger("skill.wallet.skill")
 

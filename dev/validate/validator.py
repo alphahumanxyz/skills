@@ -16,7 +16,6 @@ import importlib.util
 import re
 import sys
 from pathlib import Path
-from typing import Any
 
 from dev.types.skill_types import SkillDefinition
 
@@ -138,7 +137,7 @@ def validate_skill_py(skill_py_path: Path, dir_name: str) -> SkillResult:
   # --- Validate hooks ---
   if skill.hooks:
     hooks_dict = skill.hooks.model_dump(exclude_none=True)
-    for hook_name, hook_fn in hooks_dict.items():
+    for hook_name, _hook_fn in hooks_dict.items():
       if hook_name not in VALID_HOOKS:
         result.warnings.append(f'Unknown hook "{hook_name}" — will be ignored by the runtime')
     # Also check the original hooks object for callable validation

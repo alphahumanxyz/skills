@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..api import flag_api
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import validate_uid_list, req_string, opt_string
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import opt_string, req_string, validate_uid_list
 
 
 async def mark_read(args: dict[str, Any]) -> ToolResult:

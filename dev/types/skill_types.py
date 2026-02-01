@@ -10,18 +10,18 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any, Literal, Protocol, runtime_checkable, Callable, Awaitable, Optional
+from collections.abc import Awaitable, Callable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from dev.types.setup_types import (  # noqa: F401  — re-exported
-  SetupFieldOption,
   SetupField,
-  SetupStep,
   SetupFieldError,
+  SetupFieldOption,
   SetupResult,
+  SetupStep,
 )
-
 
 # ---------------------------------------------------------------------------
 # Skill Option Definition
@@ -264,20 +264,20 @@ class SkillHooks(BaseModel):
 
   model_config = ConfigDict(arbitrary_types_allowed=True)
 
-  on_load: Optional[LoadHook] = None
-  on_unload: Optional[UnloadHook] = None
-  on_session_start: Optional[SessionHook] = None
-  on_session_end: Optional[SessionHook] = None
-  on_before_message: Optional[MessageHook] = None
-  on_after_response: Optional[MessageHook] = None
-  on_memory_flush: Optional[LoadHook] = None
-  on_tick: Optional[TickHook] = None
+  on_load: LoadHook | None = None
+  on_unload: UnloadHook | None = None
+  on_session_start: SessionHook | None = None
+  on_session_end: SessionHook | None = None
+  on_before_message: MessageHook | None = None
+  on_after_response: MessageHook | None = None
+  on_memory_flush: LoadHook | None = None
+  on_tick: TickHook | None = None
   on_status: StatusHook = Field(description="Returns current skill status information")
-  on_setup_start: Optional[SetupStartHandler] = None
-  on_setup_submit: Optional[SetupSubmitHandler] = None
-  on_setup_cancel: Optional[SetupCancelHandler] = None
-  on_options_change: Optional[OptionsChangeHook] = None
-  on_disconnect: Optional[DisconnectHook] = None
+  on_setup_start: SetupStartHandler | None = None
+  on_setup_submit: SetupSubmitHandler | None = None
+  on_setup_cancel: SetupCancelHandler | None = None
+  on_options_change: OptionsChangeHook | None = None
+  on_disconnect: DisconnectHook | None = None
 
 
 # ---------------------------------------------------------------------------

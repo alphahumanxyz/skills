@@ -102,7 +102,7 @@ async def edit_message(args: dict[str, Any]) -> ToolResult:
     if not client:
       return ToolResult(content="Slack client not initialized", is_error=True)
 
-    result = await client.chat_update(channel_id, message_ts, text)
+    await client.chat_update(channel_id, message_ts, text)
     return ToolResult(content=f"Successfully updated message {message_ts}")
 
   except ValidationError as e:

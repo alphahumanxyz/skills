@@ -570,7 +570,7 @@ def split_file(
         print(f"  Classes: {len(classes)}")
         if functions:
           print(
-            f"  Function prefixes: {set(f['name'].split('_')[0] if '_' in f['name'] else 'misc' for f in functions)}"
+            f"  Function prefixes: { {f['name'].split('_')[0] if '_' in f['name'] else 'misc' for f in functions} }"
           )
 
       print(f"\nWould split {file_path} into {len(sections)} files:")

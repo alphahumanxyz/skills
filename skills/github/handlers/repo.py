@@ -4,18 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from github import GithubException
-
 from ..client.gh_client import get_client, run_sync
-from ..helpers import ToolResult, format_repo_line, log_and_format_error, ErrorCategory
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
 from ..validation import (
-  validate_repo_spec,
-  validate_owner_repo,
-  req_string,
-  opt_string,
-  opt_number,
   opt_boolean,
+  opt_number,
+  opt_string,
   opt_string_list,
+  req_string,
+  validate_repo_spec,
   validate_username,
 )
 

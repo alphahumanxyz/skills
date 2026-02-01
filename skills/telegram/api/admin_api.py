@@ -8,30 +8,30 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, TypeVar, Generic
+from typing import Any, Generic, TypeVar
 
-from telethon.tl.types import (
-  Channel,
-  InputChannel,
-  InputUser,
-  ChatAdminRights,
-  ChatBannedRights,
-  ChannelParticipantsRecent,
-  ChannelParticipantsAdmins,
-  ChannelParticipantsBots,
-  ChannelParticipantsKicked,
-  ChannelParticipantsBanned,
-  channels,
-)
 from telethon.tl.functions.channels import (
-  GetParticipantsRequest,
   EditAdminRequest,
   EditBannedRequest,
   GetAdminLogRequest,
+  GetParticipantsRequest,
+)
+from telethon.tl.types import (
+  Channel,
+  ChannelParticipantsAdmins,
+  ChannelParticipantsBanned,
+  ChannelParticipantsBots,
+  ChannelParticipantsKicked,
+  ChannelParticipantsRecent,
+  ChatAdminRights,
+  ChatBannedRights,
+  InputChannel,
+  InputUser,
+  channels,
 )
 
-from ..client.telethon_client import get_client
 from ..client.builders import build_user
+from ..client.telethon_client import get_client
 from ..helpers import enforce_rate_limit
 
 log = logging.getLogger("skill.telegram.api.admin")

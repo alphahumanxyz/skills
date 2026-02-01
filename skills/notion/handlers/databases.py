@@ -9,10 +9,9 @@ from ..client import get_client
 from ..helpers import (
   ToolResult,
   enforce_rate_limit,
+  extract_title,
   format_api_error,
   format_database_summary,
-  extract_title,
-  format_page_summary,
   make_rich_text,
 )
 

@@ -12,7 +12,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-
 TelegramConnectionStatus = Literal["disconnected", "connecting", "connected", "error"]
 
 TelegramAuthStatus = Literal["not_authenticated", "authenticating", "authenticated", "error"]

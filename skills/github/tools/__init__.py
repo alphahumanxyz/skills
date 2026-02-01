@@ -6,18 +6,21 @@ Each module exports a list of Tool objects that are combined into ALL_TOOLS.
 
 from __future__ import annotations
 
-from mcp.types import Tool
+from typing import TYPE_CHECKING
 
-from .repo import repo_tools
-from .issue import issue_tools
-from .pr import pr_tools
-from .search import search_tools
-from .code import code_tools
-from .release import release_tools
-from .gist import gist_tools
 from .actions import actions_tools
-from .notification import notification_tools
 from .api import api_tools
+from .code import code_tools
+from .gist import gist_tools
+from .issue import issue_tools
+from .notification import notification_tools
+from .pr import pr_tools
+from .release import release_tools
+from .repo import repo_tools
+from .search import search_tools
+
+if TYPE_CHECKING:
+  from mcp.types import Tool
 
 ALL_TOOLS: list[Tool] = [
   *repo_tools,

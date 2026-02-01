@@ -7,8 +7,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..client.ccxt_client import get_ccxt_manager
-from ..helpers import ToolResult, log_and_format_error, ErrorCategory
-from ..validation import req_string, req_list
+from ..helpers import ErrorCategory, ToolResult, log_and_format_error
+from ..validation import req_list, req_string
 
 
 async def list_exchanges(args: dict[str, Any]) -> ToolResult:
@@ -94,7 +94,7 @@ async def test_connection(args: dict[str, Any]) -> ToolResult:
       )
     except Exception as e:
       return ToolResult(
-        content=f"Connection test failed: {str(e)}",
+        content=f"Connection test failed: {e!s}",
         is_error=True,
       )
   except Exception as e:

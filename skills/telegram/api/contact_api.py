@@ -9,32 +9,35 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import dataclass
-from typing import Any, TypeVar, Generic
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from telethon.tl.types import (
-  User,
-  InputUser,
-  InputPeerUser,
-  InputPhoneContact,
-  contacts,
-)
 from telethon.tl.functions.contacts import (
-  GetContactsRequest,
-  SearchRequest as ContactsSearchRequest,
   AddContactRequest,
-  DeleteContactsRequest,
   BlockRequest,
-  UnblockRequest,
+  DeleteContactsRequest,
   GetBlockedRequest,
   GetContactIDsRequest,
+  GetContactsRequest,
   ImportContactsRequest,
+  UnblockRequest,
+)
+from telethon.tl.functions.contacts import (
+  SearchRequest as ContactsSearchRequest,
+)
+from telethon.tl.types import (
+  InputPeerUser,
+  InputPhoneContact,
+  InputUser,
+  contacts,
 )
 
-from ..client.telethon_client import get_client
 from ..client.builders import build_user
-from ..state import store
-from ..state.types import TelegramUser, TelegramMessage
+from ..client.telethon_client import get_client
 from ..helpers import enforce_rate_limit
+from ..state import store
+
+if TYPE_CHECKING:
+  from ..state.types import TelegramMessage, TelegramUser
 
 log = logging.getLogger("skill.telegram.api.contact")
 
@@ -53,7 +56,7 @@ async def list_contacts(limit: int = 20) -> ApiResult[list[TelegramUser]]:
 
   try:
     mtproto = get_client()
-    client = mtproto.get_client()
+    mtproto.get_client()
     result = await mtproto.invoke(GetContactsRequest(hash=0))
 
     if not isinstance(result, contacts.Contacts):
@@ -303,7 +306,7 @@ async def get_last_interaction(user_id: str) -> ApiResult[TelegramUser | None]:
     if all_messages:
       all_messages.sort(key=lambda m: m.date, reverse=True)
       # Get the user from the last message
-      last_msg = all_messages[0]
+      all_messages[0]
       # Find the user in users map
       user = state.users.get(user_id)
       if user:

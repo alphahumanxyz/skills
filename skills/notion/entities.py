@@ -12,10 +12,11 @@ to the host runtime via reverse RPC.
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from .client import get_client
-from .helpers import extract_title, _rich_text_to_str, enforce_rate_limit
+from .helpers import _rich_text_to_str, enforce_rate_limit, extract_title
 
 log = logging.getLogger("skill.notion.entities")
 

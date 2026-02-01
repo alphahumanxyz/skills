@@ -7,19 +7,23 @@ State mutations are synchronous. After each mutation, listeners are notified.
 
 from __future__ import annotations
 
+import contextlib
 import re
-from typing import Callable
+from typing import TYPE_CHECKING
 
 from .types import (
-  TelegramState,
-  TelegramChat,
-  TelegramMessage,
-  TelegramUser,
-  TelegramThread,
-  TelegramConnectionStatus,
   TelegramAuthStatus,
+  TelegramChat,
+  TelegramConnectionStatus,
+  TelegramMessage,
+  TelegramState,
+  TelegramThread,
+  TelegramUser,
   initial_state,
 )
+
+if TYPE_CHECKING:
+  from collections.abc import Callable
 
 _state: TelegramState = initial_state()
 _listeners: list[Callable[[], None]] = []
@@ -38,10 +42,8 @@ def subscribe(listener: Callable[[], None]) -> Callable[[], None]:
   _listeners.append(listener)
 
   def unsubscribe() -> None:
-    try:
+    with contextlib.suppress(ValueError):
       _listeners.remove(listener)
-    except ValueError:
-      pass
 
   return unsubscribe
 

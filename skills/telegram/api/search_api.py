@@ -8,25 +8,30 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, TypeVar, Generic
+from typing import Any, Generic, TypeVar
 
-from telethon.tl.types import (
-  Message,
-  InputPeerEmpty,
-  InputMessagesFilterEmpty,
-  messages as messages_types,
+from telethon.tl.functions.contacts import (
+  ResolveUsernameRequest,
 )
 from telethon.tl.functions.contacts import (
   SearchRequest as ContactsSearchRequest,
-  ResolveUsernameRequest,
+)
+from telethon.tl.functions.messages import (
+  SearchGlobalRequest,
 )
 from telethon.tl.functions.messages import (
   SearchRequest as MessagesSearchRequest,
-  SearchGlobalRequest,
+)
+from telethon.tl.types import (
+  InputMessagesFilterEmpty,
+  InputPeerEmpty,
+)
+from telethon.tl.types import (
+  messages as messages_types,
 )
 
-from ..client.telethon_client import get_client
 from ..client.builders import build_user
+from ..client.telethon_client import get_client
 from ..helpers import enforce_rate_limit
 
 log = logging.getLogger("skill.telegram.api.search")

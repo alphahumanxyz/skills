@@ -8,7 +8,6 @@ and skill lifecycle methods (load, unload, tick).
 from __future__ import annotations
 
 import logging
-import os
 import time
 from typing import Any
 
@@ -16,15 +15,15 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from .tools import ALL_TOOLS
-from .handlers import dispatch_tool
 from .client.imap_client import create_imap_client, get_imap_client
 from .client.smtp_client import configure_smtp
+from .db.connection import close_db, get_db, init_db
+from .db.sync import refresh_folder_list, sync_all_watched_folders
+from .handlers import dispatch_tool
 from .state import store
 from .state.sync import init_host_sync
 from .state.types import EmailAccount
-from .db.connection import init_db, close_db, get_db
-from .db.sync import sync_all_watched_folders, refresh_folder_list
+from .tools import ALL_TOOLS
 
 log = logging.getLogger("skill.email.server")
 
@@ -89,7 +88,7 @@ async def on_skill_load(
   store.set_account(account)
 
   # Set account ID on API modules
-  from .api import message_api, flag_api, attachment_api, draft_api
+  from .api import attachment_api, draft_api, flag_api, message_api
 
   message_api.set_account_id(email_addr)
   flag_api.set_account_id(email_addr)
@@ -155,16 +154,15 @@ async def on_skill_tick() -> None:
 
   # NOOP keepalive
   client = get_imap_client()
-  if client:
-    if not await client.noop():
-      # Try to reconnect
-      log.warning("IMAP keepalive failed, reconnecting...")
-      store.set_connection_status("connecting")
-      if await client.ensure_connected():
-        store.set_connection_status("connected")
-      else:
-        store.set_connection_status("error")
-        return
+  if client and not await client.noop():
+    # Try to reconnect
+    log.warning("IMAP keepalive failed, reconnecting...")
+    store.set_connection_status("connecting")
+    if await client.ensure_connected():
+      store.set_connection_status("connected")
+    else:
+      store.set_connection_status("error")
+      return
 
   # Incremental sync
   store.set_sync_status(True)

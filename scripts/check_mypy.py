@@ -11,8 +11,8 @@ Usage:
 import argparse
 import subprocess
 import sys
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 
 def run_mypy(exclude: list[str] | None = None) -> tuple[int, str]:

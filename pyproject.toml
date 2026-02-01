@@ -13,6 +13,14 @@ license = {text = "MIT"}
 target-version = "py311"
 line-length = 100
 indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -34,14 +42,6 @@ ignore = [
     "ARG001", # unused function argument (common in handlers)
     "ARG002", # unused method argument
 ]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-
-[tool.ruff.lint]
 exclude = [
     ".git",
     "__pycache__",

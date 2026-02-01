@@ -5,14 +5,14 @@ Note management tools — add, get, and list notes.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from dev.types.skill_types import SkillContext, ToolResult
 
 
 def _now() -> str:
   """Get current timestamp."""
-  return datetime.now(timezone.utc).isoformat()
+  return datetime.now(UTC).isoformat()
 
 
 async def execute_add_note(args: dict) -> ToolResult:

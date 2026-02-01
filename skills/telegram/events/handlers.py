@@ -10,12 +10,14 @@ Delegates to focused sub-modules:
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
-from telethon import TelegramClient
-
-from .message_events import register_message_handlers
 from .chat_events import register_chat_handlers
+from .message_events import register_message_handlers
 from .raw_events import register_raw_handlers
+
+if TYPE_CHECKING:
+  from telethon import TelegramClient
 
 log = logging.getLogger("skill.telegram.events")
 
