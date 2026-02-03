@@ -6,13 +6,16 @@
     "clean": "rimraf skills",
     "build:ts": "tsc -p tsconfig.build.json",
     "build:strip": "node scripts/strip-exports.mjs",
-    "build": "npm run clean && npm run build:ts && npm run build:strip",
+    "build:bundle": "node scripts/bundle-telegram.mjs",
+    "build": "npm run clean && npm run build:ts && npm run build:bundle && npm run build:strip",
     "build:watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "test": "bash scripts/test-js.sh"
   },
   "devDependencies": {
+    "esbuild": "^0.24.2",
     "rimraf": "^6.1.2",
+    "telegram": "^2.26.22",
     "typescript": "~5.8.3"
   }
 }
