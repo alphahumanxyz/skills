@@ -7,6 +7,7 @@
     "rootDir": ".",
     "declaration": false,
     "sourceMap": false,
+    "noEmit": true,
     "strict": true,
     "alwaysStrict": false,
     "noUnusedLocals": true,
@@ -16,7 +17,7 @@
   },
   "include": [
     "types/**/*.d.ts",
-    "skills/*/index.ts",
+    "skills-ts/*/index.ts",
     "examples/*/index.ts"
   ],
   "exclude": [
