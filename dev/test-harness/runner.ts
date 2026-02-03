@@ -235,6 +235,9 @@ async function main(): Promise<void> {
       var window = G;
       var __helpers = G.__helpers;
       var Buffer = G.Buffer;
+      var location = G.location;
+      var WebSocket = G.WebSocket;
+      var crypto = G.crypto;
       // NOTE: Do NOT pre-declare tools, init, start, stop, etc. - the skill code
       // defines them and we need to let its function declarations work
       // NOTE: Do NOT inject exports/module - the bundled code creates its own
@@ -334,9 +337,11 @@ var onSetOption = G.onSetOption;
 // Tool calling helper
 function callTool(name, args) {
   args = args || {};
-  var tool = tools.find(function(t) { return t.name === name; });
+  // Filter out undefined tools (CommonJS interop issue)
+  var validTools = tools.filter(function(t) { return t && t.name; });
+  var tool = validTools.find(function(t) { return t.name === name; });
   if (!tool) {
-    throw new Error('Tool "' + name + '" not found. Available: ' + tools.map(function(t) { return t.name; }).join(', '));
+    throw new Error('Tool "' + name + '" not found. Available: ' + validTools.map(function(t) { return t.name; }).join(', '));
   }
   var result = tool.execute(args);
   try {
@@ -401,7 +406,8 @@ function triggerTimer(timerId) {
 
 // List helpers
 function listTools() {
-  return tools.map(function(t) { return t.name; });
+  // Filter out undefined tools (can happen due to CommonJS interop issues with bundled skills)
+  return tools.filter(function(t) { return t && t.name; }).map(function(t) { return t.name; });
 }
 
 function listTimers() {

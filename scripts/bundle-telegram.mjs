@@ -156,6 +156,31 @@ var __GramJS = GramJS;
 // Expose skill bundle to globalThis for V8 runtime access
 // Use exports.default since the IIFE sets exports.default = skill
 globalThis.__skill = exports.default ? { default: exports.default } : __skill_bundle;
+
+// IMPORTANT: Fix for esbuild CommonJS interop issue
+// Tool modules write to global 'exports' object, but the tools array references
+// empty module-specific exports. Rebuild tools array from global exports.
+(function() {
+  var skill = globalThis.__skill && globalThis.__skill.default;
+  if (!skill || !skill.tools) return;
+
+  // Check if tools array has undefined elements (sign of the CommonJS issue)
+  var hasUndefined = skill.tools.some(function(t) { return t === undefined || t === null; });
+  if (!hasUndefined) return;
+
+  // Collect tools from global exports object (where they actually ended up)
+  var fixedTools = [];
+  for (var key in exports) {
+    if (key.endsWith('Tool') && exports[key] && exports[key].name && exports[key].execute) {
+      fixedTools.push(exports[key]);
+    }
+  }
+
+  if (fixedTools.length > 0) {
+    skill.tools = fixedTools;
+    console.log('[skill-fixup] Rebuilt tools array from exports (' + fixedTools.length + ' tools)');
+  }
+})();
 `;
 
   // Create the final bundled skill file

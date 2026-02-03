@@ -201,6 +201,202 @@ export function createBridgeAPIs(): Record<string, unknown> {
     state.timers.delete(id);
   };
 
+  // Mock window.location for gramjs browser detection
+  const mockLocation = {
+    protocol: 'https:',
+    host: 'localhost',
+    hostname: 'localhost',
+    port: '',
+    pathname: '/',
+    search: '',
+    hash: '',
+    href: 'https://localhost/',
+    origin: 'https://localhost',
+  };
+
+  // Mock WebSocket for gramjs (won't actually connect in mocked tests)
+  class MockWebSocket {
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+
+    readyState = MockWebSocket.CONNECTING;
+    url: string;
+    protocol = '';
+    binaryType: 'blob' | 'arraybuffer' = 'blob';
+    onopen: ((ev: unknown) => void) | null = null;
+    onclose: ((ev: unknown) => void) | null = null;
+    onerror: ((ev: unknown) => void) | null = null;
+    onmessage: ((ev: unknown) => void) | null = null;
+
+    constructor(url: string, _protocols?: string | string[]) {
+      this.url = url;
+      // In mock mode, immediately close with error after a short delay
+      globalThis.setTimeout(() => {
+        this.readyState = MockWebSocket.CLOSED;
+        if (this.onerror) {
+          this.onerror({ type: 'error', message: 'WebSocket not available in mocked test environment' });
+        }
+        if (this.onclose) {
+          this.onclose({ code: 1006, reason: 'Mocked test environment', wasClean: false });
+        }
+      }, 10);
+    }
+
+    send(_data: unknown): void {
+      throw new Error('WebSocket.send() not available in mocked test environment');
+    }
+
+    close(_code?: number, _reason?: string): void {
+      this.readyState = MockWebSocket.CLOSED;
+    }
+
+    addEventListener(_type: string, _listener: () => void): void {}
+    removeEventListener(_type: string, _listener: () => void): void {}
+    dispatchEvent(_event: unknown): boolean {
+      return false;
+    }
+  }
+
+  // Mock crypto for gramjs cryptography
+  const mockCrypto = {
+    getRandomValues: <T extends ArrayBufferView>(array: T): T => {
+      // Use Deno's crypto for actual randomness
+      if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
+        return globalThis.crypto.getRandomValues(array);
+      }
+      // Fallback: fill with pseudo-random values
+      if (array instanceof Uint8Array) {
+        for (let i = 0; i < array.length; i++) {
+          array[i] = Math.floor(Math.random() * 256);
+        }
+      }
+      return array;
+    },
+    subtle: typeof globalThis.crypto !== 'undefined' ? globalThis.crypto.subtle : undefined,
+    randomUUID:
+      typeof globalThis.crypto !== 'undefined' && globalThis.crypto.randomUUID
+        ? () => globalThis.crypto.randomUUID()
+        : () => {
+            // Simple UUID v4 fallback
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+              const r = (Math.random() * 16) | 0;
+              const v = c === 'x' ? r : (r & 0x3) | 0x8;
+              return v.toString(16);
+            });
+          },
+  };
+
+  // Mock Buffer class for gramjs (simplified)
+  class MockBuffer extends Uint8Array {
+    static isBuffer(obj: unknown): obj is MockBuffer {
+      return obj instanceof MockBuffer || obj instanceof Uint8Array;
+    }
+
+    static from(
+      data: string | ArrayLike<number> | ArrayBufferLike,
+      encoding?: string
+    ): MockBuffer {
+      if (typeof data === 'string') {
+        if (encoding === 'base64') {
+          const binaryString = atob(data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          return new MockBuffer(bytes);
+        }
+        // Default to utf-8
+        const encoder = new TextEncoder();
+        return new MockBuffer(encoder.encode(data));
+      }
+      if (data instanceof ArrayBuffer) {
+        return new MockBuffer(new Uint8Array(data));
+      }
+      return new MockBuffer(data as ArrayLike<number>);
+    }
+
+    static alloc(size: number, fill?: number): MockBuffer {
+      const buf = new MockBuffer(size);
+      if (fill !== undefined) {
+        buf.fill(fill);
+      }
+      return buf;
+    }
+
+    static allocUnsafe(size: number): MockBuffer {
+      return new MockBuffer(size);
+    }
+
+    static concat(list: Uint8Array[], totalLength?: number): MockBuffer {
+      const length = totalLength ?? list.reduce((acc, arr) => acc + arr.length, 0);
+      const result = new MockBuffer(length);
+      let offset = 0;
+      for (const arr of list) {
+        result.set(arr, offset);
+        offset += arr.length;
+      }
+      return result;
+    }
+
+    toString(encoding?: string): string {
+      if (encoding === 'base64') {
+        let binary = '';
+        for (let i = 0; i < this.length; i++) {
+          binary += String.fromCharCode(this[i]);
+        }
+        return btoa(binary);
+      }
+      if (encoding === 'hex') {
+        return Array.from(this)
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+      }
+      // Default to utf-8
+      const decoder = new TextDecoder();
+      return decoder.decode(this);
+    }
+
+    write(string: string, offset = 0, _length?: number, encoding?: string): number {
+      const bytes = MockBuffer.from(string, encoding);
+      this.set(bytes, offset);
+      return bytes.length;
+    }
+
+    readUInt32BE(offset = 0): number {
+      return (this[offset] << 24) | (this[offset + 1] << 16) | (this[offset + 2] << 8) | this[offset + 3];
+    }
+
+    readUInt32LE(offset = 0): number {
+      return this[offset] | (this[offset + 1] << 8) | (this[offset + 2] << 16) | (this[offset + 3] << 24);
+    }
+
+    writeUInt32BE(value: number, offset = 0): number {
+      this[offset] = (value >>> 24) & 0xff;
+      this[offset + 1] = (value >>> 16) & 0xff;
+      this[offset + 2] = (value >>> 8) & 0xff;
+      this[offset + 3] = value & 0xff;
+      return offset + 4;
+    }
+
+    writeUInt32LE(value: number, offset = 0): number {
+      this[offset] = value & 0xff;
+      this[offset + 1] = (value >>> 8) & 0xff;
+      this[offset + 2] = (value >>> 16) & 0xff;
+      this[offset + 3] = (value >>> 24) & 0xff;
+      return offset + 4;
+    }
+
+    slice(start?: number, end?: number): MockBuffer {
+      return new MockBuffer(super.slice(start, end));
+    }
+
+    subarray(start?: number, end?: number): MockBuffer {
+      return new MockBuffer(super.subarray(start, end));
+    }
+  }
+
   return {
     console,
     store,
@@ -258,6 +454,11 @@ export function createBridgeAPIs(): Record<string, unknown> {
     // Base64
     btoa: (str: string): string => btoa(str),
     atob: (str: string): string => atob(str),
+    // Browser-like globals for gramjs
+    location: mockLocation,
+    WebSocket: MockWebSocket,
+    crypto: mockCrypto,
+    Buffer: MockBuffer,
     // Pre-declare skill globals
     tools: [],
     init: undefined,
