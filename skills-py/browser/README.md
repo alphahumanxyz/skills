@@ -89,10 +89,7 @@ Comprehensive browser automation skill using Playwright for web scraping, testin
 Create `config.json` in the skill's data directory to customize browser behavior:
 
 ```json
-{
-  "headless": false,
-  "browser_type": "chromium"
-}
+{ "headless": false, "browser_type": "chromium" }
 ```
 
 Options:

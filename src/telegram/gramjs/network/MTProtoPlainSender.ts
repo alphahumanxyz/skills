@@ -3,7 +3,6 @@
  *  in plain text, when no authorization key has been created yet.
  */
 // Removed big-integer import, using native bigint
-
 import { InvalidBufferError } from '../errors';
 import { BinaryReader } from '../extensions';
 import { toSignedLittleBuffer } from '../Helpers';

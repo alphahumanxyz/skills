@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import type { EntityLike } from '../define';
 import { _EntityType, _entityType, isArrayLike } from '../Helpers';
 import { utils } from '../index';

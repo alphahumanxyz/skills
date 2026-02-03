@@ -2,7 +2,6 @@
  * Crypto polyfill for V8 runtime.
  * Provides Node.js crypto-like interface using Web Crypto API.
  */
-
 import { Buffer } from './buffer.js';
 
 /**
@@ -158,7 +157,7 @@ function sha1(data) {
   // Pre-processing
   const msgLen = msg.length;
   const bitLen = msgLen * 8;
-  const padLen = ((msgLen + 8) % 64 === 0 ? 64 : (64 - ((msgLen + 8) % 64))) + msgLen + 8;
+  const padLen = ((msgLen + 8) % 64 === 0 ? 64 : 64 - ((msgLen + 8) % 64)) + msgLen + 8;
   const padded = new Uint8Array(padLen);
   padded.set(msg);
   padded[msgLen] = 0x80;
@@ -176,7 +175,11 @@ function sha1(data) {
       w[j] = rotl(w[j - 3] ^ w[j - 8] ^ w[j - 14] ^ w[j - 16], 1);
     }
 
-    let a = h0, b = h1, c = h2, d = h3, e = h4;
+    let a = h0,
+      b = h1,
+      c = h2,
+      d = h3,
+      e = h4;
     for (let j = 0; j < 80; j++) {
       let f, k;
       if (j < 20) {
@@ -231,12 +234,11 @@ function sha256(data) {
     0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
     0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
   ]);
 
   let H = new Uint32Array([
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
   ]);
 
   const msg = data instanceof Uint8Array ? data : new Uint8Array(data);
@@ -321,14 +323,13 @@ function md5(data) {
     0xfffa3942, 0x8771f681, 0x6d9d6122, 0xfde5380c, 0xa4beea44, 0x4bdecfa9, 0xf6bb4b60, 0xbebfbc70,
     0x289b7ec6, 0xeaa127fa, 0xd4ef3085, 0x04881d05, 0xd9d4d039, 0xe6db99e5, 0x1fa27cf8, 0xc4ac5665,
     0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039, 0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
-    0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1, 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
+    0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1, 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
   ]);
 
   const S = [
-    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
-    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
-    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
-    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9,
+    14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
   ];
 
   let a0 = 0x67452301;
@@ -354,7 +355,10 @@ function md5(data) {
       M[j] = view.getUint32(i + j * 4, true);
     }
 
-    let A = a0, B = b0, C = c0, D = d0;
+    let A = a0,
+      B = b0,
+      C = c0,
+      D = d0;
 
     for (let j = 0; j < 64; j++) {
       let F, g;

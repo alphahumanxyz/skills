@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import { errors, utils } from '../';
 import type { TelegramClient } from '../';
 import type { Entity, EntityLike } from '../define';
@@ -300,9 +299,7 @@ export async function getInputEntity(
   peer = utils.getPeer(peer);
   if (peer instanceof Api.PeerUser) {
     const users = await client.invoke(
-      new Api.users.GetUsers({
-        id: [new Api.InputUser({ userId: peer.userId, accessHash: 0n })],
-      })
+      new Api.users.GetUsers({ id: [new Api.InputUser({ userId: peer.userId, accessHash: 0n })] })
     );
     if (users.length && !(users[0] instanceof Api.UserEmpty)) {
       // If the user passed a valid ID they expect to work for
@@ -443,7 +440,10 @@ export async function _getPeer(client: TelegramClient, peer: EntityLike) {
 }
 
 /** @hidden */
-export async function _getInputDialog(client: TelegramClient, dialog: EntityLike | Api.TypeInputDialogPeer) {
+export async function _getInputDialog(
+  client: TelegramClient,
+  dialog: EntityLike | Api.TypeInputDialogPeer
+) {
   try {
     if (dialog.SUBCLASS_OF_ID == 0xa21c9795) {
       // crc32(b'InputDialogPeer')
@@ -458,7 +458,10 @@ export async function _getInputDialog(client: TelegramClient, dialog: EntityLike
 }
 
 /** @hidden */
-export async function _getInputNotify(client: TelegramClient, notify: EntityLike | Api.TypeInputNotifyPeer) {
+export async function _getInputNotify(
+  client: TelegramClient,
+  notify: EntityLike | Api.TypeInputNotifyPeer
+) {
   try {
     if (notify.SUBCLASS_OF_ID == 0x58981615) {
       if (notify instanceof Api.InputNotifyPeer) {

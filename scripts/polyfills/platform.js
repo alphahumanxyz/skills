@@ -22,11 +22,4 @@ export function getPlatform() {
   return 'v8-runtime';
 }
 
-export default {
-  isBrowser,
-  isNode,
-  isDeno,
-  hasWebSocket,
-  hasWebCrypto,
-  getPlatform,
-};
+export default { isBrowser, isNode, isDeno, hasWebSocket, hasWebCrypto, getPlatform };

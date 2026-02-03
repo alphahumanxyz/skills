@@ -84,7 +84,9 @@ export class Buffer extends Uint8Array {
       // Array-like object
       return new Buffer(Array.from(data));
     }
-    throw new TypeError('First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object');
+    throw new TypeError(
+      'First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object'
+    );
   }
 
   static fromString(str, encoding) {
@@ -236,7 +238,13 @@ export class Buffer extends Uint8Array {
     return true;
   }
 
-  compare(target, targetStart = 0, targetEnd = target.length, sourceStart = 0, sourceEnd = this.length) {
+  compare(
+    target,
+    targetStart = 0,
+    targetEnd = target.length,
+    sourceStart = 0,
+    sourceEnd = this.length
+  ) {
     const source = this.subarray(sourceStart, sourceEnd);
     const targetSlice = target.subarray(targetStart, targetEnd);
     return Buffer.compare(source, targetSlice);
@@ -249,7 +257,11 @@ export class Buffer extends Uint8Array {
   }
 
   slice(start, end) {
-    return new Buffer(this.buffer, this.byteOffset + (start || 0), (end || this.length) - (start || 0));
+    return new Buffer(
+      this.buffer,
+      this.byteOffset + (start || 0),
+      (end || this.length) - (start || 0)
+    );
   }
 
   subarray(start, end) {
@@ -279,20 +291,22 @@ export class Buffer extends Uint8Array {
 
   readUInt32LE(offset = 0) {
     return (
-      this[offset] |
-      (this[offset + 1] << 8) |
-      (this[offset + 2] << 16) |
-      (this[offset + 3] << 24)
-    ) >>> 0;
+      (this[offset] |
+        (this[offset + 1] << 8) |
+        (this[offset + 2] << 16) |
+        (this[offset + 3] << 24)) >>>
+      0
+    );
   }
 
   readUInt32BE(offset = 0) {
     return (
-      (this[offset] << 24) |
-      (this[offset + 1] << 16) |
-      (this[offset + 2] << 8) |
-      this[offset + 3]
-    ) >>> 0;
+      ((this[offset] << 24) |
+        (this[offset + 1] << 16) |
+        (this[offset + 2] << 8) |
+        this[offset + 3]) >>>
+      0
+    );
   }
 
   readInt8(offset = 0) {
@@ -312,19 +326,13 @@ export class Buffer extends Uint8Array {
 
   readInt32LE(offset = 0) {
     return (
-      this[offset] |
-      (this[offset + 1] << 8) |
-      (this[offset + 2] << 16) |
-      (this[offset + 3] << 24)
+      this[offset] | (this[offset + 1] << 8) | (this[offset + 2] << 16) | (this[offset + 3] << 24)
     );
   }
 
   readInt32BE(offset = 0) {
     return (
-      (this[offset] << 24) |
-      (this[offset + 1] << 16) |
-      (this[offset + 2] << 8) |
-      this[offset + 3]
+      (this[offset] << 24) | (this[offset + 1] << 16) | (this[offset + 2] << 8) | this[offset + 3]
     );
   }
 

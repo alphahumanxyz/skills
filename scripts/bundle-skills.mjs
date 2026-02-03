@@ -5,10 +5,9 @@
  * making them available to the V8 runtime which doesn't support ES modules.
  * Similar to bundle-telegram.mjs but for skills with tool files.
  */
-
 import * as esbuild from 'esbuild';
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -68,9 +67,7 @@ for (const skillName of skills) {
       treeShaking: true,
       // Don't add "use strict" as it prevents global assignments
       legalComments: 'none',
-      banner: {
-        js: '/* Bundled skill with tools */',
-      },
+      banner: { js: '/* Bundled skill with tools */' },
       // Configure to handle CommonJS modules properly
       mainFields: ['browser', 'module', 'main'],
       outdir: skillDirOutput,
@@ -110,7 +107,9 @@ for (const skillName of skills) {
 
     // // Write the bundled file back
     // writeFileSync(skillIndexPathOutput, bundledCode);
-    console.log(`[bundle-skills] Bundled ${skillName} (${(bundledCode.length / 1024).toFixed(1)} KB)`);
+    console.log(
+      `[bundle-skills] Bundled ${skillName} (${(bundledCode.length / 1024).toFixed(1)} KB)`
+    );
   } catch (error) {
     console.error(`[bundle-skills] Failed to bundle ${skillName}:`, error.message);
     if (error.errors) {

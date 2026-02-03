@@ -43,7 +43,7 @@ Each skill is a directory under `src/` containing:
 
 - **index.ts** — TypeScript source with lifecycle hooks, tools, and business logic
 - **manifest.json** — Metadata (id, name, version, runtime, platforms, setup config)
-- **__tests__/** _(optional)_ — Unit tests
+- ****tests**/** _(optional)_ — Unit tests
 
 ### manifest.json
 
@@ -57,10 +57,7 @@ Each skill is a directory under `src/` containing:
   "description": "What this skill does",
   "auto_start": false,
   "platforms": ["windows", "macos", "linux"],
-  "setup": {
-    "required": true,
-    "label": "Configure My Skill"
-  }
+  "setup": { "required": true, "label": "Configure My Skill" }
 }
 ```
 
@@ -104,30 +101,30 @@ Skills have access to these global namespaces (defined in `types/globals.d.ts`):
 ### Database (`db`)
 
 ```typescript
-db.exec("CREATE TABLE IF NOT EXISTS logs (...)", []);
-db.exec("INSERT INTO logs (msg) VALUES (?)", ["hello"]);
-const row = db.get("SELECT * FROM logs WHERE id = ?", [1]);
-const rows = db.all("SELECT * FROM logs LIMIT 10", []);
-db.kvSet("key", { any: "value" });
-const value = db.kvGet("key");
+db.exec('CREATE TABLE IF NOT EXISTS logs (...)', []);
+db.exec('INSERT INTO logs (msg) VALUES (?)', ['hello']);
+const row = db.get('SELECT * FROM logs WHERE id = ?', [1]);
+const rows = db.all('SELECT * FROM logs LIMIT 10', []);
+db.kvSet('key', { any: 'value' });
+const value = db.kvGet('key');
 ```
 
 ### Store (`store`)
 
 ```typescript
-store.set("config", { apiKey: "xxx" });
-const config = store.get("config");
-store.delete("config");
+store.set('config', { apiKey: 'xxx' });
+const config = store.get('config');
+store.delete('config');
 const keys = store.keys();
 ```
 
 ### HTTP (`net`)
 
 ```typescript
-const response = net.fetch("https://api.example.com/data", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ query: "test" }),
+const response = net.fetch('https://api.example.com/data', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ query: 'test' }),
   timeout: 10000,
 });
 // response: { status: number, headers: Record<string, string>, body: string }
@@ -137,39 +134,39 @@ const response = net.fetch("https://api.example.com/data", {
 
 ```typescript
 // 6-field syntax: seconds minutes hours day month dow
-cron.register("every-10s", "*/10 * * * * *");
-cron.unregister("every-10s");
+cron.register('every-10s', '*/10 * * * * *');
+cron.unregister('every-10s');
 const schedules = cron.list();
 ```
 
 ### State (`state`)
 
 ```typescript
-state.set("status", "healthy");
+state.set('status', 'healthy');
 state.setPartial({ lastPing: Date.now(), uptime: 99.9 });
-const status = state.get("status");
+const status = state.get('status');
 ```
 
 ### Data (`data`)
 
 ```typescript
-data.write("config.json", JSON.stringify(config, null, 2));
-const content = data.read("config.json");  // null if not found
+data.write('config.json', JSON.stringify(config, null, 2));
+const content = data.read('config.json'); // null if not found
 ```
 
 ### Platform (`platform`)
 
 ```typescript
-const os = platform.os();  // "windows", "macos", "linux", "android", "ios"
-const apiKey = platform.env("MY_API_KEY");
-platform.notify("Title", "Body");
+const os = platform.os(); // "windows", "macos", "linux", "android", "ios"
+const apiKey = platform.env('MY_API_KEY');
+platform.notify('Title', 'Body');
 ```
 
 ### Skills Interop (`skills`)
 
 ```typescript
 const allSkills = skills.list();
-const result = skills.callTool("other-skill", "tool-name", { arg: "value" });
+const result = skills.callTool('other-skill', 'tool-name', { arg: 'value' });
 ```
 
 ## Lifecycle Hooks
@@ -177,18 +174,18 @@ const result = skills.callTool("other-skill", "tool-name", { arg: "value" });
 Skills implement these functions (all synchronous):
 
 ```typescript
-function init(): void                                           // Load config, create DB tables
-function start(): void                                          // Register cron schedules, begin work
-function stop(): void                                           // Cleanup, persist state
-function onCronTrigger(scheduleId: string): void               // Handle cron triggers
-function onSessionStart(args: { sessionId: string }): void     // User started conversation
-function onSessionEnd(args: { sessionId: string }): void       // Conversation ended
-function onSetupStart(): SetupStartResult                       // Return first setup step
-function onSetupSubmit(args): SetupSubmitResult                 // Process setup step
-function onSetupCancel(): void                                  // Cleanup on cancel
-function onDisconnect(): void                                   // User disconnected skill
-function onListOptions(): { options: SkillOption[] }           // Runtime options
-function onSetOption(args: { name: string; value: unknown }): void
+function init(): void; // Load config, create DB tables
+function start(): void; // Register cron schedules, begin work
+function stop(): void; // Cleanup, persist state
+function onCronTrigger(scheduleId: string): void; // Handle cron triggers
+function onSessionStart(args: { sessionId: string }): void; // User started conversation
+function onSessionEnd(args: { sessionId: string }): void; // Conversation ended
+function onSetupStart(): SetupStartResult; // Return first setup step
+function onSetupSubmit(args): SetupSubmitResult; // Process setup step
+function onSetupCancel(): void; // Cleanup on cancel
+function onDisconnect(): void; // User disconnected skill
+function onListOptions(): { options: SkillOption[] }; // Runtime options
+function onSetOption(args: { name: string; value: unknown }): void;
 ```
 
 ### Lifecycle Flow
@@ -212,18 +209,18 @@ Tools are exposed to the AI via the global `tools` array:
 ```typescript
 tools = [
   {
-    name: "get-status",
-    description: "Get current skill status",
+    name: 'get-status',
+    description: 'Get current skill status',
     input_schema: {
-      type: "object",
+      type: 'object',
       properties: {
-        format: { type: "string", enum: ["json", "text"], description: "Output format" },
+        format: { type: 'string', enum: ['json', 'text'], description: 'Output format' },
       },
       required: [],
     },
     execute(args): string {
       // Must return JSON string
-      return JSON.stringify({ status: "ok", uptime: 99.9 });
+      return JSON.stringify({ status: 'ok', uptime: 99.9 });
     },
   },
 ];
@@ -274,13 +271,13 @@ function onListOptions(): { options: SkillOption[] } {
   return {
     options: [
       {
-        name: "interval",
-        type: "select",
-        label: "Check Interval",
+        name: 'interval',
+        type: 'select',
+        label: 'Check Interval',
         value: String(CONFIG.interval),
         options: [
-          { label: "Every 10s", value: "10" },
-          { label: "Every 30s", value: "30" },
+          { label: 'Every 10s', value: '10' },
+          { label: 'Every 30s', value: '30' },
         ],
       },
     ],
@@ -288,11 +285,11 @@ function onListOptions(): { options: SkillOption[] } {
 }
 
 function onSetOption(args: { name: string; value: unknown }): void {
-  if (args.name === "interval") {
+  if (args.name === 'interval') {
     CONFIG.interval = parseInt(args.value as string);
     // Update cron schedule
-    cron.unregister("work");
-    cron.register("work", `*/${CONFIG.interval} * * * * *`);
+    cron.unregister('work');
+    cron.register('work', `*/${CONFIG.interval} * * * * *`);
   }
 }
 ```
@@ -309,24 +306,22 @@ Tests use a V8 harness with mocked bridge APIs.
 function freshInit(overrides?: Partial<Config>): void {
   setupSkillTest({
     storeData: { config: { ...defaultConfig, ...overrides } },
-    fetchResponses: {
-      "https://api.example.com": { status: 200, body: '{"ok":true}' },
-    },
+    fetchResponses: { 'https://api.example.com': { status: 200, body: '{"ok":true}' } },
   });
   init();
 }
 
-_describe("My Skill", () => {
-  _it("should initialize", () => {
+_describe('My Skill', () => {
+  _it('should initialize', () => {
     freshInit();
-    _assertNotNull(store.get("config"));
+    _assertNotNull(store.get('config'));
   });
 
-  _it("should call API", () => {
-    freshInit({ apiKey: "test" });
+  _it('should call API', () => {
+    freshInit({ apiKey: 'test' });
     start();
-    const result = callTool("get-status", {});
-    _assertEqual(result.status, "ok");
+    const result = callTool('get-status', {});
+    _assertEqual(result.status, 'ok');
   });
 });
 ```
@@ -365,6 +360,7 @@ npx tsc -p tsconfig.test.json
 1. Create directory: `mkdir src/my-skill`
 
 2. Create `manifest.json`:
+
 ```json
 {
   "id": "my-skill",
@@ -380,6 +376,7 @@ npx tsc -p tsconfig.test.json
 3. Create `index.ts` with lifecycle hooks and tools
 
 4. Build and test:
+
 ```bash
 yarn build
 yarn typecheck
@@ -420,10 +417,10 @@ interface SkillConfig {
   interval: number;
 }
 
-const CONFIG: SkillConfig = { serverUrl: "", interval: 30 };
+const CONFIG: SkillConfig = { serverUrl: '', interval: 30 };
 
 function init(): void {
-  const saved = store.get("config") as Partial<SkillConfig> | null;
+  const saved = store.get('config') as Partial<SkillConfig> | null;
   if (saved) {
     CONFIG.serverUrl = saved.serverUrl ?? CONFIG.serverUrl;
     CONFIG.interval = saved.interval ?? CONFIG.interval;
@@ -431,7 +428,7 @@ function init(): void {
 }
 
 function stop(): void {
-  store.set("config", CONFIG);
+  store.set('config', CONFIG);
 }
 ```
 
@@ -441,11 +438,8 @@ function stop(): void {
 function callApi(endpoint: string, data?: unknown): unknown {
   try {
     const response = net.fetch(`https://api.example.com${endpoint}`, {
-      method: data ? "POST" : "GET",
-      headers: {
-        "Authorization": `Bearer ${CONFIG.apiKey}`,
-        "Content-Type": "application/json",
-      },
+      method: data ? 'POST' : 'GET',
+      headers: { Authorization: `Bearer ${CONFIG.apiKey}`, 'Content-Type': 'application/json' },
       body: data ? JSON.stringify(data) : undefined,
       timeout: 10000,
     });
@@ -467,7 +461,7 @@ function callApi(endpoint: string, data?: unknown): unknown {
 ```typescript
 function publishState(): void {
   state.setPartial({
-    status: isHealthy ? "healthy" : "down",
+    status: isHealthy ? 'healthy' : 'down',
     lastCheck: new Date().toISOString(),
     uptime: calculateUptime(),
     errorCount: FAIL_COUNT,
@@ -479,16 +473,16 @@ function publishState(): void {
 
 ```typescript
 function onCronTrigger(scheduleId: string): void {
-  if (scheduleId === "health-check") {
+  if (scheduleId === 'health-check') {
     try {
       const result = checkHealth();
       if (!result.ok && CONFIG.notifyOnError) {
-        platform.notify("Health Check Failed", result.message);
+        platform.notify('Health Check Failed', result.message);
       }
     } catch (e) {
       console.error(`Health check error: ${e}`);
       if (CONFIG.notifyOnError) {
-        platform.notify("Health Check Error", String(e));
+        platform.notify('Health Check Error', String(e));
       }
     }
   }
@@ -516,7 +510,7 @@ interface SetupStep {
 
 interface SetupField {
   name: string;
-  type: "text" | "select" | "boolean" | "number" | "password";
+  type: 'text' | 'select' | 'boolean' | 'number' | 'password';
   label: string;
   description?: string;
   required?: boolean;
@@ -529,14 +523,14 @@ interface SetupStartResult {
 }
 
 interface SetupSubmitResult {
-  status: "next" | "complete" | "error";
+  status: 'next' | 'complete' | 'error';
   nextStep?: SetupStep;
   errors?: SetupFieldError[];
 }
 
 interface SkillOption {
   name: string;
-  type: "boolean" | "text" | "number" | "select";
+  type: 'boolean' | 'text' | 'number' | 'select';
   label: string;
   value: unknown;
   options?: SetupFieldOption[];

@@ -9,6 +9,7 @@ import {
   readBufferFromBigInt,
   sha256,
 } from './Helpers';
+import { Api } from './tl';
 
 /**
  * Helper function to calculate bit length of a bigint
@@ -17,7 +18,6 @@ function bitLength(n: bigint): number {
   if (n === 0n) return 0;
   return n.toString(2).length;
 }
-import { Api } from './tl';
 
 const SIZE_FOR_HASH = 256;
 
@@ -113,7 +113,7 @@ function checkPrimeAndGood(primeBytes: Buffer, g: number) {
  * @returns {boolean}
  */
 function isGoodLarge(number: bigint, p: bigint) {
-  return number > 0n && (p - number) > 0n;
+  return number > 0n && p - number > 0n;
 }
 
 /**
@@ -250,7 +250,7 @@ async function computeCheck(request: Api.account.Password, password: string) {
   const bForHash = numBytesForHash(srp_B);
   const gX = modExp(BigInt(g), x, p);
   const k = readBigIntFromBuffer(await sha256(Buffer.concat([pForHash, gForHash])), false);
-  const kgX = bigIntMod((k * gX), p);
+  const kgX = bigIntMod(k * gX, p);
   const generateAndCheckRandom = async () => {
     const randomSize = 256;
     // eslint-disable-next-line no-constant-condition

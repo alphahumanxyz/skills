@@ -19,11 +19,7 @@ function bitLength(n: bigint): number {
  * @param signed
  * @returns {bigint}
  */
-export function readBigIntFromBuffer(
-  buffer: Buffer,
-  little = true,
-  signed = false
-): bigint {
+export function readBigIntFromBuffer(buffer: Buffer, little = true, signed = false): bigint {
   let randBuffer = Buffer.from(buffer);
   const bytesNumber = randBuffer.length;
   if (little) {
@@ -32,7 +28,7 @@ export function readBigIntFromBuffer(
   let bigIntVar = BigInt('0x' + randBuffer.toString('hex'));
 
   if (signed && Math.floor(bitLength(bigIntVar) / 8) >= bytesNumber) {
-    bigIntVar = bigIntVar - (2n ** BigInt(bytesNumber * 8));
+    bigIntVar = bigIntVar - 2n ** BigInt(bytesNumber * 8);
   }
   return bigIntVar;
 }
@@ -140,7 +136,7 @@ export function readBufferFromBigInt(
   }
 
   if (signed && bigIntVar < 0n) {
-    bigIntVar = (2n ** BigInt(bytesNumber * 8)) + bigIntVar;
+    bigIntVar = 2n ** BigInt(bytesNumber * 8) + bigIntVar;
   }
 
   const hex = bigIntVar.toString(16).padStart(bytesNumber * 2, '0');
@@ -262,10 +258,7 @@ export function stripText(text: string, entities: Api.TypeMessageEntity[]) {
  * @param newNonceBigInt
  * @returns {{key: Buffer, iv: Buffer}}
  */
-export async function generateKeyDataFromNonce(
-  serverNonceBigInt: bigint,
-  newNonceBigInt: bigint
-) {
+export async function generateKeyDataFromNonce(serverNonceBigInt: bigint, newNonceBigInt: bigint) {
   const serverNonce = toSignedLittleBuffer(serverNonceBigInt, 16);
   const newNonce = toSignedLittleBuffer(newNonceBigInt, 32);
   const [hash1, hash2, hash3] = await Promise.all([
@@ -318,11 +311,7 @@ export function sha256(data: Buffer): Promise<Buffer> {
  * @param n
  * @returns {bigint}
  */
-export function modExp(
-  a: bigint,
-  b: bigint,
-  n: bigint
-): bigint {
+export function modExp(a: bigint, b: bigint, n: bigint): bigint {
   a = a % n;
   let result = 1n;
   let x = a;

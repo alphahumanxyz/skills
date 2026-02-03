@@ -5,7 +5,6 @@
  * @returns {Promise<{authKey: *, timeOffset: *}>}
  */
 // Removed big-integer import, using native bigint
-
 import { AuthKey } from '../crypto/AuthKey';
 import { Factorizator } from '../crypto/Factorizator';
 import { IGE } from '../crypto/IGE';

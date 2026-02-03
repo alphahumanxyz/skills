@@ -56,13 +56,4 @@ export function isIPv6(input) {
   return true;
 }
 
-export default {
-  Socket,
-  Server,
-  createConnection,
-  connect,
-  createServer,
-  isIP,
-  isIPv4,
-  isIPv6,
-};
+export default { Socket, Server, createConnection, connect, createServer, isIP, isIPv4, isIPv6 };

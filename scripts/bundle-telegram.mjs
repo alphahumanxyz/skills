@@ -4,10 +4,9 @@
  * The telegram skill uses gramjs which requires Node.js APIs.
  * This script bundles gramjs from the npm 'telegram' package with polyfills for the V8 runtime.
  */
-
 import * as esbuild from 'esbuild';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -51,34 +50,34 @@ try {
     // Define globals
     define: {
       'process.env.NODE_ENV': '"production"',
-      'global': 'globalThis',
+      global: 'globalThis',
       'process.browser': 'true',
     },
     // Inject Buffer globally
     inject: [join(polyfillsDir, 'buffer-inject.js')],
     // Map Node.js modules to polyfills
     alias: {
-      'buffer': join(polyfillsDir, 'buffer.js'),
-      'crypto': join(polyfillsDir, 'crypto.js'),
-      'events': join(polyfillsDir, 'events.js'),
+      buffer: join(polyfillsDir, 'buffer.js'),
+      crypto: join(polyfillsDir, 'crypto.js'),
+      events: join(polyfillsDir, 'events.js'),
       'async-mutex': join(polyfillsDir, 'async-mutex.js'),
-      'websocket': join(polyfillsDir, 'websocket.js'),
-      'store2': join(polyfillsDir, 'store2.js'),
+      websocket: join(polyfillsDir, 'websocket.js'),
+      store2: join(polyfillsDir, 'store2.js'),
       'big-integer': join(polyfillsDir, 'big-integer.js'),
-      'path': join(polyfillsDir, 'path.js'),
-      'fs': join(polyfillsDir, 'fs.js'),
-      'os': join(polyfillsDir, 'os.js'),
-      'net': join(polyfillsDir, 'net.js'),
-      'tls': join(polyfillsDir, 'tls.js'),
-      'stream': join(polyfillsDir, 'stream.js'),
-      'util': join(polyfillsDir, 'util.js'),
-      'socks': join(polyfillsDir, 'socks.js'),
+      path: join(polyfillsDir, 'path.js'),
+      fs: join(polyfillsDir, 'fs.js'),
+      os: join(polyfillsDir, 'os.js'),
+      net: join(polyfillsDir, 'net.js'),
+      tls: join(polyfillsDir, 'tls.js'),
+      stream: join(polyfillsDir, 'stream.js'),
+      util: join(polyfillsDir, 'util.js'),
+      socks: join(polyfillsDir, 'socks.js'),
       'ts-custom-error': join(polyfillsDir, 'ts-custom-error.js'),
       '@cryptography/aes': join(polyfillsDir, 'cryptography-aes.js'),
-      'htmlparser2': join(polyfillsDir, 'htmlparser2.js'),
+      htmlparser2: join(polyfillsDir, 'htmlparser2.js'),
       'node-localstorage': join(polyfillsDir, 'node-localstorage.js'),
-      'pako': join(polyfillsDir, 'pako.js'),
-      'mime': join(polyfillsDir, 'mime.js'),
+      pako: join(polyfillsDir, 'pako.js'),
+      mime: join(polyfillsDir, 'mime.js'),
     },
   });
 
@@ -93,7 +92,9 @@ try {
   gramjsBundleCode = gramjsBundleCode.replace(/^"use strict";\s*/m, '');
   gramjsBundleCode = gramjsBundleCode.replace(/^\s*"use strict";\s*/gm, '');
 
-  console.log(`[bundle-telegram] gramjs bundle size: ${(gramjsBundleCode.length / 1024).toFixed(1)} KB`);
+  console.log(
+    `[bundle-telegram] gramjs bundle size: ${(gramjsBundleCode.length / 1024).toFixed(1)} KB`
+  );
 
   // Write gramjs bundle
   const gramjsBundlePath = join(telegramOutDir, 'gramjs-bundle.js');

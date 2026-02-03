@@ -1,6 +1,5 @@
 // Which updates have the following fields?
 // Removed big-integer import, using native bigint
-
 import { isArrayLike, returnBigInt } from './Helpers';
 import { Api } from './tl';
 import { getInputPeer, getPeerId } from './Utils';
@@ -62,7 +61,9 @@ export class EntityCache {
     }
     for (const cls of [Api.PeerUser, Api.PeerChat, Api.PeerChannel]) {
       const result = this.cacheMap.get(
-        getPeerId(new cls({ userId: bigIntItem, chatId: bigIntItem, channelId: bigIntItem })).toString()
+        getPeerId(
+          new cls({ userId: bigIntItem, chatId: bigIntItem, channelId: bigIntItem })
+        ).toString()
       );
       if (result) {
         return result;

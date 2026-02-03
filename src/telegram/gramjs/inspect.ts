@@ -1,1 +1,1 @@
-export { inspect } from "util";
+export { inspect } from 'util';

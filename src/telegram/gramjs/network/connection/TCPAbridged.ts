@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import type { PromisedNetSockets, PromisedWebSockets } from '../../extensions';
 import { readBufferFromBigInt } from '../../Helpers';
 import { Connection, PacketCodec } from './Connection';

@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import { helpers } from '../';
 import type { AuthKey } from '../crypto/AuthKey';
 import { IGE } from '../crypto/IGE';

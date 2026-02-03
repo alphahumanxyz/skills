@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import Deferred from '../extensions/Deferred';
 import { Api } from '../tl';
 

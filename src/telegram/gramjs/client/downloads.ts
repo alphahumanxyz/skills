@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import * as fs from './fs';
 import { utils } from '../';
 import { EntityLike, OutFile, ProgressCallback } from '../define';
@@ -315,9 +314,9 @@ export function iterDownload(
   let cls;
   if (
     chunkSize == requestSize &&
-    (offset! / BigInt(MAX_CHUNK_SIZE)) === 0n &&
+    offset! / BigInt(MAX_CHUNK_SIZE) === 0n &&
     stride % MIN_CHUNK_SIZE == 0 &&
-    (limit == undefined || (offset! / BigInt(limit)) === 0n)
+    (limit == undefined || offset! / BigInt(limit) === 0n)
   ) {
     cls = DirectDownloadIter;
     client._log.info(

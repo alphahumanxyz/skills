@@ -2,7 +2,6 @@
  * Node.js stream module stub for V8 runtime.
  * Provides minimal stream implementations for compatibility.
  */
-
 import { EventEmitter } from './events.js';
 
 export class Stream extends EventEmitter {
@@ -181,9 +180,7 @@ export class PassThrough extends Transform {
 }
 
 export function pipeline(...streams) {
-  const callback = typeof streams[streams.length - 1] === 'function'
-    ? streams.pop()
-    : () => {};
+  const callback = typeof streams[streams.length - 1] === 'function' ? streams.pop() : () => {};
 
   let source = streams[0];
   for (let i = 1; i < streams.length; i++) {
@@ -218,13 +215,4 @@ export function finished(stream, options, callback) {
   };
 }
 
-export default {
-  Stream,
-  Readable,
-  Writable,
-  Duplex,
-  Transform,
-  PassThrough,
-  pipeline,
-  finished,
-};
+export default { Stream, Readable, Writable, Duplex, Transform, PassThrough, pipeline, finished };

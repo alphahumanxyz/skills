@@ -5,7 +5,9 @@
 
 export class TLSSocket {
   constructor() {
-    throw new Error('tls.TLSSocket is not supported in V8 runtime. Use WebSocket with wss:// instead.');
+    throw new Error(
+      'tls.TLSSocket is not supported in V8 runtime. Use WebSocket with wss:// instead.'
+    );
   }
 }
 

@@ -8,8 +8,5 @@
   "tick_interval": null,
   "env": [],
   "dependencies": ["playwright>=1.40.0", "mcp>=1.0.0", "pydantic>=2.0"],
-  "setup": {
-    "required": false,
-    "label": "Configure Browser"
-  }
+  "setup": { "required": false, "label": "Configure Browser" }
 }

@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import { RequestState } from '../network/RequestState';
 
 export class PendingState {

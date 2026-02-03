@@ -1,4 +1,14 @@
 interface Skill {
+  info: {
+    id: string;
+    name: string;
+    runtime: string;
+    entry: string;
+    version: string;
+    description: string;
+    auto_start: boolean;
+    setup: { required: boolean; label: string };
+  };
   tools: ToolDefinition[];
   init: () => void;
   start: () => void;

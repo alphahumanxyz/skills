@@ -14,10 +14,7 @@
     "icalendar>=5.0.0",
     "pytz>=2023.3"
   ],
-  "setup": {
-    "required": true,
-    "label": "Connect Calendar"
-  },
+  "setup": { "required": true, "label": "Connect Calendar" },
   "entity_schema": {
     "entity_types": [
       {
@@ -25,9 +22,18 @@
         "label": "Calendar Account",
         "description": "A connected calendar account.",
         "properties": [
-          { "name": "provider", "type": "string", "description": "Calendar provider (google, outlook, caldav)" },
+          {
+            "name": "provider",
+            "type": "string",
+            "description": "Calendar provider (google, outlook, caldav)"
+          },
           { "name": "email", "type": "string", "description": "Account email address" },
-          { "name": "display_name", "type": "string", "description": "Display name", "optional": true }
+          {
+            "name": "display_name",
+            "type": "string",
+            "description": "Display name",
+            "optional": true
+          }
         ]
       },
       {
@@ -37,8 +43,18 @@
         "properties": [
           { "name": "name", "type": "string", "description": "Calendar name" },
           { "name": "id", "type": "string", "description": "Calendar ID" },
-          { "name": "timezone", "type": "string", "description": "Calendar timezone", "optional": true },
-          { "name": "primary", "type": "boolean", "description": "Whether this is the primary calendar", "optional": true }
+          {
+            "name": "timezone",
+            "type": "string",
+            "description": "Calendar timezone",
+            "optional": true
+          },
+          {
+            "name": "primary",
+            "type": "boolean",
+            "description": "Whether this is the primary calendar",
+            "optional": true
+          }
         ]
       },
       {
@@ -49,9 +65,24 @@
           { "name": "title", "type": "string", "description": "Event title" },
           { "name": "start", "type": "string", "description": "Event start time (ISO 8601)" },
           { "name": "end", "type": "string", "description": "Event end time (ISO 8601)" },
-          { "name": "location", "type": "string", "description": "Event location", "optional": true },
-          { "name": "description", "type": "string", "description": "Event description", "optional": true },
-          { "name": "all_day", "type": "boolean", "description": "Whether this is an all-day event", "optional": true }
+          {
+            "name": "location",
+            "type": "string",
+            "description": "Event location",
+            "optional": true
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "description": "Event description",
+            "optional": true
+          },
+          {
+            "name": "all_day",
+            "type": "boolean",
+            "description": "Whether this is an all-day event",
+            "optional": true
+          }
         ]
       }
     ],

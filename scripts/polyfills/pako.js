@@ -43,11 +43,4 @@ export function ungzip(data, options = {}) {
 }
 
 // Default export matching pako structure
-export default {
-  inflate,
-  deflate,
-  inflateRaw,
-  deflateRaw,
-  gzip,
-  ungzip,
-};
+export default { inflate, deflate, inflateRaw, deflateRaw, gzip, ungzip };

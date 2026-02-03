@@ -143,26 +143,28 @@ export function stat(path, options, callback) {
 // Promises API
 export const promises = {
   readFile: (path, options) =>
-    new Promise((resolve, reject) => readFile(path, options, (err, data) => err ? reject(err) : resolve(data))),
+    new Promise((resolve, reject) =>
+      readFile(path, options, (err, data) => (err ? reject(err) : resolve(data)))
+    ),
   writeFile: (path, data, options) =>
-    new Promise((resolve, reject) => writeFile(path, data, options, err => err ? reject(err) : resolve())),
-  mkdir: (path, options) =>
-    new Promise(resolve => mkdir(path, options, () => resolve())),
+    new Promise((resolve, reject) =>
+      writeFile(path, data, options, err => (err ? reject(err) : resolve()))
+    ),
+  mkdir: (path, options) => new Promise(resolve => mkdir(path, options, () => resolve())),
   unlink: path =>
-    new Promise((resolve, reject) => unlink(path, err => err ? reject(err) : resolve())),
+    new Promise((resolve, reject) => unlink(path, err => (err ? reject(err) : resolve()))),
   readdir: (path, options) =>
-    new Promise((resolve, reject) => readdir(path, options, (err, files) => err ? reject(err) : resolve(files))),
+    new Promise((resolve, reject) =>
+      readdir(path, options, (err, files) => (err ? reject(err) : resolve(files)))
+    ),
   stat: (path, options) =>
-    new Promise((resolve, reject) => stat(path, options, (err, stats) => err ? reject(err) : resolve(stats))),
+    new Promise((resolve, reject) =>
+      stat(path, options, (err, stats) => (err ? reject(err) : resolve(stats)))
+    ),
   access: () => Promise.resolve(),
 };
 
-export const constants = {
-  F_OK: 0,
-  R_OK: 4,
-  W_OK: 2,
-  X_OK: 1,
-};
+export const constants = { F_OK: 0, R_OK: 4, W_OK: 2, X_OK: 1 };
 
 export default {
   readFileSync,

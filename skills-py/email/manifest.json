@@ -14,10 +14,7 @@
     "pydantic>=2.0",
     "aiosqlite>=0.20.0"
   ],
-  "setup": {
-    "required": true,
-    "label": "Connect Email"
-  },
+  "setup": { "required": true, "label": "Connect Email" },
   "entity_schema": {
     "entity_types": [
       {
@@ -26,8 +23,17 @@
         "description": "A connected email account.",
         "properties": [
           { "name": "email", "type": "string", "description": "Email address" },
-          { "name": "provider", "type": "string", "description": "Email provider (gmail, outlook, yahoo, icloud, custom)" },
-          { "name": "display_name", "type": "string", "description": "Display name", "optional": true }
+          {
+            "name": "provider",
+            "type": "string",
+            "description": "Email provider (gmail, outlook, yahoo, icloud, custom)"
+          },
+          {
+            "name": "display_name",
+            "type": "string",
+            "description": "Display name",
+            "optional": true
+          }
         ]
       },
       {
@@ -46,8 +52,17 @@
         "description": "An email address seen in messages.",
         "properties": [
           { "name": "email", "type": "string", "description": "Email address" },
-          { "name": "display_name", "type": "string", "description": "Display name", "optional": true },
-          { "name": "message_count", "type": "number", "description": "Number of messages involving this contact" }
+          {
+            "name": "display_name",
+            "type": "string",
+            "description": "Display name",
+            "optional": true
+          },
+          {
+            "name": "message_count",
+            "type": "number",
+            "description": "Number of messages involving this contact"
+          }
         ]
       },
       {
@@ -56,10 +71,24 @@
         "description": "A periodic digest summarizing email activity.",
         "properties": [
           { "name": "summary_type", "type": "string", "description": "One of: activity, unread" },
-          { "name": "start_date", "type": "number", "description": "Period start as Unix timestamp" },
+          {
+            "name": "start_date",
+            "type": "number",
+            "description": "Period start as Unix timestamp"
+          },
           { "name": "end_date", "type": "number", "description": "Period end as Unix timestamp" },
-          { "name": "new_messages", "type": "number", "description": "New messages in period", "optional": true },
-          { "name": "total_unread", "type": "number", "description": "Total unread messages", "optional": true }
+          {
+            "name": "new_messages",
+            "type": "number",
+            "description": "New messages in period",
+            "optional": true
+          },
+          {
+            "name": "total_unread",
+            "type": "number",
+            "description": "Total unread messages",
+            "optional": true
+          }
         ]
       }
     ],

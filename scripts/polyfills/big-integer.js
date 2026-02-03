@@ -37,7 +37,7 @@ bigInt.zero = 0n;
 bigInt.one = 1n;
 bigInt.minusOne = -1n;
 
-bigInt.fromArray = function(digits, base = 10, isNegative = false) {
+bigInt.fromArray = function (digits, base = 10, isNegative = false) {
   let result = 0n;
   const bigBase = BigInt(base);
   for (const digit of digits) {
@@ -46,7 +46,7 @@ bigInt.fromArray = function(digits, base = 10, isNegative = false) {
   return isNegative ? -result : result;
 };
 
-bigInt.gcd = function(a, b) {
+bigInt.gcd = function (a, b) {
   a = bigInt(a);
   b = bigInt(b);
   if (a < 0n) a = -a;
@@ -57,25 +57,25 @@ bigInt.gcd = function(a, b) {
   return a;
 };
 
-bigInt.lcm = function(a, b) {
+bigInt.lcm = function (a, b) {
   a = bigInt(a);
   b = bigInt(b);
   return (a * b) / bigInt.gcd(a, b);
 };
 
-bigInt.isInstance = function(x) {
+bigInt.isInstance = function (x) {
   return typeof x === 'bigint';
 };
 
-bigInt.max = function(...args) {
-  return args.map(bigInt).reduce((a, b) => a > b ? a : b);
+bigInt.max = function (...args) {
+  return args.map(bigInt).reduce((a, b) => (a > b ? a : b));
 };
 
-bigInt.min = function(...args) {
-  return args.map(bigInt).reduce((a, b) => a < b ? a : b);
+bigInt.min = function (...args) {
+  return args.map(bigInt).reduce((a, b) => (a < b ? a : b));
 };
 
-bigInt.randBetween = function(min, max) {
+bigInt.randBetween = function (min, max) {
   min = bigInt(min);
   max = bigInt(max);
   const range = max - min;

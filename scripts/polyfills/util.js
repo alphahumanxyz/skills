@@ -9,22 +9,39 @@ export function format(fmt, ...args) {
   }
 
   let i = 0;
-  return fmt.replace(/%[sdjifoOc%]/g, match => {
-    if (match === '%%') return '%';
-    if (i >= args.length) return match;
-    const arg = args[i++];
-    switch (match) {
-      case '%s': return String(arg);
-      case '%d': return Number(arg).toString();
-      case '%i': return parseInt(arg, 10).toString();
-      case '%f': return parseFloat(arg).toString();
-      case '%j': return safeStringify(arg);
-      case '%o':
-      case '%O': return inspect(arg);
-      case '%c': return ''; // CSS styling not supported
-      default: return match;
-    }
-  }) + (i < args.length ? ' ' + args.slice(i).map(v => inspect(v)).join(' ') : '');
+  return (
+    fmt.replace(/%[sdjifoOc%]/g, match => {
+      if (match === '%%') return '%';
+      if (i >= args.length) return match;
+      const arg = args[i++];
+      switch (match) {
+        case '%s':
+          return String(arg);
+        case '%d':
+          return Number(arg).toString();
+        case '%i':
+          return parseInt(arg, 10).toString();
+        case '%f':
+          return parseFloat(arg).toString();
+        case '%j':
+          return safeStringify(arg);
+        case '%o':
+        case '%O':
+          return inspect(arg);
+        case '%c':
+          return ''; // CSS styling not supported
+        default:
+          return match;
+      }
+    }) +
+    (i < args.length
+      ? ' ' +
+        args
+          .slice(i)
+          .map(v => inspect(v))
+          .join(' ')
+      : '')
+  );
 }
 
 function safeStringify(obj) {
@@ -59,7 +76,7 @@ export function inspect(obj, options = {}) {
     if (seen.has(value)) return '[Circular]';
     seen.add(value);
 
-    const maxDepth = options.depth === null ? Infinity : (options.depth || 2);
+    const maxDepth = options.depth === null ? Infinity : options.depth || 2;
     if (depth > maxDepth) return '[Object]';
 
     if (Array.isArray(value)) {
@@ -105,9 +122,7 @@ export function inspect(obj, options = {}) {
     const keys = Object.keys(value);
     if (keys.length === 0) return '{}';
 
-    const items = keys
-      .map(k => `${k}: ${_inspect(value[k], depth + 1)}`)
-      .join(', ');
+    const items = keys.map(k => `${k}: ${_inspect(value[k], depth + 1)}`).join(', ');
     return `{ ${items} }`;
   }
 
@@ -116,7 +131,7 @@ export function inspect(obj, options = {}) {
 
 export function deprecate(fn, msg) {
   let warned = false;
-  return function(...args) {
+  return function (...args) {
     if (!warned) {
       console.warn('DeprecationWarning:', msg);
       warned = true;
@@ -133,7 +148,7 @@ export function inherits(ctor, superCtor) {
 }
 
 export function promisify(fn) {
-  return function(...args) {
+  return function (...args) {
     return new Promise((resolve, reject) => {
       fn(...args, (err, result) => {
         if (err) {
@@ -147,7 +162,7 @@ export function promisify(fn) {
 }
 
 export function callbackify(fn) {
-  return function(...args) {
+  return function (...args) {
     const callback = args.pop();
     Promise.resolve(fn(...args))
       .then(result => callback(null, result))
@@ -208,12 +223,14 @@ export function isFunction(arg) {
 }
 
 export function isPrimitive(arg) {
-  return arg === null ||
+  return (
+    arg === null ||
     typeof arg === 'boolean' ||
     typeof arg === 'number' ||
     typeof arg === 'string' ||
     typeof arg === 'symbol' ||
-    typeof arg === 'undefined';
+    typeof arg === 'undefined'
+  );
 }
 
 export function isBuffer(arg) {
@@ -222,9 +239,7 @@ export function isBuffer(arg) {
 
 export function debuglog(section) {
   const debug = false; // Could check environment
-  return debug
-    ? (...args) => console.error(`${section.toUpperCase()}:`, ...args)
-    : () => {};
+  return debug ? (...args) => console.error(`${section.toUpperCase()}:`, ...args) : () => {};
 }
 
 export const types = {
@@ -249,7 +264,8 @@ export const types = {
   isRegExp: v => v instanceof RegExp,
   isSet: v => v instanceof Set,
   isSetIterator: v => v?.[Symbol.toStringTag] === 'Set Iterator',
-  isSharedArrayBuffer: v => typeof SharedArrayBuffer !== 'undefined' && v instanceof SharedArrayBuffer,
+  isSharedArrayBuffer: v =>
+    typeof SharedArrayBuffer !== 'undefined' && v instanceof SharedArrayBuffer,
   isTypedArray: v => ArrayBuffer.isView(v) && !(v instanceof DataView),
   isUint8Array: v => v instanceof Uint8Array,
   isUint8ClampedArray: v => v instanceof Uint8ClampedArray,

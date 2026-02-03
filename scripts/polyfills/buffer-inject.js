@@ -2,7 +2,6 @@
  * Buffer injection polyfill.
  * Makes Buffer available globally for gramjs.
  */
-
 import { Buffer } from './buffer.js';
 
 // Make Buffer available globally

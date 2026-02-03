@@ -23,9 +23,7 @@ export class EventEmitter {
   }
 
   getMaxListeners() {
-    return this._maxListeners !== undefined
-      ? this._maxListeners
-      : EventEmitter.defaultMaxListeners;
+    return this._maxListeners !== undefined ? this._maxListeners : EventEmitter.defaultMaxListeners;
   }
 
   emit(type, ...args) {
@@ -79,8 +77,8 @@ export class EventEmitter {
     if (max > 0 && listeners.length > max) {
       console.warn(
         `MaxListenersExceededWarning: Possible EventEmitter memory leak detected. ` +
-        `${listeners.length} ${type} listeners added. ` +
-        `Use emitter.setMaxListeners() to increase limit`
+          `${listeners.length} ${type} listeners added. ` +
+          `Use emitter.setMaxListeners() to increase limit`
       );
     }
 
@@ -93,10 +91,7 @@ export class EventEmitter {
       throw new TypeError('The "listener" argument must be of type Function');
     }
 
-    const wrapper = {
-      listener,
-      once: true,
-    };
+    const wrapper = { listener, once: true };
 
     let listeners = this._events.get(type);
     if (!listeners) {
@@ -197,10 +192,7 @@ export class EventEmitter {
       throw new TypeError('The "listener" argument must be of type Function');
     }
 
-    const wrapper = {
-      listener,
-      once: true,
-    };
+    const wrapper = { listener, once: true };
 
     let listeners = this._events.get(type);
     if (!listeners) {
@@ -220,7 +212,7 @@ export class EventEmitter {
 EventEmitter.defaultMaxListeners = 10;
 
 // Static method
-EventEmitter.listenerCount = function(emitter, type) {
+EventEmitter.listenerCount = function (emitter, type) {
   return emitter.listenerCount(type);
 };
 

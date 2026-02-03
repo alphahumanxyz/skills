@@ -18,11 +18,11 @@ A plugin system for the [AlphaHuman](https://github.com/bnbpad/alphahuman) platf
 
 A skill is a TypeScript directory under `src/` that compiles to JavaScript in `skills/`:
 
-| File            | Required | Purpose                                                  |
-| --------------- | -------- | -------------------------------------------------------- |
-| `index.ts`      | Yes      | TypeScript source with lifecycle hooks and tools         |
-| `manifest.json` | Yes      | Metadata (id, name, version, runtime, setup config)      |
-| `__tests__/`    | No       | Test files for the skill                                 |
+| File            | Required | Purpose                                             |
+| --------------- | -------- | --------------------------------------------------- |
+| `index.ts`      | Yes      | TypeScript source with lifecycle hooks and tools    |
+| `manifest.json` | Yes      | Metadata (id, name, version, runtime, setup config) |
+| `__tests__/`    | No       | Test files for the skill                            |
 
 Skills register tools the AI can call, react to lifecycle events, persist data, and run scheduled background tasks.
 
@@ -36,11 +36,11 @@ src/<skill-name>/
 
 ## Available Skills
 
-| Skill                              | Description                                                    | Setup    |
-| ---------------------------------- | -------------------------------------------------------------- | -------- |
-| [`server-ping`](src/server-ping/)  | Monitors server health with configurable ping intervals        | Required |
-| [`notion`](src/notion/)            | Notion integration with 22+ tools for pages, databases, blocks | Required |
-| [`telegram`](src/telegram/)        | Telegram integration (in development)                          | Required |
+| Skill                             | Description                                                    | Setup    |
+| --------------------------------- | -------------------------------------------------------------- | -------- |
+| [`server-ping`](src/server-ping/) | Monitors server health with configurable ping intervals        | Required |
+| [`notion`](src/notion/)           | Notion integration with 22+ tools for pages, databases, blocks | Required |
+| [`telegram`](src/telegram/)       | Telegram integration (in development)                          | Required |
 
 ## Quick Start
 
@@ -92,10 +92,7 @@ yarn test src/server-ping/__tests__/test-server-ping.ts
   "description": "What this skill does",
   "auto_start": false,
   "platforms": ["windows", "macos", "linux"],
-  "setup": {
-    "required": true,
-    "label": "Configure My Skill"
-  }
+  "setup": { "required": true, "label": "Configure My Skill" }
 }
 ```
 
@@ -108,10 +105,7 @@ interface SkillConfig {
   refreshInterval: number;
 }
 
-const CONFIG: SkillConfig = {
-  apiKey: "",
-  refreshInterval: 60,
-};
+const CONFIG: SkillConfig = { apiKey: '', refreshInterval: 60 };
 
 // ---------------------------------------------------------------------------
 // Lifecycle hooks
@@ -120,9 +114,9 @@ const CONFIG: SkillConfig = {
 function init(): void {
   // Called when skill is loaded
   // Initialize database tables, load config from store
-  db.exec("CREATE TABLE IF NOT EXISTS logs (...)", []);
+  db.exec('CREATE TABLE IF NOT EXISTS logs (...)', []);
 
-  const saved = store.get("config") as Partial<SkillConfig> | null;
+  const saved = store.get('config') as Partial<SkillConfig> | null;
   if (saved) {
     CONFIG.apiKey = saved.apiKey ?? CONFIG.apiKey;
   }
@@ -131,20 +125,20 @@ function init(): void {
 function start(): void {
   // Called when skill should begin active work
   // Register cron schedules, publish initial state
-  cron.register("refresh", `*/${CONFIG.refreshInterval} * * * * *`);
+  cron.register('refresh', `*/${CONFIG.refreshInterval} * * * * *`);
   publishState();
 }
 
 function stop(): void {
   // Called on shutdown
   // Unregister cron schedules, persist state
-  cron.unregister("refresh");
-  store.set("config", CONFIG);
+  cron.unregister('refresh');
+  store.set('config', CONFIG);
 }
 
 function onCronTrigger(scheduleId: string): void {
   // Called when a registered cron schedule fires
-  if (scheduleId === "refresh") {
+  if (scheduleId === 'refresh') {
     doRefresh();
   }
 }
@@ -164,32 +158,28 @@ function onSessionEnd(args: { sessionId: string }): void {
 function onSetupStart(): SetupStartResult {
   return {
     step: {
-      id: "credentials",
-      title: "API Credentials",
-      description: "Enter your API key",
-      fields: [
-        {
-          name: "apiKey",
-          type: "password",
-          label: "API Key",
-          required: true,
-        },
-      ],
+      id: 'credentials',
+      title: 'API Credentials',
+      description: 'Enter your API key',
+      fields: [{ name: 'apiKey', type: 'password', label: 'API Key', required: true }],
     },
   };
 }
 
-function onSetupSubmit(args: { stepId: string; values: Record<string, unknown> }): SetupSubmitResult {
-  if (args.stepId === "credentials") {
+function onSetupSubmit(args: {
+  stepId: string;
+  values: Record<string, unknown>;
+}): SetupSubmitResult {
+  if (args.stepId === 'credentials') {
     const apiKey = args.values.apiKey as string;
     if (!apiKey) {
-      return { status: "error", errors: [{ field: "apiKey", message: "Required" }] };
+      return { status: 'error', errors: [{ field: 'apiKey', message: 'Required' }] };
     }
     CONFIG.apiKey = apiKey;
-    store.set("config", CONFIG);
-    return { status: "complete" };
+    store.set('config', CONFIG);
+    return { status: 'complete' };
   }
-  return { status: "error", errors: [] };
+  return { status: 'error', errors: [] };
 }
 
 function onSetupCancel(): void {
@@ -198,7 +188,7 @@ function onSetupCancel(): void {
 
 function onDisconnect(): void {
   // Called when user disconnects the skill
-  store.delete("config");
+  store.delete('config');
 }
 
 // ---------------------------------------------------------------------------
@@ -209,13 +199,13 @@ function onListOptions(): { options: SkillOption[] } {
   return {
     options: [
       {
-        name: "refreshInterval",
-        type: "select",
-        label: "Refresh Interval",
+        name: 'refreshInterval',
+        type: 'select',
+        label: 'Refresh Interval',
         value: String(CONFIG.refreshInterval),
         options: [
-          { label: "Every 30 seconds", value: "30" },
-          { label: "Every 60 seconds", value: "60" },
+          { label: 'Every 30 seconds', value: '30' },
+          { label: 'Every 60 seconds', value: '60' },
         ],
       },
     ],
@@ -223,11 +213,11 @@ function onListOptions(): { options: SkillOption[] } {
 }
 
 function onSetOption(args: { name: string; value: unknown }): void {
-  if (args.name === "refreshInterval") {
+  if (args.name === 'refreshInterval') {
     CONFIG.refreshInterval = parseInt(args.value as string);
-    cron.unregister("refresh");
-    cron.register("refresh", `*/${CONFIG.refreshInterval} * * * * *`);
-    store.set("config", CONFIG);
+    cron.unregister('refresh');
+    cron.register('refresh', `*/${CONFIG.refreshInterval} * * * * *`);
+    store.set('config', CONFIG);
   }
 }
 
@@ -237,14 +227,11 @@ function onSetOption(args: { name: string; value: unknown }): void {
 
 tools = [
   {
-    name: "get-status",
-    description: "Get current status",
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
+    name: 'get-status',
+    description: 'Get current status',
+    input_schema: { type: 'object', properties: {} },
     execute(args): string {
-      return JSON.stringify({ status: "ok", config: CONFIG });
+      return JSON.stringify({ status: 'ok', config: CONFIG });
     },
   },
 ];
@@ -257,30 +244,30 @@ Skills have access to these global namespaces:
 ### `db` — SQLite Database
 
 ```typescript
-db.exec("CREATE TABLE logs (id INTEGER PRIMARY KEY, msg TEXT)", []);
-db.exec("INSERT INTO logs (msg) VALUES (?)", ["hello"]);
-const row = db.get("SELECT * FROM logs WHERE id = ?", [1]);
-const rows = db.all("SELECT * FROM logs LIMIT 10", []);
-db.kvSet("key", { any: "value" });
-const value = db.kvGet("key");
+db.exec('CREATE TABLE logs (id INTEGER PRIMARY KEY, msg TEXT)', []);
+db.exec('INSERT INTO logs (msg) VALUES (?)', ['hello']);
+const row = db.get('SELECT * FROM logs WHERE id = ?', [1]);
+const rows = db.all('SELECT * FROM logs LIMIT 10', []);
+db.kvSet('key', { any: 'value' });
+const value = db.kvGet('key');
 ```
 
 ### `store` — Persistent Key-Value Store
 
 ```typescript
-store.set("config", { apiKey: "xxx" });
-const config = store.get("config");
-store.delete("config");
+store.set('config', { apiKey: 'xxx' });
+const config = store.get('config');
+store.delete('config');
 const keys = store.keys();
 ```
 
 ### `net` — HTTP Networking
 
 ```typescript
-const response = net.fetch("https://api.example.com/data", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ query: "test" }),
+const response = net.fetch('https://api.example.com/data', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ query: 'test' }),
   timeout: 10000,
 });
 // response: { status: number, headers: Record<string, string>, body: string }
@@ -290,41 +277,41 @@ const response = net.fetch("https://api.example.com/data", {
 
 ```typescript
 // 6-field cron syntax: seconds minutes hours day month dow
-cron.register("every-10s", "*/10 * * * * *");
-cron.register("every-minute", "0 * * * * *");
-cron.register("daily-9am", "0 0 9 * * *");
-cron.unregister("every-10s");
+cron.register('every-10s', '*/10 * * * * *');
+cron.register('every-minute', '0 * * * * *');
+cron.register('daily-9am', '0 0 9 * * *');
+cron.unregister('every-10s');
 const schedules = cron.list();
 ```
 
 ### `state` — Frontend State Publishing
 
 ```typescript
-state.set("status", "healthy");
+state.set('status', 'healthy');
 state.setPartial({ lastPing: Date.now(), uptime: 99.9 });
-const status = state.get("status");
+const status = state.get('status');
 ```
 
 ### `data` — File I/O
 
 ```typescript
-data.write("config.json", JSON.stringify(config, null, 2));
-const content = data.read("config.json");  // returns null if not found
+data.write('config.json', JSON.stringify(config, null, 2));
+const content = data.read('config.json'); // returns null if not found
 ```
 
 ### `platform` — OS Integration
 
 ```typescript
-const os = platform.os();  // "windows", "macos", "linux", "android", "ios"
-const apiKey = platform.env("MY_API_KEY");  // whitelisted env vars only
-platform.notify("Server Down", "api.example.com is not responding");
+const os = platform.os(); // "windows", "macos", "linux", "android", "ios"
+const apiKey = platform.env('MY_API_KEY'); // whitelisted env vars only
+platform.notify('Server Down', 'api.example.com is not responding');
 ```
 
 ### `skills` — Inter-Skill Communication
 
 ```typescript
 const allSkills = skills.list();
-const result = skills.callTool("other-skill", "tool-name", { arg: "value" });
+const result = skills.callTool('other-skill', 'tool-name', { arg: 'value' });
 ```
 
 ## Lifecycle Hooks
@@ -410,24 +397,22 @@ Tests use a custom QuickJS harness with mocked bridge APIs.
 function freshInit(overrides?: Partial<Config>): void {
   setupSkillTest({
     storeData: { config: { ...defaultConfig, ...overrides } },
-    fetchResponses: {
-      "https://api.example.com/health": { status: 200, body: '{"ok":true}' },
-    },
+    fetchResponses: { 'https://api.example.com/health': { status: 200, body: '{"ok":true}' } },
   });
   init();
 }
 
-_describe("My Skill", () => {
-  _it("should initialize correctly", () => {
+_describe('My Skill', () => {
+  _it('should initialize correctly', () => {
     freshInit();
-    _assertNotNull(db.get("SELECT 1", []));
+    _assertNotNull(db.get('SELECT 1', []));
   });
 
-  _it("should handle API calls", () => {
-    freshInit({ apiKey: "test" });
+  _it('should handle API calls', () => {
+    freshInit({ apiKey: 'test' });
     start();
-    const result = callTool("get-status", {});
-    _assertEqual(result.status, "ok");
+    const result = callTool('get-status', {});
+    _assertEqual(result.status, 'ok');
   });
 });
 ```

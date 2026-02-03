@@ -8,8 +8,5 @@
   "tick_interval": 300000,
   "env": [],
   "dependencies": [],
-  "setup": {
-    "required": true,
-    "label": "Configure 1Password"
-  }
+  "setup": { "required": true, "label": "Configure 1Password" }
 }

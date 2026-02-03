@@ -10,12 +10,18 @@ export function platform() {
   if (hasPlatform) {
     const os = platform.os();
     switch (os) {
-      case 'windows': return 'win32';
-      case 'macos': return 'darwin';
-      case 'linux': return 'linux';
-      case 'android': return 'android';
-      case 'ios': return 'ios';
-      default: return os;
+      case 'windows':
+        return 'win32';
+      case 'macos':
+        return 'darwin';
+      case 'linux':
+        return 'linux';
+      case 'android':
+        return 'android';
+      case 'ios':
+        return 'ios';
+      default:
+        return os;
     }
   }
   return 'unknown';
@@ -29,10 +35,14 @@ export function arch() {
 export function type() {
   const p = platform();
   switch (p) {
-    case 'win32': return 'Windows_NT';
-    case 'darwin': return 'Darwin';
-    case 'linux': return 'Linux';
-    default: return 'Unknown';
+    case 'win32':
+      return 'Windows_NT';
+    case 'darwin':
+      return 'Darwin';
+    case 'linux':
+      return 'Linux';
+    default:
+      return 'Unknown';
   }
 }
 
@@ -83,13 +93,7 @@ export function networkInterfaces() {
 }
 
 export function userInfo() {
-  return {
-    uid: -1,
-    gid: -1,
-    username: 'v8-runtime',
-    homedir: '/',
-    shell: null,
-  };
+  return { uid: -1, gid: -1, username: 'v8-runtime', homedir: '/', shell: null };
 }
 
 export function version() {

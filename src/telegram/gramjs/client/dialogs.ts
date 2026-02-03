@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import { DateLike, EntityLike } from '../define';
 import { LogLevel } from '../extensions/Logger';
 import { TotalList } from '../Helpers';

@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import { helpers, utils } from '../';
 import type { EntitiesLike, Entity, EntityLike, ValueOf } from '../define';
 import { betterConsoleLog, getMinBigInt, returnBigInt, sleep, TotalList } from '../Helpers';
@@ -105,7 +104,10 @@ class _ChatAction {
 
 interface ParticipantsIterInterface {
   entity: EntityLike;
-  filter?: Api.TypeChannelParticipantsFilter | (new () => Api.TypeChannelParticipantsFilter) | (new (args?: { q?: string }) => Api.TypeChannelParticipantsFilter);
+  filter?:
+    | Api.TypeChannelParticipantsFilter
+    | (new () => Api.TypeChannelParticipantsFilter)
+    | (new (args?: { q?: string }) => Api.TypeChannelParticipantsFilter);
   offset?: number;
   search?: string;
   showTotal?: boolean;

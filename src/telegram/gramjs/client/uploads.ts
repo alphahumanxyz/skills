@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import { EntityLike, FileLike, MarkupLike, MessageIDLike } from '../define';
 import { generateRandomBytes, readBigIntFromBuffer, sleep } from '../Helpers';
 import { errors, utils } from '../index';

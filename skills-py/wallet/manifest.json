@@ -16,10 +16,7 @@
     "mcp>=1.0.0",
     "pydantic>=2.0"
   ],
-  "setup": {
-    "required": true,
-    "label": "Connect Wallet"
-  },
+  "setup": { "required": true, "label": "Connect Wallet" },
   "entity_schema": {
     "entity_types": [
       {
@@ -27,21 +24,9 @@
         "label": "Wallet Account",
         "description": "A blockchain wallet account derived from a seed phrase.",
         "properties": [
-          {
-            "name": "index",
-            "type": "number",
-            "description": "Derivation index (0-4)"
-          },
-          {
-            "name": "chain_type",
-            "type": "string",
-            "description": "Chain type: 'evm' or 'sol'"
-          },
-          {
-            "name": "address",
-            "type": "string",
-            "description": "Wallet address"
-          },
+          { "name": "index", "type": "number", "description": "Derivation index (0-4)" },
+          { "name": "chain_type", "type": "string", "description": "Chain type: 'evm' or 'sol'" },
+          { "name": "address", "type": "string", "description": "Wallet address" },
           {
             "name": "label",
             "type": "string",
@@ -55,22 +40,10 @@
         "label": "Blockchain Network",
         "description": "A blockchain network configuration.",
         "properties": [
-          {
-            "name": "chain_id",
-            "type": "string",
-            "description": "Chain identifier"
-          },
+          { "name": "chain_id", "type": "string", "description": "Chain identifier" },
           { "name": "name", "type": "string", "description": "Network name" },
-          {
-            "name": "rpc_url",
-            "type": "string",
-            "description": "RPC endpoint URL"
-          },
-          {
-            "name": "chain_type",
-            "type": "string",
-            "description": "Chain type: 'evm' or 'sol'"
-          }
+          { "name": "rpc_url", "type": "string", "description": "RPC endpoint URL" },
+          { "name": "chain_type", "type": "string", "description": "Chain type: 'evm' or 'sol'" }
         ]
       }
     ],

@@ -2,9 +2,9 @@
 
 import { spawn } from 'child_process';
 import { watch } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,7 +21,7 @@ function runStrip() {
       shell: true,
     });
 
-    stripProcess.on('close', (code) => {
+    stripProcess.on('close', code => {
       if (code === 0) {
         console.log('[watch] build:strip completed successfully');
         resolve();
@@ -31,7 +31,7 @@ function runStrip() {
       }
     });
 
-    stripProcess.on('error', (err) => {
+    stripProcess.on('error', err => {
       console.error('[watch] Error running build:strip:', err);
       reject(err);
     });
@@ -46,7 +46,7 @@ function watchSkills() {
   }
 
   console.log(`[watch] Watching ${skillsDir} for JS file changes...`);
-  
+
   let timeout;
   let isRunning = false;
 
@@ -96,12 +96,12 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-tscProcess.on('close', (code) => {
+tscProcess.on('close', code => {
   console.log(`[watch] TypeScript compiler exited with code ${code}`);
   process.exit(code || 0);
 });
 
-tscProcess.on('error', (err) => {
+tscProcess.on('error', err => {
   console.error('[watch] Error starting TypeScript compiler:', err);
   process.exit(1);
 });

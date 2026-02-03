@@ -3,9 +3,7 @@
  * Provides basic path manipulation utilities.
  */
 
-const isWindows = typeof platform !== 'undefined'
-  ? platform.os() === 'windows'
-  : false;
+const isWindows = typeof platform !== 'undefined' ? platform.os() === 'windows' : false;
 
 const sep = isWindows ? '\\' : '/';
 const delimiter = isWindows ? ';' : ':';

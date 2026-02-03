@@ -43,10 +43,7 @@ mkdir src/my-skill
   "description": "What this skill does",
   "auto_start": false,
   "platforms": ["windows", "macos", "linux"],
-  "setup": {
-    "required": true,
-    "label": "Configure My Skill"
-  }
+  "setup": { "required": true, "label": "Configure My Skill" }
 }
 ```
 
@@ -60,49 +57,50 @@ interface SkillConfig {
   apiKey: string;
 }
 
-const CONFIG: SkillConfig = { apiKey: "" };
+const CONFIG: SkillConfig = { apiKey: '' };
 
 // Lifecycle hooks
 function init(): void {
-  const saved = store.get("config") as Partial<SkillConfig> | null;
+  const saved = store.get('config') as Partial<SkillConfig> | null;
   if (saved) {
     CONFIG.apiKey = saved.apiKey ?? CONFIG.apiKey;
   }
 }
 
 function start(): void {
-  console.log("[my-skill] Starting");
+  console.log('[my-skill] Starting');
 }
 
 function stop(): void {
-  store.set("config", CONFIG);
+  store.set('config', CONFIG);
 }
 
 // Setup flow (if required)
 function onSetupStart(): SetupStartResult {
   return {
     step: {
-      id: "credentials",
-      title: "API Credentials",
-      description: "Enter your API key",
-      fields: [
-        { name: "apiKey", type: "password", label: "API Key", required: true },
-      ],
+      id: 'credentials',
+      title: 'API Credentials',
+      description: 'Enter your API key',
+      fields: [{ name: 'apiKey', type: 'password', label: 'API Key', required: true }],
     },
   };
 }
 
-function onSetupSubmit(args: { stepId: string; values: Record<string, unknown> }): SetupSubmitResult {
-  if (args.stepId === "credentials") {
+function onSetupSubmit(args: {
+  stepId: string;
+  values: Record<string, unknown>;
+}): SetupSubmitResult {
+  if (args.stepId === 'credentials') {
     const apiKey = args.values.apiKey as string;
     if (!apiKey) {
-      return { status: "error", errors: [{ field: "apiKey", message: "Required" }] };
+      return { status: 'error', errors: [{ field: 'apiKey', message: 'Required' }] };
     }
     CONFIG.apiKey = apiKey;
-    store.set("config", CONFIG);
-    return { status: "complete" };
+    store.set('config', CONFIG);
+    return { status: 'complete' };
   }
-  return { status: "error", errors: [] };
+  return { status: 'error', errors: [] };
 }
 
 function onSetupCancel(): void {}
@@ -110,14 +108,11 @@ function onSetupCancel(): void {}
 // Tools
 tools = [
   {
-    name: "get-status",
-    description: "Get current status",
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
+    name: 'get-status',
+    description: 'Get current status',
+    input_schema: { type: 'object', properties: {} },
     execute(args): string {
-      return JSON.stringify({ status: "ok" });
+      return JSON.stringify({ status: 'ok' });
     },
   },
 ];

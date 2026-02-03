@@ -5,9 +5,8 @@
  * This harness provides mock implementations of the V8 bridge APIs
  * and runs basic verification tests on bundled skills.
  */
-
-import { readFileSync, existsSync, readdirSync } from 'fs';
-import { join, dirname, basename } from 'path';
+import { existsSync, readdirSync, readFileSync } from 'fs';
+import { basename, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import vm from 'vm';
 
@@ -63,9 +62,13 @@ function createBridgeAPIs() {
   return {
     // Store API
     store: {
-      get: (key) => mockState.store[key] ?? null,
-      set: (key, value) => { mockState.store[key] = value; },
-      delete: (key) => { delete mockState.store[key]; },
+      get: key => mockState.store[key] ?? null,
+      set: (key, value) => {
+        mockState.store[key] = value;
+      },
+      delete: key => {
+        delete mockState.store[key];
+      },
       keys: () => Object.keys(mockState.store),
     },
 
@@ -92,29 +95,45 @@ function createBridgeAPIs() {
       all: (sql, params = []) => {
         return []; // Simplified - return empty array
       },
-      kvGet: (key) => mockState.store[`kv:${key}`] ?? null,
-      kvSet: (key, value) => { mockState.store[`kv:${key}`] = value; },
+      kvGet: key => mockState.store[`kv:${key}`] ?? null,
+      kvSet: (key, value) => {
+        mockState.store[`kv:${key}`] = value;
+      },
     },
 
     // State API
     state: {
-      get: (key) => mockState.stateValues[key],
-      set: (key, value) => { mockState.stateValues[key] = value; },
-      setPartial: (obj) => { Object.assign(mockState.stateValues, obj); },
+      get: key => mockState.stateValues[key],
+      set: (key, value) => {
+        mockState.stateValues[key] = value;
+      },
+      setPartial: obj => {
+        Object.assign(mockState.stateValues, obj);
+      },
     },
 
     // Cron API
     cron: {
-      register: (id, schedule) => { mockState.cronSchedules[id] = schedule; },
-      unregister: (id) => { delete mockState.cronSchedules[id]; },
-      list: () => Object.keys(mockState.cronSchedules).map(id => ({ id, schedule: mockState.cronSchedules[id] })),
+      register: (id, schedule) => {
+        mockState.cronSchedules[id] = schedule;
+      },
+      unregister: id => {
+        delete mockState.cronSchedules[id];
+      },
+      list: () =>
+        Object.keys(mockState.cronSchedules).map(id => ({
+          id,
+          schedule: mockState.cronSchedules[id],
+        })),
     },
 
     // Platform API
     platform: {
       os: () => mockState.platformOs,
-      env: (key) => mockState.env[key] ?? null,
-      notify: (title, body) => { mockState.notifications.push({ title, body }); },
+      env: key => mockState.env[key] ?? null,
+      notify: (title, body) => {
+        mockState.notifications.push({ title, body });
+      },
     },
 
     // Network API
@@ -124,31 +143,32 @@ function createBridgeAPIs() {
           throw new Error(mockState.fetchErrors[url]);
         }
         const response = mockState.fetchResponses[url] || { status: 200, body: '{}', headers: {} };
-        return {
-          status: response.status,
-          headers: response.headers || {},
-          body: response.body,
-        };
+        return { status: response.status, headers: response.headers || {}, body: response.body };
       },
     },
 
     // Data API
     data: {
-      read: (filename) => mockState.dataFiles[filename] ?? null,
-      write: (filename, content) => { mockState.dataFiles[filename] = content; },
+      read: filename => mockState.dataFiles[filename] ?? null,
+      write: (filename, content) => {
+        mockState.dataFiles[filename] = content;
+      },
     },
 
     // Skills API
-    skills: {
-      list: () => [],
-      callTool: () => null,
-    },
+    skills: { list: () => [], callTool: () => null },
 
     // Console
     console: {
-      log: (...args) => { /* silent */ },
-      warn: (...args) => { /* silent */ },
-      error: (...args) => { /* silent */ },
+      log: (...args) => {
+        /* silent */
+      },
+      warn: (...args) => {
+        /* silent */
+      },
+      error: (...args) => {
+        /* silent */
+      },
     },
   };
 }
@@ -193,7 +213,9 @@ function testSkill(skillDir, skillName) {
     testsFailed++;
     return;
   }
-  console.log(`  ${colors.green}✓${colors.reset} Manifest has required fields (id: ${manifest.id}, version: ${manifest.version})`);
+  console.log(
+    `  ${colors.green}✓${colors.reset} Manifest has required fields (id: ${manifest.id}, version: ${manifest.version})`
+  );
   testsPassed++;
 
   // Load and evaluate skill
@@ -222,28 +244,29 @@ function testSkill(skillDir, skillName) {
           href: 'https://localhost/',
         },
         WebSocket: class MockWebSocket {
-          constructor() { this.readyState = 0; }
+          constructor() {
+            this.readyState = 0;
+          }
           send() {}
           close() {}
         },
       },
-      location: {
-        protocol: 'https:',
-        hostname: 'localhost',
-        port: '',
-        href: 'https://localhost/',
-      },
+      location: { protocol: 'https:', hostname: 'localhost', port: '', href: 'https://localhost/' },
       WebSocket: class MockWebSocket {
-        constructor() { this.readyState = 0; }
+        constructor() {
+          this.readyState = 0;
+        }
         send() {}
         close() {}
       },
-      navigator: {
-        userAgent: 'V8TestHarness',
+      navigator: { userAgent: 'V8TestHarness' },
+      setTimeout: fn => {
+        return 1;
       },
-      setTimeout: (fn) => { return 1; },
       clearTimeout: () => {},
-      setInterval: (fn) => { return 1; },
+      setInterval: fn => {
+        return 1;
+      },
       clearInterval: () => {},
       Date,
       JSON,
@@ -270,8 +293,8 @@ function testSkill(skillDir, skillName) {
       isFinite,
       encodeURIComponent,
       decodeURIComponent,
-      btoa: (str) => Buffer.from(str, 'binary').toString('base64'),
-      atob: (str) => Buffer.from(str, 'base64').toString('binary'),
+      btoa: str => Buffer.from(str, 'binary').toString('base64'),
+      atob: str => Buffer.from(str, 'base64').toString('binary'),
     };
 
     // Make globalThis self-referential, but preserve window.location
@@ -280,11 +303,7 @@ function testSkill(skillDir, skillName) {
     sandbox.globalThis = sandbox;
     sandbox.self = sandbox;
     // Keep window as a proper object with location
-    sandbox.window = {
-      ...sandbox,
-      location: windowLocation,
-      WebSocket: windowWebSocket,
-    };
+    sandbox.window = { ...sandbox, location: windowLocation, WebSocket: windowWebSocket };
 
     // Pre-declare skill globals that will be assigned by the skill code
     sandbox.tools = [];
@@ -323,7 +342,9 @@ function testSkill(skillDir, skillName) {
 
     // Check tools
     if (Array.isArray(sandbox.globalThis.tools)) {
-      console.log(`  ${colors.green}✓${colors.reset} tools array exported (${sandbox.globalThis.tools.length} tools)`);
+      console.log(
+        `  ${colors.green}✓${colors.reset} tools array exported (${sandbox.globalThis.tools.length} tools)`
+      );
       testsPassed++;
 
       // List tools
@@ -348,7 +369,6 @@ function testSkill(skillDir, skillName) {
         errors.push({ skill: skillName, error: `init() error: ${e.message}` });
       }
     }
-
   } catch (e) {
     console.log(`  ${colors.red}✗${colors.reset} Failed to evaluate skill: ${e.message}`);
     testsFailed++;
@@ -360,15 +380,23 @@ function testSkill(skillDir, skillName) {
 }
 
 // Main
-console.log(`${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`);
-console.log(`${colors.yellow}                   V8 Skills Test Harness                      ${colors.reset}`);
-console.log(`${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`);
+console.log(
+  `${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`
+);
+console.log(
+  `${colors.yellow}                   V8 Skills Test Harness                      ${colors.reset}`
+);
+console.log(
+  `${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`
+);
 
 // Find and test skills
 const specificSkill = process.argv[2];
 
 if (!existsSync(skillsDir)) {
-  console.log(`\n${colors.red}Error: skills directory not found. Run 'yarn build' first.${colors.reset}`);
+  console.log(
+    `\n${colors.red}Error: skills directory not found. Run 'yarn build' first.${colors.reset}`
+  );
   process.exit(1);
 }
 
@@ -389,9 +417,15 @@ for (const skillName of skillDirs) {
 }
 
 // Summary
-console.log(`\n${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`);
-console.log(`${colors.yellow}                        Summary                                ${colors.reset}`);
-console.log(`${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`);
+console.log(
+  `\n${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`
+);
+console.log(
+  `${colors.yellow}                        Summary                                ${colors.reset}`
+);
+console.log(
+  `${colors.yellow}═══════════════════════════════════════════════════════════════${colors.reset}`
+);
 console.log(`  ${colors.green}Passed: ${testsPassed}${colors.reset}`);
 console.log(`  ${colors.red}Failed: ${testsFailed}${colors.reset}`);
 

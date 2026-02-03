@@ -7,15 +7,8 @@
   "entry": "__main__.py",
   "tick_interval": 300000,
   "env": [],
-  "dependencies": [
-    "aiohttp>=3.9.0",
-    "pydantic>=2.0",
-    "aiosqlite>=0.20.0"
-  ],
-  "setup": {
-    "required": true,
-    "label": "Connect Slack"
-  },
+  "dependencies": ["aiohttp>=3.9.0", "pydantic>=2.0", "aiosqlite>=0.20.0"],
+  "setup": { "required": true, "label": "Connect Slack" },
   "entity_schema": {
     "entity_types": [
       {
@@ -24,7 +17,12 @@
         "description": "A Slack workspace/team.",
         "properties": [
           { "name": "name", "type": "string", "description": "Workspace name" },
-          { "name": "domain", "type": "string", "description": "Workspace domain", "optional": true },
+          {
+            "name": "domain",
+            "type": "string",
+            "description": "Workspace domain",
+            "optional": true
+          },
           { "name": "id", "type": "string", "description": "Workspace ID" }
         ]
       },
@@ -34,11 +32,29 @@
         "description": "A Slack channel (public or private).",
         "properties": [
           { "name": "name", "type": "string", "description": "Channel name" },
-          { "name": "is_private", "type": "boolean", "description": "Whether the channel is private" },
-          { "name": "is_archived", "type": "boolean", "description": "Whether the channel is archived" },
-          { "name": "member_count", "type": "number", "description": "Number of members", "optional": true },
+          {
+            "name": "is_private",
+            "type": "boolean",
+            "description": "Whether the channel is private"
+          },
+          {
+            "name": "is_archived",
+            "type": "boolean",
+            "description": "Whether the channel is archived"
+          },
+          {
+            "name": "member_count",
+            "type": "number",
+            "description": "Number of members",
+            "optional": true
+          },
           { "name": "topic", "type": "string", "description": "Channel topic", "optional": true },
-          { "name": "purpose", "type": "string", "description": "Channel purpose", "optional": true }
+          {
+            "name": "purpose",
+            "type": "string",
+            "description": "Channel purpose",
+            "optional": true
+          }
         ]
       },
       {
@@ -59,7 +75,12 @@
           { "name": "real_name", "type": "string", "description": "Real name", "optional": true },
           { "name": "email", "type": "string", "description": "Email address", "optional": true },
           { "name": "is_bot", "type": "boolean", "description": "Whether this user is a bot" },
-          { "name": "is_admin", "type": "boolean", "description": "Whether this user is an admin", "optional": true }
+          {
+            "name": "is_admin",
+            "type": "boolean",
+            "description": "Whether this user is an admin",
+            "optional": true
+          }
         ]
       }
     ],
