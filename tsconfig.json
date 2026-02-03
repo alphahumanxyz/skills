@@ -16,7 +16,8 @@
   },
   "include": [
     "types/**/*.d.ts",
-    "skills/*/index.ts"
+    "skills/*/index.ts",
+    "examples/*/index.ts"
   ],
   "exclude": [
     "node_modules",
