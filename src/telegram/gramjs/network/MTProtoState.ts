@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import { helpers } from '../';
 import type { AuthKey } from '../crypto/AuthKey';
@@ -14,10 +14,10 @@ export class MTProtoState {
   private readonly authKey?: AuthKey;
   private _log: any;
   timeOffset: number;
-  salt: bigInt.BigInteger;
-  private id: bigInt.BigInteger;
+  salt: bigint;
+  private id: bigint;
   _sequence: number;
-  private _lastMsgId: bigInt.BigInteger;
+  private _lastMsgId: bigint;
   private msgIds: string[];
   private securityChecks: boolean;
 
@@ -51,9 +51,9 @@ export class MTProtoState {
     this.authKey = authKey;
     this._log = loggers;
     this.timeOffset = 0;
-    this.salt = bigInt.zero;
+    this.salt = 0n;
     this._sequence = 0;
-    this.id = this._lastMsgId = bigInt.zero;
+    this.id = this._lastMsgId = 0n;
     this.msgIds = [];
     this.securityChecks = securityChecks;
     this.reset();
@@ -260,17 +260,17 @@ export class MTProtoState {
   /**
    * Updates the time offset to the correct
    * one given a known valid message ID.
-   * @param correctMsgId {BigInteger}
+   * @param correctMsgId {bigint}
    */
-  updateTimeOffset(correctMsgId: bigInt.BigInteger) {
+  updateTimeOffset(correctMsgId: bigint) {
     const bad = this._getNewMsgId();
     const old = this.timeOffset;
     const now = Math.floor(new Date().getTime() / 1000);
-    const correct = correctMsgId.shiftRight(bigInt(32)).toJSNumber();
+    const correct = Number(correctMsgId >> 32n);
     this.timeOffset = correct - now;
 
     if (this.timeOffset !== old) {
-      this._lastMsgId = bigInt.zero;
+      this._lastMsgId = 0n;
       this._log.debug(
         `Updated time offset (old offset ${old}, bad ${bad}, good ${correctMsgId}, new ${this.timeOffset})`
       );

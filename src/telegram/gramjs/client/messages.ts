@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import type { TelegramClient } from '../';
 import { utils } from '../';
@@ -21,7 +21,7 @@ import {
 import { RequestIter } from '../requestIter';
 import { Api } from '../tl';
 import { getInputMedia, getMessageId, getPeerId, parseID } from '../Utils';
-import { _parseMessageText } from './messageParse';
+import { _parseMessageText, type ParseInterface } from './messageParse';
 import { _fileToMedia } from './uploads';
 import { _getPeer } from './users';
 
@@ -35,7 +35,7 @@ interface MessageIterParams {
   fromUser?: EntityLike;
   offsetDate: DateLike;
   addOffset: number;
-  filter: any;
+  filter?: Api.TypeMessagesFilter;
   search: string;
   replyTo: MessageIDLike;
 }
@@ -129,7 +129,7 @@ export class _MessagesIter extends RequestIter {
         limit: 0,
         maxId: 0,
         minId: 0,
-        hash: bigInt.zero,
+        hash: 0n,
       });
     } else if (
       search !== undefined ||
@@ -167,7 +167,7 @@ export class _MessagesIter extends RequestIter {
         minId: 0,
         maxId: 0,
         addOffset: addOffset,
-        hash: bigInt.zero,
+        hash: 0n,
       });
     }
     if (this.limit <= 0) {
@@ -265,7 +265,7 @@ export class _MessagesIter extends RequestIter {
     return super[Symbol.asyncIterator]();
   }
 
-  _updateOffset(lastMessage: Api.Message, response: any) {
+  _updateOffset(lastMessage: Api.Message, response: Api.TypeUpdates) {
     if (!this.request) {
       throw new Error('Request not set yet');
     }
@@ -455,7 +455,7 @@ export interface SendMessageParams {
   /** Optional attributes that override the inferred ones, like DocumentAttributeFilename and so on. */
   attributes?: Api.TypeDocumentAttribute[];
   /** See the {@link parseMode} property for allowed values. Markdown parsing will be used by default. */
-  parseMode?: any;
+  parseMode?: false | string | ParseInterface;
   /** A list of message formatting entities. When provided, the parseMode is ignored. */
   formattingEntities?: Api.TypeMessageEntity[];
   /** Should the link preview be shown? */

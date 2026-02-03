@@ -1,4 +1,4 @@
-import bigInt, { BigInteger, isInstance } from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import { helpers, utils } from '../';
 import type { EntitiesLike, Entity, EntityLike, ValueOf } from '../define';
@@ -105,10 +105,14 @@ class _ChatAction {
 
 interface ParticipantsIterInterface {
   entity: EntityLike;
-  filter: any;
+  filter?: Api.TypeChannelParticipantsFilter | (new () => Api.TypeChannelParticipantsFilter) | (new (args?: { q?: string }) => Api.TypeChannelParticipantsFilter);
   offset?: number;
   search?: string;
   showTotal?: boolean;
+}
+
+interface UserWithParticipant extends Entity {
+  participant?: Api.TypeChatParticipant | Api.channels.ChannelParticipant;
 }
 
 export class _ParticipantsIter extends RequestIter {
@@ -177,7 +181,7 @@ export class _ParticipantsIter extends RequestIter {
           filter: filter || new Api.ChannelParticipantsSearch({ q: search || '' }),
           offset,
           limit: _MAX_PARTICIPANTS_CHUNK_SIZE,
-          hash: bigInt.zero,
+          hash: 0n,
         })
       );
     } else if (ty == helpers._EntityType.CHAT) {
@@ -205,7 +209,7 @@ export class _ParticipantsIter extends RequestIter {
           if (!this.filterEntity(user)) {
             continue;
           }
-          (user as any).participant = participant;
+          (user as UserWithParticipant).participant = participant;
           this.buffer?.push(user);
         }
         return true;
@@ -215,7 +219,7 @@ export class _ParticipantsIter extends RequestIter {
       if (this.limit != 0) {
         const user = await this.client.getEntity(entity);
         if (this.filterEntity(user)) {
-          (user as any).participant = undefined;
+          (user as UserWithParticipant).participant = undefined;
           this.buffer?.push(user);
         }
       }
@@ -292,8 +296,8 @@ interface _AdminLogFilterInterface {
 interface _AdminLogSearchInterface {
   admins?: EntitiesLike;
   search?: string;
-  minId?: BigInteger;
-  maxId?: BigInteger;
+  minId?: bigint;
+  maxId?: bigint;
 }
 
 class _AdminLogIter extends RequestIter {
@@ -342,11 +346,11 @@ class _AdminLogIter extends RequestIter {
     for (const entity of [...r.users, ...r.chats]) {
       entities.set(utils.getPeerId(entity), entity);
     }
-    const eventIds = [];
+    const eventIds: bigint[] = [];
     for (const e of r.events) {
       eventIds.push(e.id);
     }
-    this.request.maxId = getMinBigInt([bigInt.zero, ...eventIds]);
+    this.request.maxId = getMinBigInt([0n, ...eventIds]);
     for (const ev of r.events) {
       if (ev.action instanceof Api.ChannelAdminLogEventActionEditMessage) {
         // @ts-ignore

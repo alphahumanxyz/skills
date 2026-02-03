@@ -1,11 +1,11 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import Deferred from '../extensions/Deferred';
 import { Api } from '../tl';
 
 export class RequestState {
-  public containerId?: bigInt.BigInteger;
-  public msgId?: bigInt.BigInteger;
+  public containerId?: bigint;
+  public msgId?: bigint;
   public request: any;
   public data: Buffer;
   public after: any;

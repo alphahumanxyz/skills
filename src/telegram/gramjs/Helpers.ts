@@ -1,4 +1,3 @@
-import bigInt from 'big-integer';
 import crypto from 'crypto';
 
 import type { EntityLike } from './define';
@@ -6,26 +5,34 @@ import { isNode } from './platform';
 import type { Api } from './tl';
 
 /**
+ * Helper function to calculate bit length of a bigint
+ */
+function bitLength(n: bigint): number {
+  if (n === 0n) return 0;
+  return n.toString(2).length;
+}
+
+/**
  * converts a buffer to big int
  * @param buffer
  * @param little
  * @param signed
- * @returns {bigInt.BigInteger}
+ * @returns {bigint}
  */
 export function readBigIntFromBuffer(
   buffer: Buffer,
   little = true,
   signed = false
-): bigInt.BigInteger {
+): bigint {
   let randBuffer = Buffer.from(buffer);
   const bytesNumber = randBuffer.length;
   if (little) {
     randBuffer = randBuffer.reverse();
   }
-  let bigIntVar = bigInt(randBuffer.toString('hex'), 16) as bigInt.BigInteger;
+  let bigIntVar = BigInt('0x' + randBuffer.toString('hex'));
 
-  if (signed && Math.floor(bigIntVar.toString(2).length / 8) >= bytesNumber) {
-    bigIntVar = bigIntVar.subtract(bigInt(2).pow(bigInt(bytesNumber * 8)));
+  if (signed && Math.floor(bitLength(bigIntVar) / 8) >= bytesNumber) {
+    bigIntVar = bigIntVar - (2n ** BigInt(bytesNumber * 8));
   }
   return bigIntVar;
 }
@@ -98,43 +105,42 @@ export function addSurrogate(text: string) {
  * @param number
  * @returns {Buffer}
  */
-export function toSignedLittleBuffer(big: bigInt.BigInteger | string | number, number = 8): Buffer {
+export function toSignedLittleBuffer(big: bigint | string | number, number = 8): Buffer {
   const bigNumber = returnBigInt(big);
-  const byteArray: bigInt.BigInteger[] = [];
+  const byteArray: number[] = [];
   for (let i = 0; i < number; i++) {
-    byteArray[i] = bigNumber.shiftRight(8 * i).and(255);
+    byteArray[i] = Number((bigNumber >> BigInt(8 * i)) & 255n);
   }
-  // smh hacks
-  return Buffer.from(byteArray as unknown as number[]);
+  return Buffer.from(byteArray);
 }
 
 /**
  * converts a big int to a buffer
- * @param bigIntVar {BigInteger}
+ * @param bigIntVar {bigint}
  * @param bytesNumber
  * @param little
  * @param signed
  * @returns {Buffer}
  */
 export function readBufferFromBigInt(
-  bigIntVar: bigInt.BigInteger,
+  bigIntVar: bigint,
   bytesNumber: number,
   little = true,
   signed = false
 ): Buffer {
-  bigIntVar = bigInt(bigIntVar);
-  const bitLength = bigIntVar.bitLength().toJSNumber();
+  bigIntVar = BigInt(bigIntVar);
+  const bits = bitLength(bigIntVar);
 
-  const bytes = Math.ceil(bitLength / 8);
+  const bytes = Math.ceil(bits / 8);
   if (bytesNumber < bytes) {
     throw new Error('OverflowError: int too big to convert');
   }
-  if (!signed && bigIntVar.lesser(bigInt(0))) {
+  if (!signed && bigIntVar < 0n) {
     throw new Error('Cannot convert to unsigned');
   }
 
-  if (signed && bigIntVar.lesser(bigInt(0))) {
-    bigIntVar = bigInt(2).pow(bigInt(bytesNumber).multiply(8)).add(bigIntVar);
+  if (signed && bigIntVar < 0n) {
+    bigIntVar = (2n ** BigInt(bytesNumber * 8)) + bigIntVar;
   }
 
   const hex = bigIntVar.toString(16).padStart(bytesNumber * 2, '0');
@@ -167,12 +173,12 @@ export function mod(n: number, m: number) {
 
 /**
  * returns a positive bigInt
- * @param n {bigInt.BigInteger}
- * @param m {bigInt.BigInteger}
- * @returns {bigInt.BigInteger}
+ * @param n {bigint}
+ * @param m {bigint}
+ * @returns {bigint}
  */
-export function bigIntMod(n: bigInt.BigInteger, m: bigInt.BigInteger): bigInt.BigInteger {
-  return n.remainder(m).add(m).remainder(m);
+export function bigIntMod(n: bigint, m: bigint): bigint {
+  return ((n % m) + m) % m;
 }
 
 /**
@@ -257,8 +263,8 @@ export function stripText(text: string, entities: Api.TypeMessageEntity[]) {
  * @returns {{key: Buffer, iv: Buffer}}
  */
 export async function generateKeyDataFromNonce(
-  serverNonceBigInt: bigInt.BigInteger,
-  newNonceBigInt: bigInt.BigInteger
+  serverNonceBigInt: bigint,
+  newNonceBigInt: bigint
 ) {
   const serverNonce = toSignedLittleBuffer(serverNonceBigInt, 16);
   const newNonce = toSignedLittleBuffer(newNonceBigInt, 32);
@@ -310,74 +316,70 @@ export function sha256(data: Buffer): Promise<Buffer> {
  * @param a
  * @param b
  * @param n
- * @returns {bigInt.BigInteger}
+ * @returns {bigint}
  */
 export function modExp(
-  a: bigInt.BigInteger,
-  b: bigInt.BigInteger,
-  n: bigInt.BigInteger
-): bigInt.BigInteger {
-  a = a.remainder(n);
-  let result = bigInt.one;
+  a: bigint,
+  b: bigint,
+  n: bigint
+): bigint {
+  a = a % n;
+  let result = 1n;
   let x = a;
-  while (b.greater(bigInt.zero)) {
-    const leastSignificantBit = b.remainder(bigInt(2));
-    b = b.divide(bigInt(2));
-    if (leastSignificantBit.eq(bigInt.one)) {
-      result = result.multiply(x);
-      result = result.remainder(n);
+  while (b > 0n) {
+    const leastSignificantBit = b % 2n;
+    b = b / 2n;
+    if (leastSignificantBit === 1n) {
+      result = (result * x) % n;
     }
-    x = x.multiply(x);
-    x = x.remainder(n);
+    x = (x * x) % n;
   }
   return result;
 }
 
 /**
  * Gets the arbitrary-length byte array corresponding to the given integer
- * @param integer {number,BigInteger}
+ * @param integer {number,bigint}
  * @param signed {boolean}
  * @returns {Buffer}
  */
-export function getByteArray(integer: bigInt.BigInteger | number, signed = false) {
-  const bits = integer.toString(2).length;
+export function getByteArray(integer: bigint | number, signed = false) {
+  const bits = typeof integer === 'number' ? integer.toString(2).length : bitLength(integer);
   const byteLength = Math.floor((bits + 8 - 1) / 8);
   return readBufferFromBigInt(
-    typeof integer == 'number' ? bigInt(integer) : integer,
+    typeof integer == 'number' ? BigInt(integer) : integer,
     byteLength,
     false,
     signed
   );
 }
 
-export function returnBigInt(num: bigInt.BigInteger | string | number | bigint) {
-  if (bigInt.isInstance(num)) {
+export function returnBigInt(num: bigint | string | number): bigint {
+  if (typeof num === 'bigint') {
     return num;
   }
   if (typeof num == 'number') {
-    return bigInt(num);
+    return BigInt(num);
   }
-  if (typeof num == 'bigint') {
-    return bigInt(num);
-  }
-  return bigInt(num);
+  return BigInt(num);
 }
 
 /**
  * Helper function to return the smaller big int in an array
  * @param arrayOfBigInts
  */
-export function getMinBigInt(arrayOfBigInts: (bigInt.BigInteger | string)[]): bigInt.BigInteger {
+export function getMinBigInt(arrayOfBigInts: (bigint | string)[]): bigint {
   if (arrayOfBigInts.length == 0) {
-    return bigInt.zero;
+    return 0n;
   }
   if (arrayOfBigInts.length == 1) {
     return returnBigInt(arrayOfBigInts[0]);
   }
   let smallest = returnBigInt(arrayOfBigInts[0]);
   for (let i = 1; i < arrayOfBigInts.length; i++) {
-    if (returnBigInt(arrayOfBigInts[i]).lesser(smallest)) {
-      smallest = returnBigInt(arrayOfBigInts[i]);
+    const current = returnBigInt(arrayOfBigInts[i]);
+    if (current < smallest) {
+      smallest = current;
     }
   }
   return smallest;

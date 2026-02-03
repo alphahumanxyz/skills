@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import { RequestState } from '../network/RequestState';
 
@@ -8,15 +8,15 @@ export class PendingState {
     this._pending = new Map();
   }
 
-  set(msgId: bigInt.BigInteger, state: RequestState) {
+  set(msgId: bigint, state: RequestState) {
     this._pending.set(msgId.toString(), state);
   }
 
-  get(msgId: bigInt.BigInteger) {
+  get(msgId: bigint) {
     return this._pending.get(msgId.toString());
   }
 
-  getAndDelete(msgId: bigInt.BigInteger) {
+  getAndDelete(msgId: bigint) {
     const state = this.get(msgId);
     this.delete(msgId);
     return state;
@@ -26,7 +26,7 @@ export class PendingState {
     return Array.from(this._pending.values());
   }
 
-  delete(msgId: bigInt.BigInteger) {
+  delete(msgId: bigint) {
     this._pending.delete(msgId.toString());
   }
 

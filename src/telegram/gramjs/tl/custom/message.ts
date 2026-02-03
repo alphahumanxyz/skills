@@ -1,4 +1,4 @@
-import bigInt, { BigInteger } from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import * as utils from '../../Utils';
 import type { TelegramClient } from '../..';
@@ -246,7 +246,7 @@ export class CustomMessage extends SenderGetter {
    * The ID of the bot used to send this message
    * through its inline mode (e.g. "via @like").
    */
-  viaBotId?: bigInt.BigInteger;
+  viaBotId?: bigint;
   /**
    * The original reply header if this message is replying to another.
    */
@@ -305,7 +305,7 @@ export class CustomMessage extends SenderGetter {
    *  If this message belongs to a group of messages (photo albums or video albums),
    *  all of them will have the same value here.
    */
-  groupedId?: BigInteger;
+  groupedId?: bigint;
   /**
    * An optional list of reasons why this message was restricted.
    * If the list is `undefined`, this message has not been restricted.

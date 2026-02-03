@@ -1,4 +1,3 @@
-import bigInt from 'big-integer';
 import { WriteStream } from 'fs';
 
 import type { CustomFile } from './client/uploads';
@@ -18,7 +17,7 @@ type Entity = Api.User | Api.Chat | Api.Channel | TypeUser | TypeChat;
 type FullEntity = Api.UserFull | Api.messages.ChatFull | Api.ChatFull | Api.ChannelFull;
 type PeerLike = Api.TypePeer | Api.TypeInputPeer | Entity | FullEntity;
 type EntityLike =
-  | bigInt.BigInteger
+  | bigint
   | Phone
   | Username
   | PeerID
@@ -53,7 +52,7 @@ type FileLike =
   | Api.TypeDocument
   | CustomFile;
 type OutFile = string | Buffer | WriteStream | { write: Function; close?: Function };
-type ProgressCallback = (downloaded: bigInt.BigInteger, total: bigInt.BigInteger) => void;
+type ProgressCallback = (downloaded: bigint, total: bigint) => void;
 type ButtonLike = Api.TypeKeyboardButton | Button;
 
 type MarkupLike = Api.TypeReplyMarkup | ButtonLike | ButtonLike[] | ButtonLike[][];

@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import type { TelegramClient } from '../..';
 import type { Entity } from '../../define';
@@ -8,13 +8,13 @@ import { Api } from '../api';
 import { ChatGetter } from './chatGetter';
 
 interface SenderGetterConstructorInterface {
-  senderId?: bigInt.BigInteger;
+  senderId?: bigint;
   sender?: Entity;
   inputSender?: Api.TypeInputPeer;
 }
 
 export class SenderGetter extends ChatGetter {
-  _senderId?: bigInt.BigInteger;
+  _senderId?: bigint;
   _sender?: Entity;
   _inputSender?: Api.TypeInputPeer;
   public _client?: TelegramClient;

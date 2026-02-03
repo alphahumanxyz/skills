@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import type { TelegramClient } from '../..';
 import type { Entity } from '../../define';
@@ -18,7 +18,7 @@ export class Dialog {
   date: number;
   entity?: Entity;
   inputEntity: Api.TypeInputPeer;
-  id?: bigInt.BigInteger;
+  id?: bigint;
   name?: string;
   title?: string;
   unreadCount: number;

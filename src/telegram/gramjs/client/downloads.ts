@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import * as fs from './fs';
 import { utils } from '../';
@@ -20,9 +20,9 @@ import type { TelegramClient } from './TelegramClient';
 export interface progressCallback {
   (
     /** How much was downloaded */
-    downloaded: bigInt.BigInteger,
+    downloaded: bigint,
     /** Full size of the file to be downloaded */
-    fullSize: bigInt.BigInteger,
+    fullSize: bigint,
     /** other args to be passed if needed */
     ...args: any[]
   ): void;
@@ -70,7 +70,7 @@ export interface DownloadFileParamsV2 {
   dcId?: number;
   /** The file size that is about to be downloaded, if known.<br/>
      Only used if ``progressCallback`` is specified. */
-  fileSize?: bigInt.BigInteger;
+  fileSize?: bigint;
   /** How much to download in each chunk. The larger the less requests to be made. (max is 512kb). */
   partSizeKb?: number;
   /** Progress callback accepting one param. (progress :number) which is a float between 0 and 1 */
@@ -109,7 +109,7 @@ const MAX_CHUNK_SIZE = 512 * 1024;
 export interface DirectDownloadIterInterface {
   fileLocation: Api.TypeInputFileLocation;
   dcId: number;
-  offset: bigInt.BigInteger;
+  offset: bigint;
   stride: number;
   chunkSize: number;
   requestSize: number;
@@ -119,12 +119,12 @@ export interface DirectDownloadIterInterface {
 
 export interface IterDownloadFunction {
   file?: Api.TypeMessageMedia | Api.TypeInputFile | Api.TypeInputFileLocation;
-  offset?: bigInt.BigInteger;
+  offset?: bigint;
   stride?: number;
   limit?: number;
   chunkSize?: number;
   requestSize: number;
-  fileSize?: bigInt.BigInteger;
+  fileSize?: bigint;
   dcId?: number;
   msgData?: [EntityLike, number];
 }
@@ -270,7 +270,7 @@ export function iterDownload(
   client: TelegramClient,
   {
     file,
-    offset = bigInt.zero,
+    offset = 0n,
     stride,
     limit,
     chunkSize,
@@ -297,7 +297,7 @@ export function iterDownload(
   }
 
   if (limit == undefined && fileSize != undefined) {
-    limit = Math.floor(fileSize.add(chunkSize).subtract(1).divide(chunkSize).toJSNumber());
+    limit = Math.floor(Number((fileSize + BigInt(chunkSize) - 1n) / BigInt(chunkSize)));
   }
   if (stride == undefined) {
     stride = chunkSize;
@@ -315,9 +315,9 @@ export function iterDownload(
   let cls;
   if (
     chunkSize == requestSize &&
-    offset!.divide(MAX_CHUNK_SIZE).eq(bigInt.zero) &&
+    (offset! / BigInt(MAX_CHUNK_SIZE)) === 0n &&
     stride % MIN_CHUNK_SIZE == 0 &&
-    (limit == undefined || offset!.divide(limit).eq(bigInt.zero))
+    (limit == undefined || (offset! / BigInt(limit)) === 0n)
   ) {
     cls = DirectDownloadIter;
     client._log.info(
@@ -394,7 +394,7 @@ export async function downloadFileV2(
   }
   const writer = getWriter(outputFile);
 
-  let downloaded = bigInt.zero;
+  let downloaded = 0n;
   try {
     for await (const chunk of iterDownload(client, {
       file: inputLocation,
@@ -403,9 +403,9 @@ export async function downloadFileV2(
       msgData: msgData,
     })) {
       await writer.write(chunk);
-      downloaded = downloaded.add(chunk.length);
+      downloaded = downloaded + BigInt(chunk.length);
       if (progressCallback) {
-        await progressCallback(downloaded, bigInt(fileSize || bigInt.zero));
+        await progressCallback(downloaded, BigInt(fileSize || 0n));
       }
     }
     return returnWriterValue(writer);

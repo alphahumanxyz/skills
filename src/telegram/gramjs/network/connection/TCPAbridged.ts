@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import type { PromisedNetSockets, PromisedWebSockets } from '../../extensions';
 import { readBufferFromBigInt } from '../../Helpers';
@@ -24,7 +24,7 @@ export class AbridgedPacketCodec extends PacketCodec {
       b.writeUInt8(length, 0);
       temp = b;
     } else {
-      temp = Buffer.concat([Buffer.from('7f', 'hex'), readBufferFromBigInt(bigInt(length), 3)]);
+      temp = Buffer.concat([Buffer.from('7f', 'hex'), readBufferFromBigInt(BigInt(length), 3)]);
     }
     return Buffer.concat([temp, data]);
   }

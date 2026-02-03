@@ -123,13 +123,7 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
+// Removed unused function hexToBytes
 
 function int32ToBytes(n: number): Uint8Array {
   const bytes = new Uint8Array(4);
@@ -140,11 +134,7 @@ function int32ToBytes(n: number): Uint8Array {
   return bytes;
 }
 
-function bytesToInt32(bytes: Uint8Array, offset = 0): number {
-  return (
-    bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)
-  );
-}
+// Removed unused function bytesToInt32
 
 function concatBytes(...arrays: Uint8Array[]): Uint8Array {
   const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
@@ -317,9 +307,9 @@ function parseResPQ(buffer: ArrayBuffer): ResPQ | null {
     // Skip transport layer if present (first 4 bytes might be length)
     // For unencrypted messages: auth_key_id (8 bytes) + message_id (8 bytes) + message_length (4 bytes)
 
-    const authKeyId = reader.readInt64();
-    const messageId = reader.readInt64();
-    const messageLength = reader.readInt32();
+    reader.readInt64(); // authKeyId - read but not used
+    reader.readInt64(); // messageId - read but not used
+    reader.readInt32(); // messageLength - read but not used
 
     const constructor = reader.readUint32();
     if (constructor !== MTPROTO_CONSTRUCTORS.resPQ) {
@@ -332,7 +322,7 @@ function parseResPQ(buffer: ArrayBuffer): ResPQ | null {
     const pq = reader.readTLBytes();
 
     // Read fingerprints vector
-    const fingerprintsVectorId = reader.readUint32();
+    reader.readUint32(); // fingerprintsVectorId - read but not used
     const fingerprintsCount = reader.readInt32();
     const fingerprints: bigint[] = [];
     for (let i = 0; i < fingerprintsCount; i++) {
@@ -453,7 +443,10 @@ function stop(): void {
   // Close WebSocket if connected
   if (MTPROTO_STATE.ws) {
     try {
-      MTPROTO_STATE.ws.close();
+      const ws = MTPROTO_STATE.ws as { close?: () => void };
+      if (ws.close) {
+        ws.close();
+      }
     } catch (e) {
       console.warn('[telegram] Error closing WebSocket:', e);
     }
@@ -628,7 +621,10 @@ function onDisconnect(): void {
   CACHE.users.clear();
 
   if (MTPROTO_STATE.ws) {
-    MTPROTO_STATE.ws.close();
+    const ws = MTPROTO_STATE.ws as { close?: () => void };
+    if (ws.close) {
+      ws.close();
+    }
     MTPROTO_STATE.ws = null;
   }
   MTPROTO_STATE.connected = false;
@@ -714,7 +710,7 @@ async function mtprotoConnect(
         console.log(`[telegram] Sent req_pq_multi (${fullPacket.length} bytes)`);
       };
 
-      ws.onmessage = event => {
+      ws.onmessage = (event: { data: ArrayBuffer | string }) => {
         const latency = Date.now() - startTime;
         console.log(`[telegram] Received response (latency: ${latency}ms)`);
 
@@ -772,7 +768,7 @@ async function mtprotoConnect(
         }
       };
 
-      ws.onerror = event => {
+      ws.onerror = (event: Event) => {
         console.error(`[telegram] WebSocket error:`, event);
         clearTimeout(timeout);
         if (!resolved) {

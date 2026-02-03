@@ -4,7 +4,7 @@
  * @param log
  * @returns {Promise<{authKey: *, timeOffset: *}>}
  */
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import { AuthKey } from '../crypto/AuthKey';
 import { Factorizator } from '../crypto/Factorizator';
@@ -179,7 +179,7 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
   const clientDhInner = new Api.ClientDHInnerData({
     nonce: resPQ.nonce,
     serverNonce: resPQ.serverNonce,
-    retryId: bigInt.zero, // TODO Actual retry ID
+    retryId: 0n, // TODO Actual retry ID
     gB: getByteArray(gb, false),
   }).getBytes();
 

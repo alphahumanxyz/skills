@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import type { EntityLike } from '../define';
 import { _EntityType, _entityType, isArrayLike } from '../Helpers';
@@ -82,9 +82,9 @@ export async function _parseMessageText(
 /** @hidden */
 export function _getResponseMessage(
   client: TelegramClient,
-  request: any,
-  result: any,
-  inputChat: any
+  request: Api.AnyRequest,
+  result: Api.TypeUpdates | Api.TypeUpdate,
+  inputChat: Api.TypeInputPeer
 ) {
   let updates = [];
 
@@ -157,7 +157,7 @@ export function _getResponseMessage(
     return idToMessage;
   }
   let randomId;
-  if (isArrayLike(request) || typeof request == 'number' || bigInt.isInstance(request)) {
+  if (isArrayLike(request) || typeof request == 'number' || typeof request === 'bigint') {
     randomId = request;
   } else {
     randomId = request.randomId;
@@ -183,7 +183,8 @@ export function _getResponseMessage(
   const final = [];
   let warned = false;
   for (const rnd of randomId) {
-    const tmp = randomToId.get((rnd as any).toString());
+    const rndStr = typeof rnd === 'bigint' ? rnd.toString() : String(rnd);
+    const tmp = randomToId.get(rndStr);
     if (!tmp) {
       warned = true;
       break;
@@ -202,7 +203,8 @@ export function _getResponseMessage(
   }
   const finalToReturn = [];
   for (const rnd of randomId) {
-    finalToReturn.push(idToMessage.get(randomToId.get((rnd as any).toString())!));
+    const rndStr = typeof rnd === 'bigint' ? rnd.toString() : String(rnd);
+    finalToReturn.push(idToMessage.get(randomToId.get(rndStr)!));
   }
 
   return finalToReturn;

@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import { errors, utils } from '../';
 import type { TelegramClient } from '../';
@@ -256,14 +256,14 @@ export async function getInputEntity(
         }
       }
     }
-    if (typeof peer === 'number' || typeof peer === 'bigint' || bigInt.isInstance(peer)) {
+    if (typeof peer === 'number' || typeof peer === 'bigint') {
       const res = client._entityCache.get(peer.toString());
       if (res) {
         return res;
       }
     }
     // 0x2d45687 == crc32(b'Peer')
-    if (typeof peer == 'object' && !bigInt.isInstance(peer) && peer.SUBCLASS_OF_ID === 0x2d45687) {
+    if (typeof peer == 'object' && typeof peer !== 'bigint' && peer.SUBCLASS_OF_ID === 0x2d45687) {
       const res = client._entityCache.get(utils.getPeerId(peer));
       if (res) {
         return res;
@@ -301,7 +301,7 @@ export async function getInputEntity(
   if (peer instanceof Api.PeerUser) {
     const users = await client.invoke(
       new Api.users.GetUsers({
-        id: [new Api.InputUser({ userId: peer.userId, accessHash: bigInt.zero })],
+        id: [new Api.InputUser({ userId: peer.userId, accessHash: 0n })],
       })
     );
     if (users.length && !(users[0] instanceof Api.UserEmpty)) {
@@ -320,7 +320,7 @@ export async function getInputEntity(
     try {
       const channels = await client.invoke(
         new Api.channels.GetChannels({
-          id: [new Api.InputChannel({ channelId: peer.channelId, accessHash: bigInt.zero })],
+          id: [new Api.InputChannel({ channelId: peer.channelId, accessHash: 0n })],
         })
       );
 
@@ -347,7 +347,7 @@ export async function _getEntityFromString(client: TelegramClient, string: strin
   const phone = utils.parsePhone(string);
   if (phone) {
     try {
-      const result = await client.invoke(new Api.contacts.GetContacts({ hash: bigInt.zero }));
+      const result = await client.invoke(new Api.contacts.GetContacts({ hash: 0n }));
       if (!(result instanceof Api.contacts.ContactsNotModified)) {
         for (const user of result.users) {
           if (user instanceof Api.User && user.phone === phone) {
@@ -443,7 +443,7 @@ export async function _getPeer(client: TelegramClient, peer: EntityLike) {
 }
 
 /** @hidden */
-export async function _getInputDialog(client: TelegramClient, dialog: any) {
+export async function _getInputDialog(client: TelegramClient, dialog: EntityLike | Api.TypeInputDialogPeer) {
   try {
     if (dialog.SUBCLASS_OF_ID == 0xa21c9795) {
       // crc32(b'InputDialogPeer')
@@ -458,7 +458,7 @@ export async function _getInputDialog(client: TelegramClient, dialog: any) {
 }
 
 /** @hidden */
-export async function _getInputNotify(client: TelegramClient, notify: any) {
+export async function _getInputNotify(client: TelegramClient, notify: EntityLike | Api.TypeInputNotifyPeer) {
   try {
     if (notify.SUBCLASS_OF_ID == 0x58981615) {
       if (notify instanceof Api.InputNotifyPeer) {

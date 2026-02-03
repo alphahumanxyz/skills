@@ -12,7 +12,7 @@
  * key exists yet.
  */
 import { Mutex } from 'async-mutex';
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 import { CancellablePromise } from 'real-cancellable-promise';
 
 import type { TelegramClient } from '..';
@@ -629,7 +629,7 @@ export class MTProtoSender {
    * @returns {*[]}
    * @private
    */
-  _popStates(msgId: bigInt.BigInteger) {
+  _popStates(msgId: bigint) {
     const state = this._pendingState.getAndDelete(msgId);
     if (state) {
       return [state];

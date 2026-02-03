@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import type { BinaryReader } from '../../extensions';
 import { Api } from '../api';
@@ -8,12 +8,12 @@ export class RPCResult {
   static CONSTRUCTOR_ID = 0xf35c6d01;
   static classType = 'constructor';
   private CONSTRUCTOR_ID: number;
-  private reqMsgId: bigInt.BigInteger;
+  private reqMsgId: bigint;
   private body?: Buffer;
   private error?: Api.RpcError;
   private classType: string;
 
-  constructor(reqMsgId: bigInt.BigInteger, body?: Buffer, error?: Api.RpcError) {
+  constructor(reqMsgId: bigint, body?: Buffer, error?: Api.RpcError) {
     this.CONSTRUCTOR_ID = 0xf35c6d01;
     this.reqMsgId = reqMsgId;
     this.body = body;

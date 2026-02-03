@@ -1,4 +1,3 @@
-import bigInt from 'big-integer';
 import mime from 'mime';
 
 import type { ParseInterface } from './client/messageParse';
@@ -17,7 +16,7 @@ export function getFileInfo(
     | Api.MessageMediaDocument
     | Api.MessageMediaPhoto
     | Api.TypeInputFileLocation
-): { dcId?: number; location: Api.TypeInputFileLocation; size?: bigInt.BigInteger } {
+): { dcId?: number; location: Api.TypeInputFileLocation; size?: bigint } {
   if (!fileLocation || !fileLocation.SUBCLASS_OF_ID) {
     _raiseCastFail(fileLocation, 'InputFileLocation');
   }
@@ -54,7 +53,7 @@ export function getFileInfo(
         fileReference: location.fileReference,
         thumbSize: location.sizes[location.sizes.length - 1].type,
       }),
-      size: bigInt(_photoSizeByteCount(location.sizes[location.sizes.length - 1]) || 0),
+      size: BigInt(_photoSizeByteCount(location.sizes[location.sizes.length - 1]) || 0),
     };
   }
   _raiseCastFail(fileLocation, 'InputFileLocation');
@@ -137,7 +136,7 @@ export function getInputPeer(entity: any, allowSelf = true, checkHash = true): A
     } else if ((entity.accessHash !== undefined && !entity.min) || !checkHash) {
       return new Api.InputPeerUser({
         userId: entity.id,
-        accessHash: entity.accessHash || bigInt(0),
+        accessHash: entity.accessHash || BigInt(0),
       });
     } else {
       throw new Error('User without accessHash or min cannot be input');
@@ -154,7 +153,7 @@ export function getInputPeer(entity: any, allowSelf = true, checkHash = true): A
     if ((entity.accessHash !== undefined && !entity.min) || !checkHash) {
       return new Api.InputPeerChannel({
         channelId: entity.id,
-        accessHash: entity.accessHash || bigInt(0),
+        accessHash: entity.accessHash || BigInt(0),
       });
     } else {
       throw new TypeError('Channel without accessHash or min info cannot be input');
@@ -946,12 +945,12 @@ export function getInputMedia(
  * @param fileSize
  * @returns {Number}
  */
-export function getAppropriatedPartSize(fileSize: bigInt.BigInteger) {
-  if (fileSize.lesser(104857600)) {
+export function getAppropriatedPartSize(fileSize: bigint) {
+  if (fileSize < 104857600n) {
     // 100MB
     return 128;
   }
-  if (fileSize.lesser(786432000)) {
+  if (fileSize < 786432000n) {
     // 750MB
     return 256;
   }
@@ -1092,9 +1091,9 @@ export function getPeerId(peer: EntityLike, addMark = true): string {
  * @param markedId
  */
 export function resolveId(
-  markedId: bigInt.BigInteger
-): [bigInt.BigInteger, typeof Api.PeerUser | typeof Api.PeerChannel | typeof Api.PeerChat] {
-  if (markedId.greaterOrEquals(bigInt.zero)) {
+  markedId: bigint
+): [bigint, typeof Api.PeerUser | typeof Api.PeerChannel | typeof Api.PeerChat] {
+  if (markedId >= 0n) {
     return [markedId, Api.PeerUser];
   }
 
@@ -1104,9 +1103,9 @@ export function resolveId(
   // two zeroes.
   const m = markedId.toString().match(/-100([^0]\d*)/);
   if (m) {
-    return [bigInt(m[1]), Api.PeerChannel];
+    return [BigInt(m[1]), Api.PeerChannel];
   }
-  return [markedId.negate(), Api.PeerChat];
+  return [-markedId, Api.PeerChat];
 }
 
 /**
@@ -1171,7 +1170,7 @@ export function parsePhone(phone: string) {
 export function parseID(id: string) {
   const isValid = /^(-?[0-9][0-9]*)$/.test(id);
 
-  return isValid ? bigInt(id) : undefined;
+  return isValid ? BigInt(id) : undefined;
 }
 
 export function resolveInviteLink(link: string): [number, number, number] {

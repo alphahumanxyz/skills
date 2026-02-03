@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import { EntityLike, FileLike, MarkupLike, MessageIDLike } from '../define';
 import { generateRandomBytes, readBigIntFromBuffer, sleep } from '../Helpers';
@@ -6,7 +6,7 @@ import { errors, utils } from '../index';
 import { Api } from '../tl';
 import { getAppropriatedPartSize, getInputMedia, getMessageId } from '../Utils';
 import { promises as fs } from './fs';
-import { _parseMessageText } from './messageParse';
+import { _parseMessageText, type ParseInterface } from './messageParse';
 import { getCommentData } from './messages';
 import path from './path';
 import { TelegramClient } from './TelegramClient';
@@ -122,7 +122,7 @@ export async function uploadFile(
   const fileId = readBigIntFromBuffer(generateRandomBytes(8), true, true);
   const isLarge = size > LARGE_FILE_THRESHOLD;
 
-  const partSize = getAppropriatedPartSize(bigInt(size)) * KB_TO_BYTES;
+  const partSize = getAppropriatedPartSize(BigInt(size)) * KB_TO_BYTES;
   const partCount = Math.floor((size + partSize - 1) / partSize);
   const buffer = await getFileBuffer(file, size, fileParams.maxBufferSize || BUFFER_SIZE_20MB - 1);
 
@@ -258,7 +258,7 @@ export interface SendFileInterface {
    *  You should convert these to MP4 before sending if you want them to be streamable. Unsupported formats will result in VideoContentTypeError. */
   supportsStreaming?: boolean;
   /** See the {@link parseMode} property for allowed values. Markdown parsing will be used by default. */
-  parseMode?: any;
+  parseMode?: false | string | ParseInterface;
   /** A list of message formatting entities. When provided, the parseMode is ignored. */
   formattingEntities?: Api.TypeMessageEntity[];
   /** Whether the message should notify people in a broadcast channel or not. Defaults to false, which means it will notify them. Set it to True to alter this behaviour. */

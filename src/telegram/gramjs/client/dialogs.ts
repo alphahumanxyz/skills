@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 
 import { DateLike, EntityLike } from '../define';
 import { LogLevel } from '../extensions/Logger';
@@ -53,7 +53,7 @@ export class _DialogsIter extends RequestIter {
       offsetId,
       offsetPeer,
       limit: 1,
-      hash: bigInt.zero,
+      hash: 0n,
       excludePinned: ignorePinned,
       folderId: folder,
     });
