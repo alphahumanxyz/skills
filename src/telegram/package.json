@@ -1,0 +1,8 @@
+{
+  "name": "@alphahuman/skills-telegram",
+  "private": true,
+  "version": "1.0.0",
+  "devDependencies": {
+    "telegram": "^2.26.22"
+  }
+}

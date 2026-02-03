@@ -59,6 +59,8 @@ for (const skillName of skills) {
   console.log(`[bundle-skills] Bundling ${skillName} with ${toolFiles.length} tool files...`);
 
   try {
+    const polyfillsDir = join(__dirname, 'polyfills');
+
     // Use esbuild to bundle the skill with its tools
     // Use IIFE format and configure it to output code that can be executed directly
     const result = await esbuild.build({
@@ -77,6 +79,30 @@ for (const skillName of skills) {
       banner: { js: '/* Bundled skill with esbuild */' },
       // Configure to handle CommonJS modules properly
       mainFields: ['module', 'main'],
+      inject: [join(polyfillsDir, 'buffer-inject.js')],
+      alias: {
+        buffer: join(polyfillsDir, 'buffer.js'),
+        crypto: join(polyfillsDir, 'crypto.js'),
+        events: join(polyfillsDir, 'events.js'),
+        'async-mutex': join(polyfillsDir, 'async-mutex.js'),
+        websocket: join(polyfillsDir, 'websocket.js'),
+        store2: join(polyfillsDir, 'store2.js'),
+        'big-integer': join(polyfillsDir, 'big-integer.js'),
+        path: join(polyfillsDir, 'path.js'),
+        fs: join(polyfillsDir, 'fs.js'),
+        os: join(polyfillsDir, 'os.js'),
+        net: join(polyfillsDir, 'net.js'),
+        tls: join(polyfillsDir, 'tls.js'),
+        stream: join(polyfillsDir, 'stream.js'),
+        util: join(polyfillsDir, 'util.js'),
+        socks: join(polyfillsDir, 'socks.js'),
+        'ts-custom-error': join(polyfillsDir, 'ts-custom-error.js'),
+        '@cryptography/aes': join(polyfillsDir, 'cryptography-aes.js'),
+        htmlparser2: join(polyfillsDir, 'htmlparser2.js'),
+        'node-localstorage': join(polyfillsDir, 'node-localstorage.js'),
+        pako: join(polyfillsDir, 'pako.js'),
+        mime: join(polyfillsDir, 'mime.js'),
+      },
     });
 
     if (!result.outputFiles || result.outputFiles.length === 0) {

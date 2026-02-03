@@ -1,6 +1,18 @@
 // telegram/index.ts
 // Telegram integration skill using gramjs library via V8 runtime.
 // Provides tools for Telegram API access with async request queue pattern.
+import { TelegramClient } from 'telegram';
+
+// Import all tools
+import { telegramConnectTool } from './tools/connect';
+import { telegramGetDialogsTool } from './tools/get-dialogs';
+import { telegramGetMeTool } from './tools/get-me';
+import { telegramGetMessagesTool } from './tools/get-messages';
+import { telegramGetResultTool } from './tools/get-result';
+import { telegramSendCodeTool } from './tools/send-code';
+import { telegramSendMessageTool } from './tools/send-message';
+import { telegramSignInTool } from './tools/sign-in';
+import { telegramStatusTool } from './tools/status';
 
 // Runtime globals (store, state, platform, db, cron, tools) are declared in types/globals.d.ts
 
@@ -107,6 +119,27 @@ let CLIENT: InstanceType<typeof GramJS.TelegramClient> | null = null;
 let CLIENT_CONNECTING = false;
 let CLIENT_ERROR: string | null = null;
 
+// Expose shared state to globalThis for bundled tool modules that use `declare const`
+// This is needed because esbuild bundles tool files in separate CommonJS modules
+// and they reference these variables as globals via ambient TypeScript declarations
+const _g = globalThis as Record<string, unknown>;
+_g.CONFIG = CONFIG;
+_g.CACHE = CACHE;
+_g.CLIENT = CLIENT;
+_g.CLIENT_CONNECTING = CLIENT_CONNECTING;
+_g.CLIENT_ERROR = CLIENT_ERROR;
+_g.enqueueRequest = enqueueRequest;
+_g.getRequest = getRequest;
+
+// Helper to sync mutable state to globalThis after changes
+function _syncState(): void {
+  _g.CONFIG = CONFIG;
+  _g.CACHE = CACHE;
+  _g.CLIENT = CLIENT;
+  _g.CLIENT_CONNECTING = CLIENT_CONNECTING;
+  _g.CLIENT_ERROR = CLIENT_ERROR;
+}
+
 // Worker loop state
 let WORKER_RUNNING = false;
 let WORKER_TIMEOUT_ID: ReturnType<typeof setTimeout> | null = null;
@@ -196,72 +229,30 @@ function cleanOldRequests(): void {
 // ---------------------------------------------------------------------------
 
 async function initClient(): Promise<void> {
-  if (CLIENT || CLIENT_CONNECTING) {
-    console.log(
-      `[telegram] initClient skipped: CLIENT=${CLIENT !== null}, CONNECTING=${CLIENT_CONNECTING}`
-    );
-    return;
-  }
-  if (!CONFIG.apiId || !CONFIG.apiHash) {
-    console.log('[telegram] Cannot init client: missing credentials');
-    return;
-  }
+  const stringSession = new GramJS.StringSession(CONFIG.sessionString || '');
+  const apiId = CONFIG.apiId;
+  const apiHash = CONFIG.apiHash;
 
   CLIENT_CONNECTING = true;
   CLIENT_ERROR = null;
 
-  try {
-    console.log('[telegram] Initializing TelegramClient...');
-    console.log(
-      `[telegram] API ID: ${CONFIG.apiId}, API Hash: ${CONFIG.apiHash ? '[set]' : '[empty]'}`
-    );
-    console.log(`[telegram] WebSocket available: ${typeof WebSocket !== 'undefined'}`);
-    console.log(`[telegram] GramJS available: ${typeof GramJS !== 'undefined'}`);
+  const client = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 5 });
 
-    // Use StringSession if we have a saved session
-    console.log('[telegram] Creating StringSession...');
-    const session = new GramJS.StringSession(CONFIG.sessionString || '');
-    console.log('[telegram] StringSession created');
-
-    console.log('[telegram] Creating TelegramClient...');
-    CLIENT = new GramJS.TelegramClient(session, CONFIG.apiId, CONFIG.apiHash, {
-      connectionRetries: 5,
-      useWSS: true,
-      // Use WebSocket transport for browser-like environment
-    });
-    console.log('[telegram] TelegramClient created, connecting...');
-
-    await CLIENT.connect();
-    console.log('[telegram] Connected to Telegram servers');
-
-    // Check if authorized
-    const authorized = await CLIENT.checkAuthorization();
-    console.log(`[telegram] Authorization check: ${authorized}`);
-    if (authorized) {
-      CONFIG.isAuthenticated = true;
-      // Save session string
-      const sessionString = CLIENT.session.save();
-      if (sessionString) {
-        CONFIG.sessionString = sessionString;
-        store.set('config', CONFIG);
-      }
-      // Get user info
-      await loadMe();
-    }
-
-    CLIENT_CONNECTING = false;
-    console.log('[telegram] Client initialization complete');
-    publishState();
-  } catch (e) {
-    CLIENT_ERROR = String(e);
-    CLIENT = null;
-    CLIENT_CONNECTING = false;
-    console.error('[telegram] Failed to init client:', e);
-    if (e instanceof Error && e.stack) {
-      console.error('[telegram] Stack trace:', e.stack);
-    }
-    publishState();
+  await client.connect();
+  const authorized = await client.checkAuthorization();
+  if (authorized) {
+    CONFIG.isAuthenticated = true;
+    // const sessionString = client.session.save();
+    // if (sessionString) {
+    //   CONFIG.sessionString = sessionString;
+    //   store.set('config', CONFIG);
+    // }
+    await loadMe();
   }
+
+  CLIENT_CONNECTING = false;
+  _syncState();
+  publishState();
 }
 
 async function loadMe(): Promise<void> {
@@ -279,6 +270,7 @@ async function loadMe(): Promise<void> {
         isPremium: me.premium,
       };
       CACHE.lastSync = Date.now();
+      _syncState();
     }
   } catch (e) {
     console.error('[telegram] Failed to load me:', e);
@@ -315,6 +307,7 @@ async function processRequest(request: TelegramRequest): Promise<void> {
         CONFIG.phoneNumber = args.phoneNumber;
         CONFIG.pendingCode = true;
         store.set('config', CONFIG);
+        _syncState();
         result = {
           phoneCodeHash: sendCodeResult.phoneCodeHash,
           isCodeViaApp: sendCodeResult.isCodeViaApp,
@@ -339,6 +332,7 @@ async function processRequest(request: TelegramRequest): Promise<void> {
         }
         store.set('config', CONFIG);
         await loadMe();
+        _syncState();
         result = { success: true, user: CACHE.me };
         break;
 
@@ -346,6 +340,7 @@ async function processRequest(request: TelegramRequest): Promise<void> {
         if (!CLIENT) throw new Error('Client not connected');
         if (!CONFIG.isAuthenticated) throw new Error('Not authenticated');
         await loadMe();
+        _syncState();
         result = CACHE.me;
         break;
 
@@ -371,6 +366,7 @@ async function processRequest(request: TelegramRequest): Promise<void> {
           })
         );
         CACHE.lastSync = Date.now();
+        _syncState();
         result = CACHE.dialogs;
         break;
 
@@ -511,6 +507,9 @@ function init(): void {
     CONFIG.apiHash = platform.env('TELEGRAM_API_HASH') || '';
   }
 
+  // Sync state to globalThis for tool modules
+  _syncState();
+
   // Start the worker loop immediately so requests can be processed during setup
   startWorkerLoop();
 
@@ -552,6 +551,7 @@ function stop(): void {
 
   // Save config
   store.set('config', CONFIG);
+  _syncState();
 
   state.set('status', 'stopped');
 }
@@ -640,6 +640,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     CONFIG.apiId = apiId;
     CONFIG.apiHash = apiHash;
     store.set('config', CONFIG);
+    _syncState();
 
     // Queue connect request
     const connectRequestId = enqueueRequest('connect', {});
@@ -767,221 +768,16 @@ function publishState(): void {
 // Tools
 // ---------------------------------------------------------------------------
 
-tools = [
-  // =========================================================================
-  // CONNECTION & AUTH
-  // =========================================================================
-  {
-    name: 'telegram-connect',
-    description:
-      'Connect to Telegram servers. This is an async operation - returns a request ID. ' +
-      'Use telegram-get-result to check the status.',
-    input_schema: { type: 'object', properties: {} },
-    execute(): string {
-      if (!CONFIG.apiId || !CONFIG.apiHash) {
-        return JSON.stringify({ error: 'API credentials not configured. Complete setup first.' });
-      }
-      const requestId = enqueueRequest('connect', {});
-      return JSON.stringify({ status: 'pending', requestId });
-    },
-  },
-
-  {
-    name: 'telegram-send-code',
-    description:
-      'Send a verification code to the specified phone number. ' +
-      'Returns a request ID - use telegram-get-result to check status.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        phone_number: {
-          type: 'string',
-          description: 'Phone number in international format (e.g., +1234567890)',
-        },
-      },
-      required: ['phone_number'],
-    },
-    execute(args: Record<string, unknown>): string {
-      const phoneNumber = args.phone_number as string;
-      if (!phoneNumber || !phoneNumber.startsWith('+')) {
-        return JSON.stringify({ error: 'Phone number must be in international format (+...)' });
-      }
-      const requestId = enqueueRequest('send-code', { phoneNumber });
-      return JSON.stringify({ status: 'pending', requestId });
-    },
-  },
-
-  {
-    name: 'telegram-sign-in',
-    description:
-      'Sign in with the verification code received after calling telegram-send-code. ' +
-      'Returns a request ID - use telegram-get-result to check status.',
-    input_schema: {
-      type: 'object',
-      properties: { code: { type: 'string', description: 'Verification code from Telegram' } },
-      required: ['code'],
-    },
-    execute(args: Record<string, unknown>): string {
-      const code = args.code as string;
-      if (!code) {
-        return JSON.stringify({ error: 'Verification code is required' });
-      }
-      const requestId = enqueueRequest('sign-in', { code });
-      return JSON.stringify({ status: 'pending', requestId });
-    },
-  },
-
-  // =========================================================================
-  // STATUS & RESULTS
-  // =========================================================================
-  {
-    name: 'telegram-status',
-    description: 'Get the current connection and authentication status.',
-    input_schema: { type: 'object', properties: {} },
-    execute(): string {
-      return JSON.stringify({
-        connected: CLIENT !== null,
-        connecting: CLIENT_CONNECTING,
-        authenticated: CONFIG.isAuthenticated,
-        pendingCode: CONFIG.pendingCode,
-        hasCredentials: !!(CONFIG.apiId && CONFIG.apiHash),
-        me: CACHE.me,
-        dialogCount: CACHE.dialogs.length,
-        lastSync: CACHE.lastSync,
-        error: CLIENT_ERROR,
-      });
-    },
-  },
-
-  {
-    name: 'telegram-get-result',
-    description:
-      'Get the result of an async Telegram operation by request ID. ' +
-      'Returns the status and result/error of the operation.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        request_id: {
-          type: 'string',
-          description: 'The request ID returned by an async operation',
-        },
-      },
-      required: ['request_id'],
-    },
-    execute(args: Record<string, unknown>): string {
-      const requestId = args.request_id as string;
-      const request = getRequest(requestId);
-      if (!request) {
-        return JSON.stringify({ error: 'Request not found', requestId });
-      }
-      return JSON.stringify({
-        requestId: request.id,
-        type: request.type,
-        status: request.status,
-        result: request.result ? JSON.parse(request.result) : null,
-        error: request.error,
-        createdAt: request.created_at,
-        completedAt: request.completed_at,
-      });
-    },
-  },
-
-  // =========================================================================
-  // MESSAGING
-  // =========================================================================
-  {
-    name: 'telegram-get-me',
-    description: 'Get information about the authenticated user.',
-    input_schema: { type: 'object', properties: {} },
-    execute(): string {
-      if (!CONFIG.isAuthenticated) {
-        return JSON.stringify({ error: 'Not authenticated. Complete setup first.' });
-      }
-      if (CACHE.me) {
-        return JSON.stringify(CACHE.me);
-      }
-      const requestId = enqueueRequest('get-me', {});
-      return JSON.stringify({ status: 'pending', requestId });
-    },
-  },
-
-  {
-    name: 'telegram-get-dialogs',
-    description:
-      'Get the list of dialogs (chats, channels, users). ' +
-      'Returns a request ID - use telegram-get-result to check status.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        limit: { type: 'number', description: 'Maximum number of dialogs to return (default: 20)' },
-      },
-    },
-    execute(args: Record<string, unknown>): string {
-      if (!CONFIG.isAuthenticated) {
-        return JSON.stringify({ error: 'Not authenticated. Complete setup first.' });
-      }
-      const limit = (args.limit as number) || 20;
-      const requestId = enqueueRequest('get-dialogs', { limit });
-      return JSON.stringify({ status: 'pending', requestId });
-    },
-  },
-
-  {
-    name: 'telegram-send-message',
-    description:
-      'Send a message to a user, chat, or channel. ' +
-      'Returns a request ID - use telegram-get-result to check status.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        peer: { type: 'string', description: 'Username, phone number, or ID of the recipient' },
-        message: { type: 'string', description: 'The message text to send' },
-      },
-      required: ['peer', 'message'],
-    },
-    execute(args: Record<string, unknown>): string {
-      if (!CONFIG.isAuthenticated) {
-        return JSON.stringify({ error: 'Not authenticated. Complete setup first.' });
-      }
-      const peer = args.peer as string;
-      const message = args.message as string;
-      if (!peer || !message) {
-        return JSON.stringify({ error: 'Both peer and message are required' });
-      }
-      const requestId = enqueueRequest('send-message', { peer, message });
-      return JSON.stringify({ status: 'pending', requestId });
-    },
-  },
-
-  {
-    name: 'telegram-get-messages',
-    description:
-      'Get messages from a chat. ' +
-      'Returns a request ID - use telegram-get-result to check status.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        peer: { type: 'string', description: 'Username, phone number, or ID of the chat' },
-        limit: {
-          type: 'number',
-          description: 'Maximum number of messages to return (default: 20)',
-        },
-      },
-      required: ['peer'],
-    },
-    execute(args: Record<string, unknown>): string {
-      if (!CONFIG.isAuthenticated) {
-        return JSON.stringify({ error: 'Not authenticated. Complete setup first.' });
-      }
-      const peer = args.peer as string;
-      const limit = (args.limit as number) || 20;
-      if (!peer) {
-        return JSON.stringify({ error: 'Peer is required' });
-      }
-      const requestId = enqueueRequest('get-messages', { peer, limit });
-      return JSON.stringify({ status: 'pending', requestId });
-    },
-  },
+const tools: ToolDefinition[] = [
+  telegramConnectTool,
+  telegramSendCodeTool,
+  telegramSignInTool,
+  telegramStatusTool,
+  telegramGetResultTool,
+  telegramGetMeTool,
+  telegramGetDialogsTool,
+  telegramSendMessageTool,
+  telegramGetMessagesTool,
 ];
 
 // ---------------------------------------------------------------------------

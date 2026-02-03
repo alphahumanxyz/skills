@@ -5,19 +5,24 @@
  * This script bundles gramjs from the npm 'telegram' package with polyfills for the V8 runtime.
  */
 import * as esbuild from 'esbuild';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 
+// Input: TypeScript compiled output
+const telegramTsOutDir = join(rootDir, 'skills-ts-out', 'telegram');
+const telegramTsOutPath = join(telegramTsOutDir, 'index.js');
+
+// Output: Final bundled skill
 const telegramOutDir = join(rootDir, 'skills', 'telegram');
 const telegramSkillPath = join(telegramOutDir, 'index.js');
 
 // Only bundle if the telegram skill was compiled
-if (!existsSync(telegramSkillPath)) {
-  console.log('[bundle-telegram] No compiled telegram skill found, skipping bundle');
+if (!existsSync(telegramTsOutPath)) {
+  console.log('[bundle-telegram] No compiled telegram skill found at skills-ts-out/telegram, skipping bundle');
   process.exit(0);
 }
 
@@ -101,24 +106,53 @@ try {
   writeFileSync(gramjsBundlePath, gramjsBundleCode);
   console.log(`[bundle-telegram] Wrote gramjs bundle to: gramjs-bundle.js`);
 
-  // Now read and update the main telegram skill to include the gramjs bundle
-  console.log('[bundle-telegram] Step 2: Updating telegram skill...');
+  // Now read the compiled telegram skill and bundle with gramjs
+  console.log('[bundle-telegram] Step 2: Bundling telegram skill with gramjs...');
 
-  let skillCode = readFileSync(telegramSkillPath, 'utf-8');
+  let skillCode = readFileSync(telegramTsOutPath, 'utf-8');
 
   // The skill code should work as-is since it declares GramJS as a global
   // We just need to prepend the gramjs bundle to make GramJS available
 
+  // Footer to expose skill to globalThis (same as bundle-skills.mjs)
+  const SKILL_FOOTER = `
+// Expose skill bundle to globalThis for V8 runtime access
+globalThis.__skill = __skill_bundle;
+`;
+
   // Create the final bundled skill file
+  // Wrap skill code in an IIFE like bundle-skills does for consistency
   const finalCode = `// Bundled telegram skill with gramjs
 ${gramjsBundleCode}
 
-// Main skill code
+// Main skill code (wrapped in IIFE)
+var __skill_bundle = (function() {
+  var exports = {};
+  var module = { exports: exports };
+
 ${skillCode}
+
+  return module.exports;
+})();
+
+${SKILL_FOOTER}
 `;
+
+  // Ensure output directory exists
+  if (!existsSync(telegramOutDir)) {
+    mkdirSync(telegramOutDir, { recursive: true });
+  }
 
   writeFileSync(telegramSkillPath, finalCode);
   console.log(`[bundle-telegram] Final bundle size: ${(finalCode.length / 1024).toFixed(1)} KB`);
+
+  // Copy manifest.json from source to output
+  const srcManifest = join(rootDir, 'src', 'telegram', 'manifest.json');
+  const outManifest = join(telegramOutDir, 'manifest.json');
+  if (existsSync(srcManifest)) {
+    copyFileSync(srcManifest, outManifest);
+    console.log('[bundle-telegram] Copied manifest.json');
+  }
 
   console.log('[bundle-telegram] Bundle complete');
 } catch (error) {

@@ -152,7 +152,7 @@ function stop(): void {
 // ---------------------------------------------------------------------------
 
 function onSetupStart(): SetupStartResult {
-  console.log("[server-ping] onSetupStart");
+  console.log('[server-ping] onSetupStart');
   // Pre-fill with the host's backend URL so the user doesn't have to type it
   const defaultUrl = platform.env('BACKEND_URL') || platform.env('VITE_BACKEND_URL') || '';
 

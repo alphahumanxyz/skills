@@ -43,7 +43,7 @@ Each skill is a directory under `src/` containing:
 
 - **index.ts** — TypeScript source with lifecycle hooks, tools, and business logic
 - **manifest.json** — Metadata (id, name, version, runtime, platforms, setup config)
-- ****tests**/** _(optional)_ — Unit tests
+- \***\*tests**/\*\* _(optional)_ — Unit tests
 
 ### manifest.json
 
