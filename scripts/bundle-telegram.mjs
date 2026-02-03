@@ -77,9 +77,9 @@ try {
       '@cryptography/aes': join(polyfillsDir, 'cryptography-aes.js'),
       'htmlparser2': join(polyfillsDir, 'htmlparser2.js'),
       'node-localstorage': join(polyfillsDir, 'node-localstorage.js'),
+      'pako': join(polyfillsDir, 'pako.js'),
+      'mime': join(polyfillsDir, 'mime.js'),
     },
-    // Mark some packages as external to handle manually
-    external: ['pako', 'mime'],
   });
 
   if (!gramjsBundleResult.outputFiles || gramjsBundleResult.outputFiles.length === 0) {
@@ -88,54 +88,10 @@ try {
 
   let gramjsBundleCode = gramjsBundleResult.outputFiles[0].text;
 
-  // Add simple polyfills for pako (gzip) - gramjs uses it for compressed responses
-  const pakoPolyfill = `
-// Minimal pako polyfill - gramjs uses inflate for decompressing gzip data
-var pako = {
-  inflate: function(data, options) {
-    // Use native DecompressionStream if available (V8 should have this)
-    if (typeof DecompressionStream !== 'undefined') {
-      // For sync operation, we need a workaround
-      // In practice, this might need the data to be handled differently
-      console.warn('[pako] Using stub - gzip decompression may not work');
-      return data;
-    }
-    console.warn('[pako] inflate not available - returning raw data');
-    return data;
-  },
-  deflate: function(data, options) {
-    console.warn('[pako] deflate not available - returning raw data');
-    return data;
-  }
-};
-`;
-
-  // Add simple mime polyfill
-  const mimePolyfill = `
-// Minimal mime polyfill
-var mime = {
-  getType: function(path) {
-    var ext = path.split('.').pop().toLowerCase();
-    var types = {
-      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
-      'gif': 'image/gif', 'webp': 'image/webp', 'mp4': 'video/mp4',
-      'mp3': 'audio/mpeg', 'ogg': 'audio/ogg', 'pdf': 'application/pdf',
-      'txt': 'text/plain', 'html': 'text/html', 'json': 'application/json'
-    };
-    return types[ext] || 'application/octet-stream';
-  },
-  getExtension: function(mimeType) {
-    var exts = {
-      'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif',
-      'video/mp4': 'mp4', 'audio/mpeg': 'mp3', 'application/pdf': 'pdf'
-    };
-    return exts[mimeType] || 'bin';
-  }
-};
-`;
-
-  // Prepend polyfills to the gramjs bundle
-  gramjsBundleCode = pakoPolyfill + mimePolyfill + gramjsBundleCode;
+  // Remove "use strict" from the bundle to allow global variable assignments
+  // in the skill code (tools, init, start, etc. are assigned without declaration)
+  gramjsBundleCode = gramjsBundleCode.replace(/^"use strict";\s*/m, '');
+  gramjsBundleCode = gramjsBundleCode.replace(/^\s*"use strict";\s*/gm, '');
 
   console.log(`[bundle-telegram] gramjs bundle size: ${(gramjsBundleCode.length / 1024).toFixed(1)} KB`);
 

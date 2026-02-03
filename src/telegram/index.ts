@@ -111,6 +111,11 @@ let CLIENT: InstanceType<typeof GramJS.TelegramClient> | null = null;
 let CLIENT_CONNECTING = false;
 let CLIENT_ERROR: string | null = null;
 
+// Worker loop state
+let WORKER_RUNNING = false;
+let WORKER_TIMEOUT_ID: ReturnType<typeof setTimeout> | null = null;
+const WORKER_INTERVAL_MS = 100; // Check every 100ms for pending requests
+
 // ---------------------------------------------------------------------------
 // Database Schema
 // ---------------------------------------------------------------------------
@@ -191,7 +196,10 @@ function cleanOldRequests(): void {
 // ---------------------------------------------------------------------------
 
 async function initClient(): Promise<void> {
-  if (CLIENT || CLIENT_CONNECTING) return;
+  if (CLIENT || CLIENT_CONNECTING) {
+    console.log(`[telegram] initClient skipped: CLIENT=${CLIENT !== null}, CONNECTING=${CLIENT_CONNECTING}`);
+    return;
+  }
   if (!CONFIG.apiId || !CONFIG.apiHash) {
     console.log('[telegram] Cannot init client: missing credentials');
     return;
@@ -202,21 +210,29 @@ async function initClient(): Promise<void> {
 
   try {
     console.log('[telegram] Initializing TelegramClient...');
+    console.log(`[telegram] API ID: ${CONFIG.apiId}, API Hash: ${CONFIG.apiHash ? '[set]' : '[empty]'}`);
+    console.log(`[telegram] WebSocket available: ${typeof WebSocket !== 'undefined'}`);
+    console.log(`[telegram] GramJS available: ${typeof GramJS !== 'undefined'}`);
 
     // Use StringSession if we have a saved session
+    console.log('[telegram] Creating StringSession...');
     const session = new GramJS.StringSession(CONFIG.sessionString || '');
+    console.log('[telegram] StringSession created');
 
+    console.log('[telegram] Creating TelegramClient...');
     CLIENT = new GramJS.TelegramClient(session, CONFIG.apiId, CONFIG.apiHash, {
       connectionRetries: 5,
       useWSS: true,
       // Use WebSocket transport for browser-like environment
     });
+    console.log('[telegram] TelegramClient created, connecting...');
 
     await CLIENT.connect();
     console.log('[telegram] Connected to Telegram servers');
 
     // Check if authorized
     const authorized = await CLIENT.checkAuthorization();
+    console.log(`[telegram] Authorization check: ${authorized}`);
     if (authorized) {
       CONFIG.isAuthenticated = true;
       // Save session string
@@ -230,12 +246,16 @@ async function initClient(): Promise<void> {
     }
 
     CLIENT_CONNECTING = false;
+    console.log('[telegram] Client initialization complete');
     publishState();
   } catch (e) {
     CLIENT_ERROR = String(e);
     CLIENT = null;
     CLIENT_CONNECTING = false;
     console.error('[telegram] Failed to init client:', e);
+    if (e instanceof Error && e.stack) {
+      console.error('[telegram] Stack trace:', e.stack);
+    }
     publishState();
   }
 }
@@ -389,11 +409,62 @@ async function processRequestQueue(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Worker Loop (setTimeout-based)
+// ---------------------------------------------------------------------------
+
+function startWorkerLoop(): void {
+  if (WORKER_RUNNING) {
+    console.log('[telegram] Worker loop already running');
+    return;
+  }
+
+  WORKER_RUNNING = true;
+  console.log('[telegram] Starting worker loop');
+
+  function tick(): void {
+    if (!WORKER_RUNNING) {
+      console.log('[telegram] Worker loop stopped');
+      return;
+    }
+
+    // Process any pending requests
+    processRequestQueue()
+      .catch(e => {
+        console.error('[telegram] Queue processing error:', e);
+      })
+      .finally(() => {
+        // Schedule next tick if still running
+        if (WORKER_RUNNING) {
+          WORKER_TIMEOUT_ID = setTimeout(tick, WORKER_INTERVAL_MS);
+        }
+      });
+  }
+
+  // Start the first tick
+  WORKER_TIMEOUT_ID = setTimeout(tick, 0);
+}
+
+function stopWorkerLoop(): void {
+  console.log('[telegram] Stopping worker loop');
+  WORKER_RUNNING = false;
+
+  if (WORKER_TIMEOUT_ID !== null) {
+    clearTimeout(WORKER_TIMEOUT_ID);
+    WORKER_TIMEOUT_ID = null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Lifecycle Hooks
 // ---------------------------------------------------------------------------
 
 function init(): void {
   console.log('[telegram] Initializing skill');
+
+  // Check runtime capabilities
+  console.log(`[telegram] WebSocket available: ${typeof WebSocket !== 'undefined'}`);
+  console.log(`[telegram] GramJS available: ${typeof GramJS !== 'undefined'}`);
+  console.log(`[telegram] setTimeout available: ${typeof setTimeout !== 'undefined'}`);
 
   // Create database tables
   db.exec(SCHEMA, []);
@@ -421,6 +492,9 @@ function init(): void {
     CONFIG.apiHash = platform.env('TELEGRAM_API_HASH') || '';
   }
 
+  // Start the worker loop immediately so requests can be processed during setup
+  startWorkerLoop();
+
   console.log(`[telegram] Config loaded — authenticated: ${CONFIG.isAuthenticated}`);
   publishState();
 }
@@ -428,8 +502,10 @@ function init(): void {
 function start(): void {
   console.log('[telegram] Starting skill');
 
-  // Register cron job for processing request queue
-  cron.register('telegram-worker', '*/1 * * * * *'); // Every second
+  // Ensure worker loop is running (it may already be running from init)
+  if (!WORKER_RUNNING) {
+    startWorkerLoop();
+  }
 
   // Auto-connect if we have credentials and session
   if (CONFIG.apiId && CONFIG.apiHash && CONFIG.sessionString) {
@@ -442,8 +518,8 @@ function start(): void {
 function stop(): void {
   console.log('[telegram] Stopping skill');
 
-  // Unregister cron
-  cron.unregister('telegram-worker');
+  // Stop the worker loop
+  stopWorkerLoop();
 
   // Disconnect client
   if (CLIENT) {
@@ -461,12 +537,9 @@ function stop(): void {
   state.set('status', 'stopped');
 }
 
-function onCronTrigger(scheduleId: string): void {
-  if (scheduleId === 'telegram-worker') {
-    processRequestQueue().catch(e => {
-      console.error('[telegram] Queue processing error:', e);
-    });
-  }
+// onCronTrigger is kept for compatibility but worker loop handles processing now
+function onCronTrigger(_scheduleId: string): void {
+  // No-op: worker loop handles request processing via setTimeout
 }
 
 // ---------------------------------------------------------------------------
@@ -533,6 +606,8 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     const apiId = parseInt((values.apiId as string) || '', 10);
     const apiHash = ((values.apiHash as string) || '').trim();
 
+    console.log(`[telegram] Setup: credentials step - apiId: ${apiId}, apiHash: ${apiHash ? '[set]' : '[empty]'}`);
+
     if (!apiId || isNaN(apiId)) {
       return { status: 'error', errors: [{ field: 'apiId', message: 'Valid API ID is required' }] };
     }
@@ -545,14 +620,15 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     store.set('config', CONFIG);
 
     // Queue connect request
-    enqueueRequest('connect', {});
+    const connectRequestId = enqueueRequest('connect', {});
+    console.log(`[telegram] Setup: enqueued connect request: ${connectRequestId}`);
 
     return {
       status: 'next',
       nextStep: {
         id: 'phone',
         title: 'Connect Telegram Account',
-        description: 'Enter your phone number to connect your Telegram account.',
+        description: 'Enter your phone number to connect your Telegram account. Please wait a moment for the connection to establish.',
         fields: [
           {
             name: 'phoneNumber',
@@ -570,6 +646,9 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
   if (stepId === 'phone') {
     const phoneNumber = ((values.phoneNumber as string) || '').trim();
 
+    console.log(`[telegram] Setup: phone step - number: ${phoneNumber ? phoneNumber.slice(0, 4) + '****' : '[empty]'}`);
+    console.log(`[telegram] Setup: CLIENT connected: ${CLIENT !== null}, connecting: ${CLIENT_CONNECTING}, error: ${CLIENT_ERROR}`);
+
     if (!phoneNumber || !phoneNumber.startsWith('+')) {
       return {
         status: 'error',
@@ -577,15 +656,22 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       };
     }
 
+    // Check if we're connected before trying to send code
+    if (!CLIENT && !CLIENT_CONNECTING) {
+      console.log('[telegram] Setup: Client not connected, re-queuing connect request');
+      enqueueRequest('connect', {});
+    }
+
     // Queue send-code request
-    enqueueRequest('send-code', { phoneNumber });
+    const sendCodeRequestId = enqueueRequest('send-code', { phoneNumber });
+    console.log(`[telegram] Setup: enqueued send-code request: ${sendCodeRequestId}`);
 
     return {
       status: 'next',
       nextStep: {
         id: 'code',
         title: 'Enter Verification Code',
-        description: 'Enter the verification code sent to your Telegram app or SMS.',
+        description: 'A verification code has been requested. Check your Telegram app or SMS. It may take a few seconds to arrive.',
         fields: [
           {
             name: 'code',
