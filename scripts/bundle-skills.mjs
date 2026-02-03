@@ -6,7 +6,7 @@
  * Similar to bundle-telegram.mjs but for skills with tool files.
  */
 import * as esbuild from 'esbuild';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,6 +14,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 const skillsOutDir = join(rootDir, 'skills');
 const skillsSrcDir = join(rootDir, 'skills-ts-out');
+
+// Footer code that exposes the bundled skill object to globalThis.__skill
+// The V8 runtime will access the skill via globalThis.__skill.default
+const SKILL_FOOTER = `
+// Expose skill bundle to globalThis for V8 runtime access
+globalThis.__skill = __skill_bundle;
+`;
 
 // Find all skills that have a tools directory
 const skills = readdirSync(skillsSrcDir, { withFileTypes: true })
@@ -57,7 +64,7 @@ for (const skillName of skills) {
     const result = await esbuild.build({
       entryPoints: [skillIndexPath],
       bundle: true,
-      write: true,
+      write: false, // Don't write directly, we need to append footer
       format: 'iife',
       globalName: '__skill_bundle',
       platform: 'browser',
@@ -67,51 +74,33 @@ for (const skillName of skills) {
       treeShaking: true,
       // Don't add "use strict" as it prevents global assignments
       legalComments: 'none',
-      banner: { js: '/* Bundled skill with tools */' },
+      banner: { js: '/* Bundled skill with esbuild */' },
       // Configure to handle CommonJS modules properly
-      mainFields: ['browser', 'module', 'main'],
-      outdir: skillDirOutput,
+      mainFields: ['module', 'main'],
     });
 
-    // if (!result.outputFiles || result.outputFiles.length === 0) {
-    //   throw new Error('Failed to bundle skill');
-    // }
+    if (!result.outputFiles || result.outputFiles.length === 0) {
+      throw new Error('esbuild did not produce output');
+    }
 
-    // let bundledCode = result.outputFiles[0].text;
+    let bundledCode = result.outputFiles[0].text;
 
-    // // Remove "use strict" from the bundle to allow global variable assignments
-    // bundledCode = bundledCode.replace(/^"use strict";\s*/m, '');
-    // bundledCode = bundledCode.replace(/^\s*"use strict";\s*/gm, '');
+    // Append footer that exposes skill functions to globalThis
+    bundledCode = bundledCode + SKILL_FOOTER;
 
-    // // Fix: Ensure 'tools' is assigned to global scope
-    // // The IIFE wraps everything in a module, so 'tools = [...]' inside the module
-    // // needs to be assigned to globalThis.tools so the V8 runtime can access it
-    // if (bundledCode.includes('tools = [')) {
-    //   // Replace 'tools = [' with 'globalThis.tools = [' to assign to global scope
-    //   bundledCode = bundledCode.replace(/\btools\s*=\s*\[/g, 'globalThis.tools = [');
+    // Ensure output directory exists
+    if (!existsSync(skillDirOutput)) {
+      mkdirSync(skillDirOutput, { recursive: true });
+    }
 
-    //   // Also create a global 'tools' variable that references globalThis.tools
-    //   // This ensures tools is available as a global variable for the V8 runtime
-    //   // We'll add it right after the IIFE executes
-    //   const iifeEndMatch = bundledCode.match(/(var __skill_bundle\s*=\s*\(\(\)\s*=>\s*\{[\s\S]*?return require_index\(\);?\s*\}\)\(\);?)/);
-    //   if (iifeEndMatch) {
-    //     const iifeEnd = iifeEndMatch[0];
-    //     const iifeEndIndex = bundledCode.indexOf(iifeEnd) + iifeEnd.length;
-    //     // Insert code to create global tools reference after IIFE executes
-    //     // Use a simple assignment that works in both strict and non-strict mode
-    //     bundledCode = bundledCode.slice(0, iifeEndIndex) +
-    //       '\nif (typeof globalThis.tools !== \'undefined\') { try { tools = globalThis.tools; } catch(e) { Object.defineProperty(globalThis, \'tools\', { value: globalThis.tools, writable: true, enumerable: true, configurable: true }); } }' +
-    //       bundledCode.slice(iifeEndIndex);
-    //   }
-    // }
+    // Write the bundled file
+    writeFileSync(skillIndexPathOutput, bundledCode);
 
-    // // Write the bundled file back
-    // writeFileSync(skillIndexPathOutput, bundledCode);
     console.log(
       `[bundle-skills] Bundled ${skillName} (${(bundledCode.length / 1024).toFixed(1)} KB)`
     );
   } catch (error) {
-    console.error(`[bundle-skills] Failed to bundle ${skillName}:`, error.message);
+    console.error(`[bundle-skills] Failed to bundle ${skillName}:`, error.message, error);
     if (error.errors) {
       for (const err of error.errors) {
         console.error(`  ${err.location?.file}:${err.location?.line}: ${err.text}`);

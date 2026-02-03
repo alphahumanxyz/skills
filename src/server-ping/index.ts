@@ -38,6 +38,22 @@ let CONSECUTIVE_FAILS = 0;
 let WAS_DOWN = false;
 let ACTIVE_SESSIONS: string[] = [];
 
+// Expose shared state to globalThis for bundled tool modules that use `declare const`
+// This is needed because esbuild bundles tool files in separate CommonJS modules
+// and they reference these variables as globals via ambient TypeScript declarations
+const _g = globalThis as Record<string, unknown>;
+_g.CONFIG = CONFIG;
+_g.PING_COUNT = PING_COUNT;
+_g.FAIL_COUNT = FAIL_COUNT;
+_g.CONSECUTIVE_FAILS = CONSECUTIVE_FAILS;
+
+// Helper to sync mutable state to globalThis after changes
+function _syncState(): void {
+  _g.PING_COUNT = PING_COUNT;
+  _g.FAIL_COUNT = FAIL_COUNT;
+  _g.CONSECUTIVE_FAILS = CONSECUTIVE_FAILS;
+}
+
 // ---------------------------------------------------------------------------
 // Lifecycle hooks
 // ---------------------------------------------------------------------------
@@ -117,6 +133,7 @@ function stop(): void {
 // ---------------------------------------------------------------------------
 
 function onSetupStart(): SetupStartResult {
+  console.log("[server-ping] onSetupStart");
   // Pre-fill with the host's backend URL so the user doesn't have to type it
   const defaultUrl = platform.env('BACKEND_URL') || '';
 
@@ -380,6 +397,9 @@ function doPing(): void {
     }
   }
 
+  // Sync state to globalThis for bundled tools
+  _syncState();
+
   // Persist counters periodically (every 10 pings)
   if (PING_COUNT % 10 === 0) {
     store.set('counters', { pingCount: PING_COUNT, failCount: FAIL_COUNT });
@@ -419,6 +439,10 @@ function publishState(): void {
     platform: platform.os(),
   });
 }
+
+// Expose functions to globalThis for bundled tool modules
+_g.doPing = doPing;
+_g.publishState = publishState;
 
 // ---------------------------------------------------------------------------
 // Data file logging
