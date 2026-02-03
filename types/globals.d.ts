@@ -102,7 +102,7 @@ interface ToolDefinition {
 }
 
 interface ToolInputSchema {
-  type: "object";
+  type: 'object';
   properties: Record<string, ToolPropertySchema>;
   required?: string[];
 }
@@ -137,7 +137,7 @@ interface SetupStep {
 
 interface SetupField {
   name: string;
-  type: "text" | "select" | "boolean" | "number" | "password";
+  type: 'text' | 'select' | 'boolean' | 'number' | 'password';
   label: string;
   description?: string;
   required?: boolean;
@@ -161,14 +161,14 @@ interface SetupStartResult {
 }
 
 interface SetupSubmitResult {
-  status: "next" | "complete" | "error";
+  status: 'next' | 'complete' | 'error';
   nextStep?: SetupStep;
   errors?: SetupFieldError[];
 }
 
 interface SkillOption {
   name: string;
-  type: "boolean" | "text" | "number" | "select";
+  type: 'boolean' | 'text' | 'number' | 'select';
   label: string;
   description?: string;
   value: unknown;

@@ -265,10 +265,7 @@ export function getInputChannel(entity: EntityLike) {
     return entity;
   }
   if (entity instanceof Api.Channel || entity instanceof Api.ChannelForbidden) {
-    return new Api.InputChannel({
-      channelId: entity.id,
-      accessHash: entity.accessHash || 0n,
-    });
+    return new Api.InputChannel({ channelId: entity.id, accessHash: entity.accessHash || 0n });
   }
 
   if (entity instanceof Api.InputPeerChannel) {

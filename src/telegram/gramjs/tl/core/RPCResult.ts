@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import type { BinaryReader } from '../../extensions';
 import { Api } from '../api';
 import { GZIPPacked } from './';

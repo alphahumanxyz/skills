@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import * as utils from '../../Utils';
 import type { TelegramClient } from '../..';
 import { DownloadMediaInterface } from '../../client/downloads';

@@ -101,11 +101,7 @@ const CONFIG: SkillConfig = {
   pendingCode: false,
 };
 
-const CACHE: Cache = {
-  me: null,
-  dialogs: [],
-  lastSync: 0,
-};
+const CACHE: Cache = { me: null, dialogs: [], lastSync: 0 };
 
 let CLIENT: InstanceType<typeof GramJS.TelegramClient> | null = null;
 let CLIENT_CONNECTING = false;
@@ -165,15 +161,19 @@ function getRequest(id: string): TelegramRequest | null {
 function updateRequest(id: string, status: string, result?: unknown, error?: string): void {
   const now = Date.now();
   if (error) {
-    db.exec(
-      'UPDATE telegram_requests SET status = ?, error = ?, completed_at = ? WHERE id = ?',
-      [status, error, now, id]
-    );
+    db.exec('UPDATE telegram_requests SET status = ?, error = ?, completed_at = ? WHERE id = ?', [
+      status,
+      error,
+      now,
+      id,
+    ]);
   } else {
-    db.exec(
-      'UPDATE telegram_requests SET status = ?, result = ?, completed_at = ? WHERE id = ?',
-      [status, result ? JSON.stringify(result) : null, now, id]
-    );
+    db.exec('UPDATE telegram_requests SET status = ?, result = ?, completed_at = ? WHERE id = ?', [
+      status,
+      result ? JSON.stringify(result) : null,
+      now,
+      id,
+    ]);
   }
 }
 
@@ -197,7 +197,9 @@ function cleanOldRequests(): void {
 
 async function initClient(): Promise<void> {
   if (CLIENT || CLIENT_CONNECTING) {
-    console.log(`[telegram] initClient skipped: CLIENT=${CLIENT !== null}, CONNECTING=${CLIENT_CONNECTING}`);
+    console.log(
+      `[telegram] initClient skipped: CLIENT=${CLIENT !== null}, CONNECTING=${CLIENT_CONNECTING}`
+    );
     return;
   }
   if (!CONFIG.apiId || !CONFIG.apiHash) {
@@ -210,7 +212,9 @@ async function initClient(): Promise<void> {
 
   try {
     console.log('[telegram] Initializing TelegramClient...');
-    console.log(`[telegram] API ID: ${CONFIG.apiId}, API Hash: ${CONFIG.apiHash ? '[set]' : '[empty]'}`);
+    console.log(
+      `[telegram] API ID: ${CONFIG.apiId}, API Hash: ${CONFIG.apiHash ? '[set]' : '[empty]'}`
+    );
     console.log(`[telegram] WebSocket available: ${typeof WebSocket !== 'undefined'}`);
     console.log(`[telegram] GramJS available: ${typeof GramJS !== 'undefined'}`);
 
@@ -311,7 +315,10 @@ async function processRequest(request: TelegramRequest): Promise<void> {
         CONFIG.phoneNumber = args.phoneNumber;
         CONFIG.pendingCode = true;
         store.set('config', CONFIG);
-        result = { phoneCodeHash: sendCodeResult.phoneCodeHash, isCodeViaApp: sendCodeResult.isCodeViaApp };
+        result = {
+          phoneCodeHash: sendCodeResult.phoneCodeHash,
+          isCodeViaApp: sendCodeResult.isCodeViaApp,
+        };
         break;
 
       case 'sign-in':
@@ -346,14 +353,23 @@ async function processRequest(request: TelegramRequest): Promise<void> {
         if (!CLIENT) throw new Error('Client not connected');
         if (!CONFIG.isAuthenticated) throw new Error('Not authenticated');
         const dialogs = await CLIENT.getDialogs({ limit: args.limit || 20 });
-        CACHE.dialogs = dialogs.map((d: { id: unknown; title: unknown; isUser: unknown; isGroup: unknown; unreadCount: unknown; message: { message: unknown } | null }) => ({
-          id: String(d.id),
-          title: String(d.title || ''),
-          type: d.isUser ? 'user' : d.isGroup ? 'chat' : 'channel',
-          unreadCount: Number(d.unreadCount || 0),
-          lastMessage: d.message?.message ? String(d.message.message) : null,
-          isPinned: false,
-        }));
+        CACHE.dialogs = dialogs.map(
+          (d: {
+            id: unknown;
+            title: unknown;
+            isUser: unknown;
+            isGroup: unknown;
+            unreadCount: unknown;
+            message: { message: unknown } | null;
+          }) => ({
+            id: String(d.id),
+            title: String(d.title || ''),
+            type: d.isUser ? 'user' : d.isGroup ? 'chat' : 'channel',
+            unreadCount: Number(d.unreadCount || 0),
+            lastMessage: d.message?.message ? String(d.message.message) : null,
+            isPinned: false,
+          })
+        );
         CACHE.lastSync = Date.now();
         result = CACHE.dialogs;
         break;
@@ -362,23 +378,26 @@ async function processRequest(request: TelegramRequest): Promise<void> {
         if (!CLIENT) throw new Error('Client not connected');
         if (!CONFIG.isAuthenticated) throw new Error('Not authenticated');
         const sentMessage = await CLIENT.sendMessage(args.peer, { message: args.message });
-        result = {
-          id: sentMessage.id,
-          date: sentMessage.date,
-          message: sentMessage.message,
-        };
+        result = { id: sentMessage.id, date: sentMessage.date, message: sentMessage.message };
         break;
 
       case 'get-messages':
         if (!CLIENT) throw new Error('Client not connected');
         if (!CONFIG.isAuthenticated) throw new Error('Not authenticated');
         const messages = await CLIENT.getMessages(args.peer, { limit: args.limit || 20 });
-        result = messages.map((m: { id: unknown; date: unknown; message: unknown; fromId: { userId: { toString: () => unknown } } | null }) => ({
-          id: m.id,
-          date: m.date,
-          message: m.message,
-          fromId: m.fromId?.userId?.toString() || null,
-        }));
+        result = messages.map(
+          (m: {
+            id: unknown;
+            date: unknown;
+            message: unknown;
+            fromId: { userId: { toString: () => unknown } } | null;
+          }) => ({
+            id: m.id,
+            date: m.date,
+            message: m.message,
+            fromId: m.fromId?.userId?.toString() || null,
+          })
+        );
         break;
 
       default:
@@ -607,7 +626,9 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     const apiId = parseInt((values.apiId as string) || '', 10);
     const apiHash = ((values.apiHash as string) || '').trim();
 
-    console.log(`[telegram] Setup: credentials step - apiId: ${apiId}, apiHash: ${apiHash ? '[set]' : '[empty]'}`);
+    console.log(
+      `[telegram] Setup: credentials step - apiId: ${apiId}, apiHash: ${apiHash ? '[set]' : '[empty]'}`
+    );
 
     if (!apiId || isNaN(apiId)) {
       return { status: 'error', errors: [{ field: 'apiId', message: 'Valid API ID is required' }] };
@@ -629,7 +650,8 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       nextStep: {
         id: 'phone',
         title: 'Connect Telegram Account',
-        description: 'Enter your phone number to connect your Telegram account. Please wait a moment for the connection to establish.',
+        description:
+          'Enter your phone number to connect your Telegram account. Please wait a moment for the connection to establish.',
         fields: [
           {
             name: 'phoneNumber',
@@ -647,13 +669,22 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
   if (stepId === 'phone') {
     const phoneNumber = ((values.phoneNumber as string) || '').trim();
 
-    console.log(`[telegram] Setup: phone step - number: ${phoneNumber ? phoneNumber.slice(0, 4) + '****' : '[empty]'}`);
-    console.log(`[telegram] Setup: CLIENT connected: ${CLIENT !== null}, connecting: ${CLIENT_CONNECTING}, error: ${CLIENT_ERROR}`);
+    console.log(
+      `[telegram] Setup: phone step - number: ${phoneNumber ? phoneNumber.slice(0, 4) + '****' : '[empty]'}`
+    );
+    console.log(
+      `[telegram] Setup: CLIENT connected: ${CLIENT !== null}, connecting: ${CLIENT_CONNECTING}, error: ${CLIENT_ERROR}`
+    );
 
     if (!phoneNumber || !phoneNumber.startsWith('+')) {
       return {
         status: 'error',
-        errors: [{ field: 'phoneNumber', message: 'Phone number must start with + (international format)' }],
+        errors: [
+          {
+            field: 'phoneNumber',
+            message: 'Phone number must start with + (international format)',
+          },
+        ],
       };
     }
 
@@ -672,7 +703,8 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       nextStep: {
         id: 'code',
         title: 'Enter Verification Code',
-        description: 'A verification code has been requested. Check your Telegram app or SMS. It may take a few seconds to arrive.',
+        description:
+          'A verification code has been requested. Check your Telegram app or SMS. It may take a few seconds to arrive.',
         fields: [
           {
             name: 'code',
@@ -691,7 +723,10 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     const code = ((values.code as string) || '').trim();
 
     if (!code) {
-      return { status: 'error', errors: [{ field: 'code', message: 'Verification code is required' }] };
+      return {
+        status: 'error',
+        errors: [{ field: 'code', message: 'Verification code is required' }],
+      };
     }
 
     // Queue sign-in request
@@ -765,10 +800,7 @@ tools = [
     description:
       'Connect to Telegram servers. This is an async operation - returns a request ID. ' +
       'Use telegram-get-result to check the status.',
-    input_schema: {
-      type: 'object',
-      properties: {},
-    },
+    input_schema: { type: 'object', properties: {} },
     execute(): string {
       if (!CONFIG.apiId || !CONFIG.apiHash) {
         return JSON.stringify({ error: 'API credentials not configured. Complete setup first.' });
@@ -810,9 +842,7 @@ tools = [
       'Returns a request ID - use telegram-get-result to check status.',
     input_schema: {
       type: 'object',
-      properties: {
-        code: { type: 'string', description: 'Verification code from Telegram' },
-      },
+      properties: { code: { type: 'string', description: 'Verification code from Telegram' } },
       required: ['code'],
     },
     execute(args: Record<string, unknown>): string {
@@ -855,7 +885,10 @@ tools = [
     input_schema: {
       type: 'object',
       properties: {
-        request_id: { type: 'string', description: 'The request ID returned by an async operation' },
+        request_id: {
+          type: 'string',
+          description: 'The request ID returned by an async operation',
+        },
       },
       required: ['request_id'],
     },
@@ -953,7 +986,10 @@ tools = [
       type: 'object',
       properties: {
         peer: { type: 'string', description: 'Username, phone number, or ID of the chat' },
-        limit: { type: 'number', description: 'Maximum number of messages to return (default: 20)' },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of messages to return (default: 20)',
+        },
       },
       required: ['peer'],
     },

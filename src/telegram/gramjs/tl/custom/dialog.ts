@@ -1,5 +1,4 @@
 // Removed big-integer import, using native bigint
-
 import type { TelegramClient } from '../..';
 import type { Entity } from '../../define';
 import { betterConsoleLog, returnBigInt } from '../../Helpers';
