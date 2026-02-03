@@ -1,11 +1,8 @@
 // Tool: update-server-url
 // Change the monitored server URL at runtime.
 
-// Import ensures state is initialized; getSkillState() is called as global at runtime
+// Import ensures state is initialized
 import '../skill-state';
-
-// publishState is exposed on globalThis by the main skill module
-declare function publishState(): void;
 
 export const updateServerUrlTool: ToolDefinition = {
   name: 'update-server-url',
@@ -21,13 +18,14 @@ export const updateServerUrlTool: ToolDefinition = {
       return JSON.stringify({ error: 'Invalid URL — must start with http:// or https://' });
     }
 
-    const s = getSkillState();
+    const s = globalThis.getSkillState();
     const oldUrl = s.config.serverUrl;
     s.config.serverUrl = url;
     store.set('config', s.config);
 
     console.log(`[server-ping] Server URL changed: ${oldUrl} -> ${url}`);
-    publishState();
+    // publishState is exposed on globalThis by the main skill module
+    (globalThis as { publishState?: () => void }).publishState?.();
 
     return JSON.stringify({ success: true, oldUrl, newUrl: url });
   },

@@ -393,6 +393,7 @@ yarn test src/my-skill/__tests__/test-my-skill.ts
 - **SQL params required** — Always use `?` placeholders, never interpolation
 - **No underscores in skill names** — Use lowercase-hyphens (e.g., `my-skill`)
 - **Isolated data** — Skills cannot access other skills' databases or files
+- **Globals via globalThis** — Tools must access shared state via `globalThis.getSkillState()`, not bare variable names (see Skill State Management pattern)
 
 ## Build Process
 
@@ -409,7 +410,97 @@ yarn test src/my-skill/__tests__/test-my-skill.ts
 
 ## Common Patterns
 
-### Config Persistence
+### Skill State Management (Recommended Pattern)
+
+For skills with tools that need to access mutable state, use the **globalThis state pattern**. This ensures state is accessible in both the production V8 runtime and the test harness.
+
+**1. Create a `skill-state.ts` module:**
+
+```typescript
+// skill-state.ts
+import type { SkillConfig } from './types';
+
+export interface MySkillState {
+  config: SkillConfig;
+  counter: number;
+  isRunning: boolean;
+}
+
+// Extend globalThis type
+declare global {
+  function getSkillState(): MySkillState;
+  var __skillState: MySkillState;
+}
+
+// Initialize state on module load
+const state: MySkillState = {
+  config: { serverUrl: '', interval: 30 },
+  counter: 0,
+  isRunning: false,
+};
+globalThis.__skillState = state;
+
+// Expose getter function globally
+globalThis.getSkillState = function(): MySkillState {
+  return globalThis.__skillState;
+};
+```
+
+**2. Access state via `globalThis.getSkillState()` everywhere:**
+
+```typescript
+// In index.ts
+import './skill-state'; // Initializes state
+
+function init(): void {
+  const s = globalThis.getSkillState();
+  const saved = store.get('config');
+  if (saved) s.config = { ...s.config, ...saved };
+}
+
+function doPing(): void {
+  const s = globalThis.getSkillState();
+  s.counter++;
+  // ... use s.config, s.counter, etc.
+}
+```
+
+**3. Tools access state the same way:**
+
+```typescript
+// In tools/get-stats.ts
+import '../skill-state'; // Ensures initialization
+
+export const getStatsTool: ToolDefinition = {
+  name: 'get-stats',
+  execute(): string {
+    const s = globalThis.getSkillState();
+    return JSON.stringify({ counter: s.counter });
+  },
+};
+```
+
+**4. Expose helper functions on globalThis for tools:**
+
+```typescript
+// In index.ts - expose functions for tools to call
+const _g = globalThis as Record<string, unknown>;
+_g.doPing = doPing;
+_g.publishState = publishState;
+
+// In tools that call these functions
+(globalThis as { doPing?: () => void }).doPing?.();
+```
+
+**Why this pattern?**
+- Bundled skills use esbuild IIFE format, which creates module-local scopes
+- The test harness uses `new Function()` which has its own scope limitations
+- Accessing state via `globalThis.getSkillState()` works in both environments
+- The production Rust V8 runtime handles this correctly via `execute_script`
+
+### Config Persistence (Simple Pattern)
+
+For simple skills without tools that need state access:
 
 ```typescript
 interface SkillConfig {
