@@ -220,11 +220,11 @@ export class GenericDownloadIter extends DirectDownloadIter {
     let data = Buffer.alloc(0);
 
     //  1.1. ``bad`` is how much into the data we have we need to offset
-    const bad = this.request!.offset.mod(this.request!.limit).toJSNumber();
+    const bad = Number(this.request!.offset % BigInt(this.request!.limit));
     const before = this.request!.offset;
 
     // 1.2. We have to fetch from a valid offset, so remove that bad part
-    this.request!.offset = this.request!.offset.subtract(bad);
+    this.request!.offset = this.request!.offset - BigInt(bad);
 
     let done = false;
     while (!done && data.length - bad < this._chunkSize!) {
@@ -567,7 +567,7 @@ export async function _downloadDocument(
     }),
     {
       outputFile: outputFile,
-      fileSize: size && 'size' in size ? bigInt(size.size) : doc.size,
+      fileSize: size && 'size' in size ? BigInt(size.size) : doc.size,
       progressCallback: progressCallback,
       msgData: msgData,
     }
@@ -747,7 +747,7 @@ export async function _downloadPhoto(
     }),
     {
       outputFile: file,
-      fileSize: bigInt(fileSize),
+      fileSize: BigInt(fileSize),
       progressCallback: progressCallback,
       dcId: photo.dcId,
     }

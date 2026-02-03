@@ -268,13 +268,13 @@ async function computeCheck(request: Api.account.Password, password: string) {
     }
   };
   const { a, aForHash, u } = await generateAndCheckRandom();
-  const gB = bigIntMod(B.subtract(kgX), p);
+  const gB = bigIntMod(B - kgX, p);
   if (!isGoodModExpFirst(gB, p)) {
     throw new Error('bad gB');
   }
 
-  const ux = u.multiply(x);
-  const aUx = a.add(ux);
+  const ux = u * x;
+  const aUx = a + ux;
   const S = modExp(gB, aUx, p);
   const [K, pSha, gSha, salt1Sha, salt2Sha] = await Promise.all([
     sha256(bigNumForHash(S)),

@@ -310,7 +310,7 @@ export function getInputUser(entity: EntityLike): Api.TypeInputUser {
     if (entity.self) {
       return new Api.InputUserSelf();
     } else {
-      return new Api.InputUser({ userId: entity.id, accessHash: entity.accessHash || bigInt.zero });
+      return new Api.InputUser({ userId: entity.id, accessHash: entity.accessHash || 0n });
     }
   }
   if (entity instanceof Api.InputPeerSelf) {
@@ -1053,7 +1053,7 @@ export function getPeerId(peer: EntityLike, addMark = true): string {
     peer = returnBigInt(peer);
   }
   // First we assert it's a Peer TLObject, or early return for integers
-  if (bigInt.isInstance(peer)) {
+  if (typeof peer === 'bigint') {
     return addMark ? peer.toString() : resolveId(peer)[0].toString();
   }
   // Tell the user to use their client to resolve InputPeerSelf if we got one

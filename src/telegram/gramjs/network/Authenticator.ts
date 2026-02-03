@@ -93,11 +93,11 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
 
     const keyAesEncrypted = Buffer.concat([tempKeyXor, aesEncrypted]);
     const keyAesEncryptedInt = readBigIntFromBuffer(keyAesEncrypted, false, false);
-    if (keyAesEncryptedInt.greaterOrEquals(targetKey.n)) {
+    if (keyAesEncryptedInt >= targetKey.n) {
       log.debug('Aes key greater than RSA. retrying');
       continue;
     }
-    const encryptedDataBuffer = modExp(keyAesEncryptedInt, bigInt(targetKey.e), targetKey.n);
+    const encryptedDataBuffer = modExp(keyAesEncryptedInt, BigInt(targetKey.e), targetKey.n);
     encryptedData = readBufferFromBigInt(encryptedDataBuffer, 256, false, false);
 
     break;
@@ -172,7 +172,7 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
   const ga = readBigIntFromBuffer(serverDhInner.gA, false, false);
   const timeOffset = serverDhInner.serverTime - Math.floor(new Date().getTime() / 1000);
   const b = readBigIntFromBuffer(generateRandomBytes(256), false, false);
-  const gb = modExp(bigInt(serverDhInner.g), b, dhPrime);
+  const gb = modExp(BigInt(serverDhInner.g), b, dhPrime);
   const gab = modExp(ga, b, dhPrime);
 
   // Prepare client DH Inner Data
@@ -207,10 +207,10 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
     throw new Error(`Step 3.1 answer was ${dhGen}`);
   }
   const { name } = dhGen.constructor;
-  if (dhGen.nonce.neq(resPQ.nonce)) {
+  if (dhGen.nonce !== resPQ.nonce) {
     throw new SecurityError(`Step 3 invalid ${name} nonce from server`);
   }
-  if (dhGen.serverNonce.neq(resPQ.serverNonce)) {
+  if (dhGen.serverNonce !== resPQ.serverNonce) {
     throw new SecurityError(`Step 3 invalid ${name} server nonce from server`);
   }
   const authKey = new AuthKey();

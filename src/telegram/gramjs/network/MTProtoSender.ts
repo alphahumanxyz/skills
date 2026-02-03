@@ -807,7 +807,7 @@ export class MTProtoSender {
     if ([16, 17].includes(badMsg.errorCode)) {
       // Sent msg_id too low or too high (respectively).
       // Use the current msg_id to determine the right time offset.
-      const to = this._state.updateTimeOffset(bigInt(message.msgId));
+      const to = this._state.updateTimeOffset(message.msgId);
       this._log.info(`System clock is wrong, set time offset to ${to}s`);
     } else if (badMsg.errorCode === 32) {
       // msg_seqno too low, so just pump it up by some "large" amount
