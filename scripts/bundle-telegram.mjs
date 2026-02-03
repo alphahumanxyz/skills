@@ -142,16 +142,20 @@ try {
   // Replace require("telegram") with GramJS since we're providing it
   skillBundleCode = skillBundleCode.replace(/require\s*\(\s*["']telegram["']\s*\)/g, 'GramJS');
 
-  // CommonJS shim for skill code that references 'exports'
+  // CommonJS shim and external module mapping for skill code
   const SKILL_HEADER = `// CommonJS shim for skill entry point
 var exports = {};
 var module = { exports: exports };
+// Map esbuild's external module reference to our bundled GramJS
+var __GramJS = GramJS;
 `;
 
   // Footer to expose skill to globalThis
+  // Note: esbuild IIFE doesn't return the exports, so we use the shimmed exports object
   const SKILL_FOOTER = `
 // Expose skill bundle to globalThis for V8 runtime access
-globalThis.__skill = __skill_bundle;
+// Use exports.default since the IIFE sets exports.default = skill
+globalThis.__skill = exports.default ? { default: exports.default } : __skill_bundle;
 `;
 
   // Create the final bundled skill file
