@@ -470,148 +470,21 @@ void onSetupStart; void onSetupSubmit; void onSetupCancel;
 void onListOptions; void onSetOption;
 void onSessionStart; void onSessionEnd;
 
+// Import all tools
+import { getPingStatsTool } from "./tools/get-ping-stats";
+import { getPingHistoryTool } from "./tools/get-ping-history";
+import { pingNowTool } from "./tools/ping-now";
+import { listPeerSkillsTool } from "./tools/list-peer-skills";
+import { updateServerUrlTool } from "./tools/update-server-url";
+import { readConfigTool } from "./tools/read-config";
+
 tools = [
-  {
-    name: "get-ping-stats",
-    description:
-      "Get current ping statistics including uptime, total pings, failures, and latest latency.",
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-    execute(): string {
-      const uptimePct =
-        PING_COUNT > 0
-          ? Math.round(((PING_COUNT - FAIL_COUNT) / PING_COUNT) * 10000) / 100
-          : 100;
-      const latest = db.get(
-        "SELECT latency_ms, status, timestamp FROM ping_log ORDER BY id DESC LIMIT 1",
-        [],
-      ) as { latency_ms: number; status: number; timestamp: string } | null;
-      const avgLatency = db.get(
-        "SELECT AVG(latency_ms) as avg_ms FROM ping_log WHERE success = 1",
-        [],
-      ) as { avg_ms: number | null } | null;
-      return JSON.stringify({
-        serverUrl: CONFIG.serverUrl,
-        totalPings: PING_COUNT,
-        totalFailures: FAIL_COUNT,
-        consecutiveFailures: CONSECUTIVE_FAILS,
-        uptimePercent: uptimePct,
-        lastPing: latest
-          ? { latencyMs: latest.latency_ms, status: latest.status, at: latest.timestamp }
-          : null,
-        avgLatencyMs: avgLatency?.avg_ms ? Math.round(avgLatency.avg_ms) : null,
-        platform: platform.os(),
-      });
-    },
-  },
-
-  {
-    name: "get-ping-history",
-    description: "Get recent ping history from the database. Returns the last N ping results.",
-    input_schema: {
-      type: "object",
-      properties: {
-        limit: {
-          type: "number",
-          description: "Number of recent pings to return (default 20, max 100)",
-        },
-      },
-    },
-    execute(args: Record<string, unknown>): string {
-      const limit = Math.min(Math.max(parseInt(args.limit as string) || 20, 1), 100);
-      const rows = db.all(
-        "SELECT timestamp, url, status, latency_ms, success, error FROM ping_log ORDER BY id DESC LIMIT ?",
-        [limit],
-      );
-      return JSON.stringify({ count: rows.length, history: rows });
-    },
-  },
-
-  {
-    name: "ping-now",
-    description: "Trigger an immediate ping to the configured server and return the result.",
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-    execute(): string {
-      doPing();
-      const latest = db.get(
-        "SELECT timestamp, status, latency_ms, success, error FROM ping_log ORDER BY id DESC LIMIT 1",
-        [],
-      );
-      return JSON.stringify({
-        triggered: true,
-        pingNumber: PING_COUNT,
-        result: latest,
-      });
-    },
-  },
-
-  {
-    name: "list-peer-skills",
-    description:
-      "List all other running skills in the system (demonstrates inter-skill communication).",
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-    execute(): string {
-      try {
-        const peers = skills.list();
-        return JSON.stringify({ skills: peers });
-      } catch (e) {
-        return JSON.stringify({ error: String(e), skills: [] });
-      }
-    },
-  },
-
-  {
-    name: "update-server-url",
-    description: "Change the monitored server URL at runtime.",
-    input_schema: {
-      type: "object",
-      properties: {
-        url: {
-          type: "string",
-          description: "New server URL to monitor",
-        },
-      },
-      required: ["url"],
-    },
-    execute(args: Record<string, unknown>): string {
-      const url = ((args.url as string) ?? "").trim();
-      if (!url || !url.startsWith("http")) {
-        return JSON.stringify({ error: "Invalid URL — must start with http:// or https://" });
-      }
-      const oldUrl = CONFIG.serverUrl;
-      CONFIG.serverUrl = url;
-      store.set("config", CONFIG);
-      console.log(`[server-ping] Server URL changed: ${oldUrl} -> ${url}`);
-      publishState();
-      return JSON.stringify({ success: true, oldUrl, newUrl: url });
-    },
-  },
-
-  {
-    name: "read-config",
-    description:
-      "Read the current skill configuration from the data directory (demonstrates data file I/O).",
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-    execute(): string {
-      try {
-        const raw = data.read("config.json");
-        return raw ?? JSON.stringify({ error: "No config file found" });
-      } catch (e) {
-        return JSON.stringify({ error: `Failed to read config: ${e}` });
-      }
-    },
-  },
+  getPingStatsTool,
+  getPingHistoryTool,
+  pingNowTool,
+  listPeerSkillsTool,
+  updateServerUrlTool,
+  readConfigTool,
 ];
 
 export {};

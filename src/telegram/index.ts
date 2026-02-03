@@ -549,6 +549,7 @@ function onCronTrigger(_scheduleId: string): void {
 function onSetupStart(): SetupStartResult {
   const envApiId = platform.env('TELEGRAM_API_ID');
   const envApiHash = platform.env('TELEGRAM_API_HASH');
+  console.log(`[telegram] onSetupStart: envApiId: ${envApiId}, envApiHash: ${envApiHash}`);
 
   if (envApiId && envApiHash) {
     return {
