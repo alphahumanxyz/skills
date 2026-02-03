@@ -1,7 +1,7 @@
 {
   "id": "telegram",
   "name": "Telegram",
-  "runtime": "quickjs",
+  "runtime": "v8",
   "entry": "index.js",
   "version": "2.0.0",
   "description": "Telegram integration via TDLib — 50+ tools for chats, messages, contacts, admin, and search.",

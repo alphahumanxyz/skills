@@ -1,5 +1,5 @@
 // server-ping/index.ts
-// Comprehensive demo skill showcasing all QuickJS runtime capabilities:
+// Comprehensive demo skill showcasing all V8 runtime capabilities:
 //   Setup flow, DB (SQLite), Store (KV), State (frontend pub), Data (file I/O),
 //   Net (HTTP), Cron (scheduling), Platform (OS/notify), Skills (interop),
 //   Options, Tools, and Session lifecycle.

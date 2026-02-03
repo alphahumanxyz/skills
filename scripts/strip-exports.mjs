@@ -3,8 +3,8 @@
 // and copies manifest.json files from source to output directories.
 //
 // Needed because skill .ts files use `export {}` to create module scope
-// (isolating each skill's top-level declarations), but the QuickJS runtime
-// evaluates scripts via ctx.eval() which doesn't support ES module syntax.
+// (isolating each skill's top-level declarations), but the V8 runtime
+// evaluates scripts via eval() which doesn't support ES module syntax.
 
 import { readdirSync, readFileSync, writeFileSync, existsSync, copyFileSync } from "fs";
 import { join, dirname } from "path";

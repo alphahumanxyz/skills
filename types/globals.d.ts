@@ -1,5 +1,5 @@
-// Ambient type declarations for the AlphaHuman QuickJS skill runtime.
-// These match the friendly API layer injected by skill_instance.rs.
+// Ambient type declarations for the AlphaHuman V8 skill runtime.
+// These match the friendly API layer injected by v8_skill_instance.rs.
 
 // ---------------------------------------------------------------------------
 // Bridge namespaces

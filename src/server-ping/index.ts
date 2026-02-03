@@ -1,5 +1,5 @@
 // server-ping/index.ts
-// Comprehensive demo skill showcasing all QuickJS runtime capabilities:
+// Comprehensive demo skill showcasing all V8 runtime capabilities:
 //   Setup flow, DB (SQLite), Store (KV), State (frontend pub), Data (file I/O),
 //   Net (HTTP), Cron (scheduling), Platform (OS/notify), Skills (interop),
 //   Options, Tools, and Session lifecycle.
@@ -464,7 +464,7 @@ function sendNotification(title: string, body: string): void {
 // Tools (callable by AI and other skills)
 // ---------------------------------------------------------------------------
 
-// Runtime lifecycle hooks (called by QuickJS host, not within this module)
+// Runtime lifecycle hooks (called by V8 host, not within this module)
 void init; void start; void stop; void onCronTrigger;
 void onSetupStart; void onSetupSubmit; void onSetupCancel;
 void onListOptions; void onSetOption;
