@@ -478,7 +478,7 @@ import { listPeerSkillsTool } from "./tools/list-peer-skills";
 import { updateServerUrlTool } from "./tools/update-server-url";
 import { readConfigTool } from "./tools/read-config";
 
-tools = [
+const tools = [
   getPingStatsTool,
   getPingHistoryTool,
   pingNowTool,
@@ -487,4 +487,19 @@ tools = [
   readConfigTool,
 ];
 
-export {};
+const skill: Skill = {
+  tools,
+  init,
+  start,
+  stop,
+  onCronTrigger,
+  onSetupStart,
+  onSetupSubmit,
+  onSetupCancel,
+  onListOptions,
+  onSetOption,
+  onSessionStart,
+  onSessionEnd,
+};
+
+export default skill;

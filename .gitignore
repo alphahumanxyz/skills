@@ -30,6 +30,7 @@ dmypy.json
 
 # Compiled JavaScript from TypeScript skills
 skills
+skills-ts-out
 examples/**/*.js
 src/**/*.js
 

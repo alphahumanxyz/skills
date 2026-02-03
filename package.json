@@ -3,10 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "clean": "rimraf skills",
+    "clean": "rimraf skills skills-ts-out",
     "build:ts": "tsc -p tsconfig.build.json",
     "build:strip": "node scripts/strip-exports.mjs",
-    "build:bundle": "node scripts/bundle-telegram.mjs",
+    "build:bundle": "node scripts/bundle-telegram.mjs && node scripts/bundle-skills.mjs",
     "build": "npm run clean && npm run build:ts && npm run build:bundle && npm run build:strip",
     "build:watch": "node scripts/watch-build.mjs",
     "watch": "npm run build:watch",

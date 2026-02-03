@@ -1,9 +1,0 @@
-{
-  "id": "server-ping",
-  "name": "Server Ping",
-  "runtime": "v8",
-  "entry": "index.js",
-  "version": "1.0.0",
-  "description": "Pings the backend server every 5 seconds to verify background execution",
-  "auto_start": true
-}
