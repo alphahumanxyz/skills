@@ -2,7 +2,7 @@
 // Telegram integration skill using gramjs library via V8 runtime.
 // Provides tools for Telegram API access with async request queue pattern.
 
-// Import skill state (initializes globalThis.getSkillState)
+// Import skill state (initializes globalThis.getTelegramSkillState)
 import './skill-state';
 import type { SetupSubmitArgs } from './skill-state';
 
@@ -71,7 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_telegram_requests_created ON telegram_requests(cr
 // ---------------------------------------------------------------------------
 
 async function initClient(): Promise<void> {
-  const s = globalThis.getSkillState();
+  const s = globalThis.getTelegramSkillState();
   const stringSession = new GramJS.StringSession(s.config.sessionString || '');
   const apiId = s.config.apiId;
   const apiHash = s.config.apiHash;
@@ -134,7 +134,7 @@ async function initClient(): Promise<void> {
 }
 
 async function loadMe(): Promise<void> {
-  const s = globalThis.getSkillState();
+  const s = globalThis.getTelegramSkillState();
   if (!s.client) return;
   try {
     const me = await s.client.getMe();
@@ -155,198 +155,6 @@ async function loadMe(): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Request Processing
-// ---------------------------------------------------------------------------
-
-async function processRequest(request: TelegramRequest): Promise<void> {
-  const s = globalThis.getSkillState();
-  const { id, type, args: argsStr } = request;
-  const args = JSON.parse(argsStr);
-
-  console.log(`[telegram] Processing request ${id}: ${type}`);
-  updateRequest(id, 'processing');
-
-  try {
-    let result: unknown;
-
-    switch (type) {
-      case 'connect':
-        await initClient();
-        result = { connected: s.client !== null, error: s.clientError };
-        break;
-
-      case 'send-code':
-        if (!s.client) throw new Error('Client not connected');
-        const sendCodeResult = await s.client.sendCode(
-          { apiId: s.config.apiId, apiHash: s.config.apiHash },
-          args.phoneNumber
-        );
-        s.config.phoneCodeHash = sendCodeResult.phoneCodeHash;
-        s.config.phoneNumber = args.phoneNumber;
-        s.config.pendingCode = true;
-        store.set('config', s.config);
-        result = {
-          phoneCodeHash: sendCodeResult.phoneCodeHash,
-          isCodeViaApp: sendCodeResult.isCodeViaApp,
-        };
-        break;
-
-      case 'sign-in':
-        if (!s.client) throw new Error('Client not connected');
-        if (!s.config.phoneCodeHash) throw new Error('No pending code');
-        await s.client.invoke(
-          new GramJS.Api.auth.SignIn({
-            phoneNumber: s.config.phoneNumber,
-            phoneCodeHash: s.config.phoneCodeHash,
-            phoneCode: args.code,
-          })
-        );
-        s.config.isAuthenticated = true;
-        s.config.pendingCode = false;
-        const sessionStr = s.client.session.save();
-        if (sessionStr) {
-          s.config.sessionString = sessionStr;
-        }
-        store.set('config', s.config);
-        await loadMe();
-        result = { success: true, user: s.cache.me };
-        break;
-
-      case 'get-me':
-        if (!s.client) throw new Error('Client not connected');
-        if (!s.config.isAuthenticated) throw new Error('Not authenticated');
-        await loadMe();
-        result = s.cache.me;
-        break;
-
-      case 'get-dialogs':
-        if (!s.client) throw new Error('Client not connected');
-        if (!s.config.isAuthenticated) throw new Error('Not authenticated');
-        const dialogs = await s.client.getDialogs({ limit: args.limit || 20 });
-        s.cache.dialogs = dialogs.map(
-          (d: {
-            id: unknown;
-            title: unknown;
-            isUser: unknown;
-            isGroup: unknown;
-            unreadCount: unknown;
-            message: { message: unknown } | null;
-          }) => ({
-            id: String(d.id),
-            title: String(d.title || ''),
-            type: d.isUser ? 'user' : d.isGroup ? 'chat' : 'channel',
-            unreadCount: Number(d.unreadCount || 0),
-            lastMessage: d.message?.message ? String(d.message.message) : null,
-            isPinned: false,
-          })
-        );
-        s.cache.lastSync = Date.now();
-        result = s.cache.dialogs;
-        break;
-
-      case 'send-message':
-        if (!s.client) throw new Error('Client not connected');
-        if (!s.config.isAuthenticated) throw new Error('Not authenticated');
-        const sentMessage = await s.client.sendMessage(args.peer, { message: args.message });
-        result = { id: sentMessage.id, date: sentMessage.date, message: sentMessage.message };
-        break;
-
-      case 'get-messages':
-        if (!s.client) throw new Error('Client not connected');
-        if (!s.config.isAuthenticated) throw new Error('Not authenticated');
-        const messages = await s.client.getMessages(args.peer, { limit: args.limit || 20 });
-        result = messages.map(
-          (m: {
-            id: unknown;
-            date: unknown;
-            message: unknown;
-            fromId: { userId: { toString: () => unknown } } | null;
-          }) => ({
-            id: m.id,
-            date: m.date,
-            message: m.message,
-            fromId: m.fromId?.userId?.toString() || null,
-          })
-        );
-        break;
-
-      default:
-        throw new Error(`Unknown request type: ${type}`);
-    }
-
-    updateRequest(id, 'complete', result);
-    console.log(`[telegram] Request ${id} completed`);
-  } catch (e) {
-    const errorMsg = e instanceof Error ? e.message : String(e);
-    updateRequest(id, 'error', undefined, errorMsg);
-    console.error(`[telegram] Request ${id} failed:`, e);
-  }
-
-  publishState();
-}
-
-async function processRequestQueue(): Promise<void> {
-  const pending = getPendingRequests();
-  if (pending.length === 0) return;
-
-  for (const request of pending) {
-    await processRequest(request);
-  }
-
-  // Clean old requests periodically
-  cleanOldRequests();
-}
-
-// ---------------------------------------------------------------------------
-// Worker Loop (setTimeout-based)
-// ---------------------------------------------------------------------------
-
-function startWorkerLoop(): void {
-  const s = globalThis.getSkillState();
-  if (s.workerRunning) {
-    console.log('[telegram] Worker loop already running');
-    return;
-  }
-
-  s.workerRunning = true;
-  console.log('[telegram] Starting worker loop');
-
-  function tick(): void {
-    const st = globalThis.getSkillState();
-    if (!st.workerRunning) {
-      console.log('[telegram] Worker loop stopped');
-      return;
-    }
-
-    // Process any pending requests
-    processRequestQueue()
-      .catch(e => {
-        console.error('[telegram] Queue processing error:', e);
-      })
-      .finally(() => {
-        // Schedule next tick if still running
-        const state = globalThis.getSkillState();
-        if (state.workerRunning) {
-          state.workerTimeoutId = setTimeout(tick, WORKER_INTERVAL_MS);
-        }
-      });
-  }
-
-  // Start the first tick
-  s.workerTimeoutId = setTimeout(tick, 0);
-}
-
-function stopWorkerLoop(): void {
-  const s = globalThis.getSkillState();
-  console.log('[telegram] Stopping worker loop');
-  s.workerRunning = false;
-
-  if (s.workerTimeoutId !== null) {
-    clearTimeout(s.workerTimeoutId);
-    s.workerTimeoutId = null;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Lifecycle Hooks
@@ -364,7 +172,7 @@ function init(): void {
   db.exec(SCHEMA, []);
 
   // Load config from store
-  const s = globalThis.getSkillState();
+  const s = globalThis.getTelegramSkillState();
   const saved = store.get('config') as Partial<typeof s.config> | null;
   if (saved) {
     s.config.apiId = saved.apiId || 0;
@@ -394,96 +202,21 @@ function init(): void {
     `[telegram] Session: ${s.config.sessionString ? 'present' : 'not present'}, authenticated: ${s.config.isAuthenticated}`
   );
 
-  // Start the worker loop immediately so requests can be processed during setup
-  startWorkerLoop();
-
-  // Test connectivity on init if we have credentials (even without a session)
-  // This helps diagnose connection issues early
-  if (s.config.apiId && s.config.apiHash) {
-    console.log('[telegram] Credentials available, testing connectivity on init...');
-    testConnectivity();
-  } else {
-    console.log('[telegram] No credentials available yet, skipping connectivity test');
-  }
-
+  initClient();
   publishState();
 }
 
-// Separate async function for connectivity test (can't use async in init directly)
-function testConnectivity(): void {
-  // Use setTimeout to run async test without blocking init
-  setTimeout(async () => {
-    const s = globalThis.getSkillState();
-    try {
-      console.log('[telegram] Starting connectivity test...');
-      const stringSession = new GramJS.StringSession(s.config.sessionString || '');
-      const testClient = new TelegramClient(stringSession, s.config.apiId, s.config.apiHash, {
-        connectionRetries: 3,
-      });
-
-      console.log('[telegram] Connecting to Telegram for connectivity test...');
-      await testClient.connect();
-      console.log('[telegram] Connected to Telegram successfully');
-
-      // Test with help.getAppConfig (no auth required)
-      console.log('[telegram] Calling help.getAppConfig...');
-      const appConfig = await testClient.invoke(new GramJS.Api.help.GetAppConfig({ hash: 0 }));
-      console.log('[telegram] help.getAppConfig succeeded!');
-
-      if (appConfig && typeof appConfig === 'object') {
-        console.log(
-          '[telegram] App config className:',
-          (appConfig as { className?: string }).className || 'AppConfig'
-        );
-      }
-
-      // If this test client connected, check if we should keep it or dispose
-      // If we have a session, we'll use it as the main client
-      if (s.config.sessionString) {
-        // We have a session, so this test client can become the main client
-        s.client = testClient;
-        s.clientError = null;
-
-        // Check authorization
-        const authorized = await testClient.checkAuthorization();
-        console.log('[telegram] Authorization status:', authorized ? 'authorized' : 'not authorized');
-
-        if (authorized) {
-          s.config.isAuthenticated = true;
-          await loadMe();
-        }
-      } else {
-        // No session, disconnect the test client
-        console.log('[telegram] No session, disconnecting test client');
-        await testClient.disconnect();
-      }
-
-      publishState();
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error('[telegram] Connectivity test failed:', errorMsg);
-      s.clientError = `Connectivity test failed: ${errorMsg}`;
-      publishState();
-    }
-  }, 0);
-}
 
 function start(): void {
   console.log('[telegram] Starting skill');
-  const s = globalThis.getSkillState();
+  const s = globalThis.getTelegramSkillState();
 
-  // Ensure worker loop is running (it may already be running from init)
-  if (!s.workerRunning) {
-    startWorkerLoop();
-  }
+  // todo: start
 }
 
 function stop(): void {
   console.log('[telegram] Stopping skill');
-  const s = globalThis.getSkillState();
-
-  // Stop the worker loop
-  stopWorkerLoop();
+  const s = globalThis.getTelegramSkillState();
 
   // Disconnect client
   if (s.client) {
@@ -497,7 +230,6 @@ function stop(): void {
 
   // Save config
   store.set('config', s.config);
-
   state.set('status', 'stopped');
 }
 
@@ -565,7 +297,7 @@ function onSetupStart(): SetupStartResult {
 }
 
 function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
-  const s = globalThis.getSkillState();
+  const s = globalThis.getTelegramSkillState();
   const { stepId, values } = args;
 
   if (stepId === 'credentials') {
@@ -588,8 +320,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     store.set('config', s.config);
 
     // Queue connect request
-    const connectRequestId = enqueueRequest('connect', {});
-    console.log(`[telegram] Setup: enqueued connect request: ${connectRequestId}`);
+    // todo: connect
 
     return {
       status: 'next',
@@ -637,12 +368,11 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     // Check if we're connected before trying to send code
     if (!s.client && !s.clientConnecting) {
       console.log('[telegram] Setup: Client not connected, re-queuing connect request');
-      enqueueRequest('connect', {});
+      // todo throw error asking to re-run setup
     }
 
     // Queue send-code request
-    const sendCodeRequestId = enqueueRequest('send-code', { phoneNumber });
-    console.log(`[telegram] Setup: enqueued send-code request: ${sendCodeRequestId}`);
+    // todo: send code
 
     return {
       status: 'next',

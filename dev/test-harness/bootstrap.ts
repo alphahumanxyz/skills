@@ -214,50 +214,8 @@ export function createBridgeAPIs(): Record<string, unknown> {
     origin: 'https://localhost',
   };
 
-  // Mock WebSocket for gramjs (won't actually connect in mocked tests)
-  class MockWebSocket {
-    static CONNECTING = 0;
-    static OPEN = 1;
-    static CLOSING = 2;
-    static CLOSED = 3;
-
-    readyState = MockWebSocket.CONNECTING;
-    url: string;
-    protocol = '';
-    binaryType: 'blob' | 'arraybuffer' = 'blob';
-    onopen: ((ev: unknown) => void) | null = null;
-    onclose: ((ev: unknown) => void) | null = null;
-    onerror: ((ev: unknown) => void) | null = null;
-    onmessage: ((ev: unknown) => void) | null = null;
-
-    constructor(url: string, _protocols?: string | string[]) {
-      this.url = url;
-      // In mock mode, immediately close with error after a short delay
-      globalThis.setTimeout(() => {
-        this.readyState = MockWebSocket.CLOSED;
-        if (this.onerror) {
-          this.onerror({ type: 'error', message: 'WebSocket not available in mocked test environment' });
-        }
-        if (this.onclose) {
-          this.onclose({ code: 1006, reason: 'Mocked test environment', wasClean: false });
-        }
-      }, 10);
-    }
-
-    send(_data: unknown): void {
-      throw new Error('WebSocket.send() not available in mocked test environment');
-    }
-
-    close(_code?: number, _reason?: string): void {
-      this.readyState = MockWebSocket.CLOSED;
-    }
-
-    addEventListener(_type: string, _listener: () => void): void {}
-    removeEventListener(_type: string, _listener: () => void): void {}
-    dispatchEvent(_event: unknown): boolean {
-      return false;
-    }
-  }
+  // Use actual WebSocket from globalThis (available in Deno/Node/Browser)
+  const RealWebSocket = globalThis.WebSocket;
 
   // Mock crypto for gramjs cryptography
   const mockCrypto = {
@@ -456,7 +414,7 @@ export function createBridgeAPIs(): Record<string, unknown> {
     atob: (str: string): string => atob(str),
     // Browser-like globals for gramjs
     location: mockLocation,
-    WebSocket: MockWebSocket,
+    WebSocket: RealWebSocket,
     crypto: mockCrypto,
     Buffer: MockBuffer,
     // Pre-declare skill globals
