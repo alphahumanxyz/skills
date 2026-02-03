@@ -40,7 +40,7 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
   if (!(resPQ instanceof Api.ResPQ)) {
     throw new SecurityError(`Step 1 answer was ${resPQ}`);
   }
-  if (resPQ.nonce.neq(nonce)) {
+  if (resPQ.nonce !== nonce) {
     throw new SecurityError('Step 1 invalid nonce from server');
   }
   const pq = readBigIntFromBuffer(resPQ.pq, false, true);
@@ -126,18 +126,18 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
   ) {
     throw new Error(`Step 2.1 answer was ${serverDhParams}`);
   }
-  if (serverDhParams.nonce.neq(resPQ.nonce)) {
+  if (serverDhParams.nonce !== resPQ.nonce) {
     throw new SecurityError('Step 2 invalid nonce from server');
   }
 
-  if (serverDhParams.serverNonce.neq(resPQ.serverNonce)) {
+  if (serverDhParams.serverNonce !== resPQ.serverNonce) {
     throw new SecurityError('Step 2 invalid server nonce from server');
   }
 
   if (serverDhParams instanceof Api.ServerDHParamsFail) {
     const sh = await sha1(toSignedLittleBuffer(newNonce, 32).slice(4, 20));
     const nnh = readBigIntFromBuffer(sh, true, true);
-    if (serverDhParams.newNonceHash.neq(nnh)) {
+    if (serverDhParams.newNonceHash !== nnh) {
       throw new SecurityError('Step 2 invalid DH fail nonce from server');
     }
   }
@@ -162,10 +162,10 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
     throw new Error(`Step 3 answer was ${serverDhInner}`);
   }
 
-  if (serverDhInner.nonce.neq(resPQ.nonce)) {
+  if (serverDhInner.nonce !== resPQ.nonce) {
     throw new SecurityError('Step 3 Invalid nonce in encrypted answer');
   }
-  if (serverDhInner.serverNonce.neq(resPQ.serverNonce)) {
+  if (serverDhInner.serverNonce !== resPQ.serverNonce) {
     throw new SecurityError('Step 3 Invalid server nonce in encrypted answer');
   }
   const dhPrime = readBigIntFromBuffer(serverDhInner.dhPrime, false, false);
@@ -222,7 +222,7 @@ export async function doAuthentication(sender: MTProtoPlainSender, log: any) {
   // @ts-ignore
   const dhHash = dhGen[`newNonceHash${nonceNumber}`];
 
-  if (dhHash.neq(newNonceHash)) {
+  if (dhHash !== newNonceHash) {
     throw new SecurityError('Step 3 invalid new nonce hash');
   }
 

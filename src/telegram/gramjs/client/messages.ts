@@ -1079,7 +1079,7 @@ export async function getCommentData(
   for (const c of result.chats) {
     if (
       relevantMessage.peerId instanceof Api.PeerChannel &&
-      c.id.eq(relevantMessage.peerId.channelId)
+      c.id === relevantMessage.peerId.channelId
     ) {
       chat = c;
       break;

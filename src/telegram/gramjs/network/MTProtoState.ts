@@ -66,7 +66,7 @@ export class MTProtoState {
     // Session IDs can be random on every connection
     this.id = helpers.generateRandomLong(true);
     this._sequence = 0;
-    this._lastMsgId = bigInt.zero;
+    this._lastMsgId = 0n;
     this.msgIds = [];
   }
 
@@ -193,7 +193,7 @@ export class MTProtoState {
 
     // TODO Check salt,sessionId, and sequenceNumber
     const keyId = helpers.readBigIntFromBuffer(body.slice(0, 8));
-    if (!this.authKey.keyId || keyId.neq(this.authKey.keyId)) {
+    if (!this.authKey.keyId || keyId !== this.authKey.keyId) {
       throw new SecurityError('Server replied with an invalid auth key');
     }
     const authKey = this.authKey.getKey();
@@ -216,7 +216,7 @@ export class MTProtoState {
     const reader = new BinaryReader(body);
     reader.readLong(); // removeSalt
     const serverId = reader.readLong();
-    if (serverId.neq(this.id)) {
+    if (serverId !== this.id) {
       // throw new SecurityError('Server replied with a wrong session ID');
     }
 
@@ -247,11 +247,9 @@ export class MTProtoState {
   _getNewMsgId() {
     const now = new Date().getTime() / 1000 + this.timeOffset;
     const nanoseconds = Math.floor((now - Math.floor(now)) * 1e9);
-    let newMsgId = bigInt(Math.floor(now))
-      .shiftLeft(bigInt(32))
-      .or(bigInt(nanoseconds).shiftLeft(bigInt(2)));
-    if (this._lastMsgId.greaterOrEquals(newMsgId)) {
-      newMsgId = this._lastMsgId.add(bigInt(4));
+    let newMsgId = (BigInt(Math.floor(now)) << 32n) | (BigInt(nanoseconds) << 2n);
+    if (this._lastMsgId >= newMsgId) {
+      newMsgId = this._lastMsgId + 4n;
     }
     this._lastMsgId = newMsgId;
     return newMsgId;

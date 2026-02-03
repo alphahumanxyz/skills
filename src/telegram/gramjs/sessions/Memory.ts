@@ -90,8 +90,8 @@ export class MemorySession extends Session {
   delete() {}
 
   _entityValuesToRow(
-    id: bigInt.BigInteger | string,
-    hash: bigInt.BigInteger | string,
+    id: bigint | string,
+    hash: bigint | string,
     username: string,
     phone: string,
     name: string
@@ -118,7 +118,7 @@ export class MemorySession extends Session {
     if (p instanceof Api.InputPeerUser || p instanceof Api.InputPeerChannel) {
       pHash = p.accessHash;
     } else if (p instanceof Api.InputPeerChat) {
-      pHash = bigInt.zero;
+      pHash = 0n;
     } else {
       return;
     }
@@ -200,7 +200,7 @@ export class MemorySession extends Session {
     }
   }
 
-  getEntityRowsById(id: string | bigInt.BigInteger, exact = true) {
+  getEntityRowsById(id: string | bigint, exact = true) {
     if (exact) {
       for (const e of this._entities) {
         // id, hash, username, phone, name
@@ -225,7 +225,7 @@ export class MemorySession extends Session {
 
   getInputEntity(key: EntityLike): Api.TypeInputPeer {
     let exact;
-    if (typeof key === 'object' && !bigInt.isInstance(key) && key.SUBCLASS_OF_ID) {
+    if (typeof key === 'object' && typeof key !== 'bigint' && key.SUBCLASS_OF_ID) {
       if (
         key.SUBCLASS_OF_ID == 0xc91c90b6 ||
         key.SUBCLASS_OF_ID == 0xe669bf46 ||
@@ -245,7 +245,7 @@ export class MemorySession extends Session {
         exact = false;
       }
     }
-    if (bigInt.isInstance(key) || typeof key == 'bigint' || typeof key == 'number') {
+    if (typeof key === 'bigint' || typeof key == 'number') {
       key = key.toString();
     }
     let result: any[] | undefined = undefined;

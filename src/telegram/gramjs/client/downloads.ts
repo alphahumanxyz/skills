@@ -169,7 +169,7 @@ export class DirectDownloadIter extends RequestIter {
       await this.close();
       return true;
     } else {
-      this.request!.offset = this.request!.offset.add(this._stride!);
+      this.request!.offset = this.request!.offset + BigInt(this._stride!);
     }
   }
 
@@ -229,7 +229,7 @@ export class GenericDownloadIter extends DirectDownloadIter {
     let done = false;
     while (!done && data.length - bad < this._chunkSize!) {
       const current = await this._request();
-      this.request!.offset = this.request!.offset.add(this.request!.limit);
+      this.request!.offset = this.request!.offset + BigInt(this.request!.limit);
 
       data = Buffer.concat([data, current]);
       done = current.length < this.request!.limit;
@@ -244,7 +244,7 @@ export class GenericDownloadIter extends DirectDownloadIter {
       this.buffer!.push(data.slice(i, i + this._chunkSize!));
 
       // 2.2. We will yield this offset, so move to the next one
-      this.request!.offset = this.request!.offset.add(this._stride!);
+      this.request!.offset = this.request!.offset + BigInt(this._stride!);
     }
 
     // 2.3. If we are in the last chunk, we will return the last partial data
@@ -260,7 +260,7 @@ export class GenericDownloadIter extends DirectDownloadIter {
       //   3. Be careful with the offsets. Re-fetching a bit of data
       //   is fine, since it greatly simplifies things.
       // TODO Try to not re-fetch data
-      this.request!.offset = this.request!.offset.subtract(this._stride!);
+      this.request!.offset = this.request!.offset - BigInt(this._stride!);
     }
   }
 }

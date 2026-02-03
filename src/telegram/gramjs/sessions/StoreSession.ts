@@ -77,7 +77,7 @@ export class StoreSession extends MemorySession {
     }
   }
 
-  getEntityRowsById(id: string | bigInt.BigInteger, exact: boolean = true): any {
+  getEntityRowsById(id: string | bigint, exact: boolean = true): any {
     return this.store.get(this.sessionName + id.toString());
   }
 }

@@ -253,7 +253,7 @@ export function getInputChannel(entity: EntityLike) {
     typeof entity === 'string' ||
     typeof entity == 'number' ||
     typeof entity == 'bigint' ||
-    bigInt.isInstance(entity)
+    typeof entity === 'bigint'
   ) {
     _raiseCastFail(entity, 'InputChannel');
   }
@@ -267,7 +267,7 @@ export function getInputChannel(entity: EntityLike) {
   if (entity instanceof Api.Channel || entity instanceof Api.ChannelForbidden) {
     return new Api.InputChannel({
       channelId: entity.id,
-      accessHash: entity.accessHash || bigInt.zero,
+      accessHash: entity.accessHash || 0n,
     });
   }
 
@@ -293,7 +293,7 @@ export function getInputUser(entity: EntityLike): Api.TypeInputUser {
     typeof entity === 'string' ||
     typeof entity == 'number' ||
     typeof entity == 'bigint' ||
-    bigInt.isInstance(entity)
+    typeof entity === 'bigint'
   ) {
     _raiseCastFail(entity, 'InputUser');
   }
@@ -968,7 +968,7 @@ export function getPeer(peer: EntityLike | any) {
     peer = returnBigInt(peer);
   }
   try {
-    if (bigInt.isInstance(peer)) {
+    if (typeof peer === 'bigint') {
       const res = resolveId(peer);
       if (res[1] === Api.PeerChannel) {
         return new Api.PeerChannel({ channelId: res[0] });
@@ -1071,7 +1071,7 @@ export function getPeerId(peer: EntityLike, addMark = true): string {
   } else if (peer instanceof Api.PeerChat) {
     // Check in case the user mixed things up to avoid blowing up
     peer.chatId = resolveId(returnBigInt(peer.chatId))[0];
-    return addMark ? peer.chatId.negate().toString() : peer.chatId.toString();
+    return addMark ? (-peer.chatId).toString() : peer.chatId.toString();
   } else if (typeof peer == 'object' && 'channelId' in peer) {
     // if (peer instanceof Api.PeerChannel)
     // Check in case the user mixed things up to avoid blowing up

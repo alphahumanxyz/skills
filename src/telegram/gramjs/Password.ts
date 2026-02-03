@@ -1,4 +1,4 @@
-import bigInt from 'big-integer';
+// Removed big-integer import, using native bigint
 import crypto from 'crypto';
 
 import {
@@ -9,6 +9,14 @@ import {
   readBufferFromBigInt,
   sha256,
 } from './Helpers';
+
+/**
+ * Helper function to calculate bit length of a bigint
+ */
+function bitLength(n: bigint): number {
+  if (n === 0n) return 0;
+  return n.toString(2).length;
+}
 import { Api } from './tl';
 
 const SIZE_FOR_HASH = 256;
@@ -104,8 +112,8 @@ function checkPrimeAndGood(primeBytes: Buffer, g: number) {
  * @param p{BigInteger}
  * @returns {boolean}
  */
-function isGoodLarge(number: bigInt.BigInteger, p: bigInt.BigInteger) {
-  return number.greater(bigInt(0)) && p.subtract(number).greater(bigInt(0));
+function isGoodLarge(number: bigint, p: bigint) {
+  return number > 0n && (p - number) > 0n;
 }
 
 /**
@@ -122,7 +130,7 @@ function numBytesForHash(number: Buffer) {
  * @param g {bigInt}
  * @returns {Buffer}
  */
-function bigNumForHash(g: bigInt.BigInteger) {
+function bigNumForHash(g: bigint) {
   return readBufferFromBigInt(g, SIZE_FOR_HASH, false);
 }
 
@@ -132,17 +140,17 @@ function bigNumForHash(g: bigInt.BigInteger) {
  * @param prime {BigInteger}
  * @returns {Boolean}
  */
-function isGoodModExpFirst(modexp: bigInt.BigInteger, prime: bigInt.BigInteger) {
-  const diff = prime.subtract(modexp);
+function isGoodModExpFirst(modexp: bigint, prime: bigint) {
+  const diff = prime - modexp;
 
   const minDiffBitsCount = 2048 - 64;
   const maxModExpSize = 256;
 
   return !(
-    diff.lesser(bigInt(0)) ||
-    diff.bitLength().toJSNumber() < minDiffBitsCount ||
-    modexp.bitLength().toJSNumber() < minDiffBitsCount ||
-    Math.floor((modexp.bitLength().toJSNumber() + 7) / 8) > maxModExpSize
+    diff < 0n ||
+    bitLength(diff) < minDiffBitsCount ||
+    bitLength(modexp) < minDiffBitsCount ||
+    Math.floor((bitLength(modexp) + 7) / 8) > maxModExpSize
   );
 }
 
@@ -202,7 +210,7 @@ async function computeDigest(
   }
 
   const value = modExp(
-    bigInt(algo.g),
+    BigInt(algo.g),
     readBigIntFromBuffer(await computeHash(algo, password), false),
     readBigIntFromBuffer(algo.p, false)
   );
@@ -238,22 +246,22 @@ async function computeCheck(request: Api.account.Password, password: string) {
   }
   const x = readBigIntFromBuffer(pwHash, false);
   const pForHash = numBytesForHash(algo.p);
-  const gForHash = bigNumForHash(bigInt(g));
+  const gForHash = bigNumForHash(BigInt(g));
   const bForHash = numBytesForHash(srp_B);
-  const gX = modExp(bigInt(g), x, p);
+  const gX = modExp(BigInt(g), x, p);
   const k = readBigIntFromBuffer(await sha256(Buffer.concat([pForHash, gForHash])), false);
-  const kgX = bigIntMod(k.multiply(gX), p);
+  const kgX = bigIntMod((k * gX), p);
   const generateAndCheckRandom = async () => {
     const randomSize = 256;
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const random = generateRandomBytes(randomSize);
       const a = readBigIntFromBuffer(random, false);
-      const A = modExp(bigInt(g), a, p);
+      const A = modExp(BigInt(g), a, p);
       if (isGoodModExpFirst(A, p)) {
         const aForHash = bigNumForHash(A);
         const u = readBigIntFromBuffer(await sha256(Buffer.concat([aForHash, bForHash])), false);
-        if (u.greater(bigInt(0))) {
+        if (u > 0n) {
           return { a: a, aForHash: aForHash, u: u };
         }
       }

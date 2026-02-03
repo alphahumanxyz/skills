@@ -421,7 +421,7 @@ export async function getPeerId(client: TelegramClient, peer: EntityLike, addMar
       peer = await client.getInputEntity(peer);
     }
   }
-  if (typeof peer == 'number' || typeof peer == 'bigint' || bigInt.isInstance(peer)) {
+  if (typeof peer == 'number' || typeof peer == 'bigint') {
     return utils.getPeerId(peer, addMark);
   }
   if (peer.SUBCLASS_OF_ID == 0x2d45687 || peer.SUBCLASS_OF_ID == 0xc91c90b6) {
