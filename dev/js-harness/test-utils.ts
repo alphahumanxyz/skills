@@ -119,13 +119,8 @@ function mockFetchResponse(
 }
 
 /** Configure a mock fetch that throws (simulating network error). */
-function mockFetchError(url: string): void {
-  // Store a sentinel that the mock-bridge can use
-  (globalThis as any).__mockFetchResponses[url] = {
-    status: 0,
-    headers: {},
-    body: "__MOCK_ERROR__",
-  };
+function mockFetchError(url: string, message?: string): void {
+  (globalThis as any).__mockFetchErrors[url] = message || "Network error: connection refused";
 }
 
 // Expose to global scope

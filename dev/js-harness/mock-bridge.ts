@@ -98,9 +98,18 @@ const _std = (globalThis as any)._std;
 // __net — configurable fetch responses
 // ---------------------------------------------------------------------------
 
+(globalThis as any).__mockFetchErrors = {} as Record<string, string>;
+
 (globalThis as any).__net = {
   fetch(url: string, optionsJson: string): string {
     (globalThis as any).__mockFetchCalls.push({ url, options: optionsJson });
+
+    // Check if this URL should throw a network error
+    const errors = (globalThis as any).__mockFetchErrors as Record<string, string>;
+    const errorMsg = errors[url] || errors["*"];
+    if (errorMsg) {
+      throw new Error(errorMsg);
+    }
 
     const responses = (globalThis as any).__mockFetchResponses as Record<
       string,
@@ -217,6 +226,7 @@ const _std = (globalThis as any)._std;
   (globalThis as any).__mockStore = {};
   (globalThis as any).__mockCronSchedules = {};
   (globalThis as any).__mockFetchResponses = {};
+  (globalThis as any).__mockFetchErrors = {};
   (globalThis as any).__mockFetchCalls = [];
   (globalThis as any).__mockNotifications = [];
   (globalThis as any).__mockDataFiles = {};

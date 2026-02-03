@@ -26,11 +26,15 @@ fi
 echo "Compiling TypeScript (tsconfig.test.json)..."
 npx tsc -p tsconfig.test.json
 
-# Strip "export {};" from compiled scripts. QuickJS loadScript() runs files as
-# scripts (not modules), but tsc emits "export {};" for files with no
-# imports/exports. The runner.js (loaded with --module) is unaffected.
-find skills dev/js-harness -name '*.js' -not -name 'runner.js' -exec \
-  sed -i '' '/^export \{\};$/d' {} +
+# Post-process compiled JS for QuickJS script mode compatibility.
+# 1. Strip "export {};" — loadScript() is script mode, not ES module.
+# 2. Convert top-level let/const to var — so declarations become globalThis
+#    properties, enabling test reset between test cases.
+# The runner.js is an ES module and excluded from these transforms.
+# Use a for-loop to avoid sed regex escaping issues with find -exec {} +
+for js_file in $(find skills dev/js-harness -name '*.js' -not -name 'runner.js'); do
+  sed -i '' -e '/^export {};$/d' -e 's/^let /var /g' -e 's/^const /var /g' "$js_file"
+done
 
 echo "Compilation complete."
 

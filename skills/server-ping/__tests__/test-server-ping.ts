@@ -28,6 +28,8 @@ const CLEAN_CONFIG = {
   verboseLogging: false,
 };
 
+const _mockFetchError = (globalThis as any).mockFetchError as (url: string, msg?: string) => void;
+
 /** Reset mocks + re-init with clean defaults. Call before each test group. */
 function freshInit(overrides?: {
   config?: Record<string, unknown>;
@@ -35,6 +37,7 @@ function freshInit(overrides?: {
   env?: Record<string, string>;
   platformOs?: string;
   fetchResponses?: Record<string, { status: number; headers?: Record<string, string>; body: string }>;
+  fetchErrors?: Record<string, string>;
   peerSkills?: { id: string; name: string; version?: string; status?: string }[];
 }): void {
   const storeData: Record<string, unknown> = {
@@ -50,6 +53,12 @@ function freshInit(overrides?: {
     fetchResponses: overrides?.fetchResponses,
     peerSkills: overrides?.peerSkills,
   });
+  // Set up fetch errors (network errors that throw)
+  if (overrides?.fetchErrors) {
+    for (const [url, msg] of Object.entries(overrides.fetchErrors)) {
+      _mockFetchError(url, msg);
+    }
+  }
   // Reset skill module-level state that persists across tests.
   // These are global vars set by loadScript() in the skill source.
   (globalThis as any).PING_COUNT = 0;
@@ -250,12 +259,10 @@ _describe("Ping logic", () => {
     _assertEqual(stats.consecutiveFailures, 1, "consecutive fails should be 1");
   });
 
-  _it("should notify on server down (first failure)", () => {
+  _it("should notify on server down (network error)", () => {
     freshInit({
       config: { serverUrl: "https://down.com" },
-      fetchResponses: {
-        "https://down.com": { status: 500, body: "error" },
-      },
+      fetchErrors: { "https://down.com": "Connection refused" },
     });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
@@ -267,14 +274,13 @@ _describe("Ping logic", () => {
   _it("should notify on recovery after downtime", () => {
     freshInit({
       config: { serverUrl: "https://flaky.com" },
-      fetchResponses: {
-        "https://flaky.com": { status: 500, body: "error" },
-      },
+      fetchErrors: { "https://flaky.com": "Connection refused" },
     });
     (globalThis as any).start();
-    // First ping fails
+    // First ping fails (network error)
     (globalThis as any).onCronTrigger("ping");
-    // Second ping succeeds
+    // Remove the error and set a success response
+    (globalThis as any).__mockFetchErrors = {};
     _mockFetchResponse("https://flaky.com", 200, '{"ok":true}');
     (globalThis as any).onCronTrigger("ping");
     const mock = _getMockState();
@@ -322,9 +328,7 @@ _describe("Ping logic", () => {
     freshInit({
       platformOs: "android",
       config: { serverUrl: "https://down.com" },
-      fetchResponses: {
-        "https://down.com": { status: 500, body: "error" },
-      },
+      fetchErrors: { "https://down.com": "Connection refused" },
     });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
