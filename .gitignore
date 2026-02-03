@@ -27,3 +27,6 @@ dmypy.json
 # Ruff
 .ruff_cache/
 *.log
+
+# Compiled JavaScript from TypeScript skills
+skills/*/index.js
