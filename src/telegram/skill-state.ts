@@ -1,0 +1,123 @@
+// Shared skill state module for Telegram skill
+// Tools and lifecycle functions access state through globalThis.getSkillState()
+// This pattern works in both production V8 runtime and test harness sandbox.
+
+import type { TelegramClient } from 'telegram';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface SkillConfig {
+  apiId: number;
+  apiHash: string;
+  phoneNumber: string;
+  isAuthenticated: boolean;
+  sessionString: string;
+  phoneCodeHash: string;
+  pendingCode: boolean;
+}
+
+export interface FormattedUser {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  phoneNumber?: string;
+  isBot?: boolean;
+  isPremium?: boolean;
+}
+
+export interface FormattedDialog {
+  id: string;
+  title: string;
+  type: 'user' | 'chat' | 'channel';
+  unreadCount: number;
+  lastMessage: string | null;
+  isPinned: boolean;
+}
+
+export interface Cache {
+  me: FormattedUser | null;
+  dialogs: FormattedDialog[];
+  lastSync: number;
+}
+
+export interface SetupSubmitArgs {
+  stepId: string;
+  values: Record<string, unknown>;
+}
+
+/**
+ * Telegram skill state interface - defines the shape of our mutable state
+ */
+export interface TelegramState {
+  config: SkillConfig;
+  cache: Cache;
+  client: InstanceType<typeof TelegramClient> | null;
+  clientConnecting: boolean;
+  clientError: string | null;
+  workerRunning: boolean;
+  workerTimeoutId: ReturnType<typeof setTimeout> | null;
+}
+
+// ---------------------------------------------------------------------------
+// Global Type Extension
+// ---------------------------------------------------------------------------
+
+declare global {
+  function getTelegramSkillState(): TelegramState;
+  // eslint-disable-next-line no-var
+  var __telegramSkillState: TelegramState;
+}
+
+// ---------------------------------------------------------------------------
+// State Initialization
+// ---------------------------------------------------------------------------
+
+/**
+ * Initialize the skill state. Called once at module load.
+ */
+function initSkillState(): TelegramState {
+  const state: TelegramState = {
+    config: {
+      apiId: 0,
+      apiHash: '',
+      phoneNumber: '',
+      isAuthenticated: false,
+      sessionString: '',
+      phoneCodeHash: '',
+      pendingCode: false,
+    },
+    cache: {
+      me: null,
+      dialogs: [],
+      lastSync: 0,
+    },
+    client: null,
+    clientConnecting: false,
+    clientError: null,
+    workerRunning: false,
+    workerTimeoutId: null,
+  };
+
+  globalThis.__telegramSkillState = state;
+  return state;
+}
+
+// Initialize on module load
+initSkillState();
+
+// Expose getSkillState as a global function
+globalThis.getTelegramSkillState = function getTelegramSkillState(): TelegramState {
+  const state = globalThis.__telegramSkillState;
+  if (!state) {
+    throw new Error('[telegram] Skill state not initialized');
+  }
+  return state;
+};
+
+// Re-export for TypeScript imports (won't be used at runtime, but satisfies compiler)
+export function getTelegramSkillState(): TelegramState {
+  return globalThis.getTelegramSkillState();
+}
