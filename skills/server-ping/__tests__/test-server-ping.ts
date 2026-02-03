@@ -17,14 +17,56 @@ const _callTool = (globalThis as any).callTool as (name: string, args?: any) => 
 const _getMockState = (globalThis as any).getMockState as () => any;
 const _mockFetchResponse = (globalThis as any).mockFetchResponse as (url: string, status: number, body: string) => void;
 
+// Default clean config to reset skill state between tests.
+// Since the skill uses module-level CONFIG that persists across calls,
+// we must explicitly provide a clean config via store so init() resets it.
+const CLEAN_CONFIG = {
+  serverUrl: "",
+  pingIntervalSec: 10,
+  notifyOnDown: true,
+  notifyOnRecover: true,
+  verboseLogging: false,
+};
+
+/** Reset mocks + re-init with clean defaults. Call before each test group. */
+function freshInit(overrides?: {
+  config?: Record<string, unknown>;
+  counters?: Record<string, unknown>;
+  env?: Record<string, string>;
+  platformOs?: string;
+  fetchResponses?: Record<string, { status: number; headers?: Record<string, string>; body: string }>;
+  peerSkills?: { id: string; name: string; version?: string; status?: string }[];
+}): void {
+  const storeData: Record<string, unknown> = {
+    config: { ...CLEAN_CONFIG, ...(overrides?.config || {}) },
+  };
+  if (overrides?.counters) {
+    storeData["counters"] = overrides.counters;
+  }
+  _setup({
+    storeData,
+    env: overrides?.env || {},
+    platformOs: overrides?.platformOs,
+    fetchResponses: overrides?.fetchResponses,
+    peerSkills: overrides?.peerSkills,
+  });
+  // Reset skill module-level state that persists across tests.
+  // These are global vars set by loadScript() in the skill source.
+  (globalThis as any).PING_COUNT = 0;
+  (globalThis as any).FAIL_COUNT = 0;
+  (globalThis as any).CONSECUTIVE_FAILS = 0;
+  (globalThis as any).WAS_DOWN = false;
+  (globalThis as any).ACTIVE_SESSIONS = [];
+  (globalThis as any).init();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // init() tests
 // ─────────────────────────────────────────────────────────────────────────────
 
 _describe("init()", () => {
   _it("should create ping_log table", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     const tables = (globalThis as any).__mockTables;
     _assert(tables["ping_log"], "ping_log table should exist");
     const cols = tables["ping_log"].columns.map((c: any) => c.name);
@@ -35,40 +77,22 @@ _describe("init()", () => {
   });
 
   _it("should load config from store if available", () => {
-    _setup({
-      storeData: {
-        config: {
-          serverUrl: "https://saved.example.com",
-          pingIntervalSec: 30,
-          notifyOnDown: false,
-          notifyOnRecover: true,
-          verboseLogging: true,
-        },
-      },
-    });
-    (globalThis as any).init();
-    // Verify by checking state published by the skill
+    freshInit({ config: { serverUrl: "https://saved.example.com", pingIntervalSec: 30 } });
     const stats = _callTool("get-ping-stats");
     _assertEqual(stats.serverUrl, "https://saved.example.com", "should use saved URL");
   });
 
   _it("should fall back to BACKEND_URL env var", () => {
-    _setup({
-      env: { BACKEND_URL: "https://env.example.com/api" },
-    });
-    (globalThis as any).init();
+    freshInit({ env: { BACKEND_URL: "https://env.example.com/api" } });
     const stats = _callTool("get-ping-stats");
     _assertEqual(stats.serverUrl, "https://env.example.com/api", "should use env URL");
   });
 
   _it("should load persisted counters", () => {
-    _setup({
-      storeData: {
-        counters: { pingCount: 42, failCount: 3 },
-      },
-      env: { BACKEND_URL: "https://test.com" },
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      counters: { pingCount: 42, failCount: 3 },
     });
-    (globalThis as any).init();
     const stats = _callTool("get-ping-stats");
     _assertEqual(stats.totalPings, 42, "should restore ping count");
     _assertEqual(stats.totalFailures, 3, "should restore fail count");
@@ -81,8 +105,7 @@ _describe("init()", () => {
 
 _describe("start()", () => {
   _it("should register cron when URL is configured", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com" } });
     (globalThis as any).start();
     const mock = _getMockState();
     _assert(mock.cronSchedules["ping"], "should register ping cron");
@@ -90,8 +113,7 @@ _describe("start()", () => {
   });
 
   _it("should not register cron without URL", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     (globalThis as any).start();
     const mock = _getMockState();
     _assertEqual(
@@ -102,18 +124,7 @@ _describe("start()", () => {
   });
 
   _it("should use custom interval from config", () => {
-    _setup({
-      storeData: {
-        config: {
-          serverUrl: "https://test.com",
-          pingIntervalSec: 30,
-          notifyOnDown: true,
-          notifyOnRecover: true,
-          verboseLogging: false,
-        },
-      },
-    });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com", pingIntervalSec: 30 } });
     (globalThis as any).start();
     const mock = _getMockState();
     _assertContains(mock.cronSchedules["ping"], "*/30", "should use 30s interval");
@@ -126,8 +137,7 @@ _describe("start()", () => {
 
 _describe("Setup flow", () => {
   _it("onSetupStart should return server-config step", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     const result = (globalThis as any).onSetupStart();
     _assertEqual(result.step.id, "server-config", "step id");
     _assert(result.step.fields.length >= 2, "should have at least 2 fields");
@@ -137,16 +147,14 @@ _describe("Setup flow", () => {
   });
 
   _it("onSetupStart should pre-fill BACKEND_URL from env", () => {
-    _setup({ env: { BACKEND_URL: "https://prefill.example.com" } });
-    (globalThis as any).init();
+    freshInit({ env: { BACKEND_URL: "https://prefill.example.com" } });
     const result = (globalThis as any).onSetupStart();
     const urlField = result.step.fields.find((f: any) => f.name === "serverUrl");
     _assertEqual(urlField.default, "https://prefill.example.com", "should pre-fill from env");
   });
 
   _it("onSetupSubmit should validate empty URL", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     const result = (globalThis as any).onSetupSubmit({
       stepId: "server-config",
       values: { serverUrl: "", pingIntervalSec: "10" },
@@ -157,8 +165,7 @@ _describe("Setup flow", () => {
   });
 
   _it("onSetupSubmit should validate URL protocol", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     const result = (globalThis as any).onSetupSubmit({
       stepId: "server-config",
       values: { serverUrl: "ftp://bad.com", pingIntervalSec: "10" },
@@ -167,8 +174,7 @@ _describe("Setup flow", () => {
   });
 
   _it("onSetupSubmit step 1 should return next step", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     const result = (globalThis as any).onSetupSubmit({
       stepId: "server-config",
       values: { serverUrl: "https://good.example.com", pingIntervalSec: "30" },
@@ -178,8 +184,7 @@ _describe("Setup flow", () => {
   });
 
   _it("onSetupSubmit step 2 should complete", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     // Step 1
     (globalThis as any).onSetupSubmit({
       stepId: "server-config",
@@ -198,8 +203,7 @@ _describe("Setup flow", () => {
   });
 
   _it("onSetupSubmit should error on unknown step", () => {
-    _setup();
-    (globalThis as any).init();
+    freshInit();
     const result = (globalThis as any).onSetupSubmit({
       stepId: "nonexistent",
       values: {},
@@ -214,11 +218,13 @@ _describe("Setup flow", () => {
 
 _describe("Ping logic", () => {
   _it("successful ping should log to DB", () => {
-    _setup({ env: { BACKEND_URL: "https://healthy.com" } });
-    _mockFetchResponse("https://healthy.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://healthy.com" },
+      fetchResponses: {
+        "https://healthy.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
-    // Trigger cron manually
     (globalThis as any).onCronTrigger("ping");
     const row = (globalThis as any).db.get(
       "SELECT status, success, url FROM ping_log ORDER BY id DESC LIMIT 1",
@@ -230,10 +236,13 @@ _describe("Ping logic", () => {
     _assertEqual(row.url, "https://healthy.com");
   });
 
-  _it("failed ping should increment fail count and notify", () => {
-    _setup({ env: { BACKEND_URL: "https://down.com" } });
-    _mockFetchResponse("https://down.com", 500, '{"error":"Internal Server Error"}');
-    (globalThis as any).init();
+  _it("failed ping should increment fail count", () => {
+    freshInit({
+      config: { serverUrl: "https://down.com" },
+      fetchResponses: {
+        "https://down.com": { status: 500, body: '{"error":"Internal Server Error"}' },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
     const stats = _callTool("get-ping-stats");
@@ -242,44 +251,51 @@ _describe("Ping logic", () => {
   });
 
   _it("should notify on server down (first failure)", () => {
-    _setup({ env: { BACKEND_URL: "https://down.com" } });
-    _mockFetchResponse("https://down.com", 500, "error");
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://down.com" },
+      fetchResponses: {
+        "https://down.com": { status: 500, body: "error" },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
     const mock = _getMockState();
-    _assert(mock.notifications.length > 0, "should send notification on down");
+    _assertGreaterThan(mock.notifications.length, 0, "should send notification on down");
     _assertContains(mock.notifications[0].title, "Down", "notification title should mention Down");
   });
 
   _it("should notify on recovery after downtime", () => {
-    _setup({ env: { BACKEND_URL: "https://flaky.com" } });
-    // First ping fails
-    _mockFetchResponse("https://flaky.com", 500, "error");
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://flaky.com" },
+      fetchResponses: {
+        "https://flaky.com": { status: 500, body: "error" },
+      },
+    });
     (globalThis as any).start();
+    // First ping fails
     (globalThis as any).onCronTrigger("ping");
     // Second ping succeeds
     _mockFetchResponse("https://flaky.com", 200, '{"ok":true}');
     (globalThis as any).onCronTrigger("ping");
     const mock = _getMockState();
-    // Should have at least 2 notifications: down + recovered
     _assertGreaterThan(mock.notifications.length, 1, "should have recovery notification");
     _assertContains(mock.notifications[1].title, "Recovered");
   });
 
   _it("should skip non-ping cron triggers", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com" } });
     (globalThis as any).onCronTrigger("some-other-schedule");
     const stats = _callTool("get-ping-stats");
     _assertEqual(stats.totalPings, 0, "should not increment for other schedules");
   });
 
   _it("should publish state to frontend", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
     const mock = _getMockState();
@@ -289,9 +305,12 @@ _describe("Ping logic", () => {
   });
 
   _it("should write ping-log.txt data file", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
     const mock = _getMockState();
@@ -300,12 +319,13 @@ _describe("Ping logic", () => {
   });
 
   _it("should not send notification on mobile", () => {
-    _setup({
+    freshInit({
       platformOs: "android",
-      env: { BACKEND_URL: "https://down.com" },
+      config: { serverUrl: "https://down.com" },
+      fetchResponses: {
+        "https://down.com": { status: 500, body: "error" },
+      },
     });
-    _mockFetchResponse("https://down.com", 500, "error");
-    (globalThis as any).init();
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
     const mock = _getMockState();
@@ -319,8 +339,7 @@ _describe("Ping logic", () => {
 
 _describe("Tools", () => {
   _it("get-ping-stats should return stats object", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com" } });
     const stats = _callTool("get-ping-stats");
     _assertNotNull(stats, "should return stats");
     _assertEqual(stats.serverUrl, "https://test.com");
@@ -329,34 +348,42 @@ _describe("Tools", () => {
   });
 
   _it("get-ping-history should return history array", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
     (globalThis as any).onCronTrigger("ping");
-    const history = _callTool("get-ping-history", { limit: 5 });
+    const history = _callTool("get-ping-history", { limit: "5" });
     _assertEqual(history.count, 2, "should have 2 entries");
     _assert(Array.isArray(history.history), "history should be an array");
   });
 
   _it("get-ping-history should respect limit", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
-    // Do 5 pings
     for (let i = 0; i < 5; i++) {
       (globalThis as any).onCronTrigger("ping");
     }
-    const history = _callTool("get-ping-history", { limit: 3 });
+    const history = _callTool("get-ping-history", { limit: "3" });
     _assertEqual(history.count, 3, "should limit to 3");
   });
 
   _it("ping-now should trigger immediate ping", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     const result = _callTool("ping-now");
     _assertEqual(result.triggered, true);
     _assertGreaterThan(result.pingNumber, 0, "should have ping number");
@@ -364,42 +391,37 @@ _describe("Tools", () => {
   });
 
   _it("update-server-url should change URL", () => {
-    _setup({ env: { BACKEND_URL: "https://old.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://old.com" } });
     const result = _callTool("update-server-url", { url: "https://new.com" });
     _assertEqual(result.success, true);
     _assertEqual(result.oldUrl, "https://old.com");
     _assertEqual(result.newUrl, "https://new.com");
-    // Verify URL is actually changed
     const stats = _callTool("get-ping-stats");
     _assertEqual(stats.serverUrl, "https://new.com");
   });
 
   _it("update-server-url should reject invalid URL", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com" } });
     const result = _callTool("update-server-url", { url: "not-a-url" });
     _assert(result.error, "should return error for invalid URL");
   });
 
   _it("list-peer-skills should return skills list", () => {
-    _setup({
-      env: { BACKEND_URL: "https://test.com" },
+    freshInit({
+      config: { serverUrl: "https://test.com" },
       peerSkills: [
         { id: "telegram", name: "Telegram", version: "1.0.0" },
         { id: "wallet-watch", name: "Wallet Watch", version: "2.0.0" },
       ],
     });
-    (globalThis as any).init();
     const result = _callTool("list-peer-skills");
     _assertEqual(result.skills.length, 2, "should list 2 peers");
     _assertEqual(result.skills[0].id, "telegram");
   });
 
   _it("read-config should return config file content", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
-    // First setup to write config.json
+    freshInit({ config: { serverUrl: "https://test.com" } });
+    // Setup flow writes config.json
     (globalThis as any).onSetupSubmit({
       stepId: "server-config",
       values: { serverUrl: "https://test.com", pingIntervalSec: "10" },
@@ -414,8 +436,7 @@ _describe("Tools", () => {
   });
 
   _it("read-config should handle missing file", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit();
     const result = _callTool("read-config");
     _assert(
       typeof result === "object" && result.error,
@@ -430,21 +451,26 @@ _describe("Tools", () => {
 
 _describe("Sessions", () => {
   _it("onSessionStart should track session", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onSessionStart({ sessionId: "sess-1" });
-    // Trigger a ping to update state
     (globalThis as any).onCronTrigger("ping");
     const mock = _getMockState();
     _assertEqual(mock.stateValues["activeSessions"], 1, "should track 1 session");
   });
 
   _it("onSessionEnd should remove session", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onSessionStart({ sessionId: "sess-1" });
     (globalThis as any).onSessionStart({ sessionId: "sess-2" });
@@ -461,8 +487,7 @@ _describe("Sessions", () => {
 
 _describe("Options", () => {
   _it("onListOptions should return all options", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com" } });
     const result = (globalThis as any).onListOptions();
     _assert(result.options.length >= 4, "should have at least 4 options");
     const names = result.options.map((o: any) => o.name);
@@ -472,21 +497,17 @@ _describe("Options", () => {
   });
 
   _it("onSetOption should change ping interval and re-register cron", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com" } });
     (globalThis as any).start();
-    // Verify initial cron
     let mock = _getMockState();
     _assertContains(mock.cronSchedules["ping"], "*/10", "initial interval");
-    // Change interval
     (globalThis as any).onSetOption({ name: "pingIntervalSec", value: "60" });
     mock = _getMockState();
     _assertContains(mock.cronSchedules["ping"], "*/60", "updated interval");
   });
 
   _it("onSetOption should toggle boolean options", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    (globalThis as any).init();
+    freshInit({ config: { serverUrl: "https://test.com" } });
     (globalThis as any).onSetOption({ name: "verboseLogging", value: true });
     const result = (globalThis as any).onListOptions();
     const verbose = result.options.find((o: any) => o.name === "verboseLogging");
@@ -500,9 +521,12 @@ _describe("Options", () => {
 
 _describe("stop()", () => {
   _it("should unregister cron and persist counters", () => {
-    _setup({ env: { BACKEND_URL: "https://test.com" } });
-    _mockFetchResponse("https://test.com", 200, '{"ok":true}');
-    (globalThis as any).init();
+    freshInit({
+      config: { serverUrl: "https://test.com" },
+      fetchResponses: {
+        "https://test.com": { status: 200, body: '{"ok":true}' },
+      },
+    });
     (globalThis as any).start();
     (globalThis as any).onCronTrigger("ping");
     (globalThis as any).stop();
