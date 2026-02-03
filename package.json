@@ -13,7 +13,7 @@
     "watch": "npm run build:watch",
     "typecheck": "tsc --noEmit",
     "test": "bash scripts/test-js.sh",
-    "test:script": "deno run --allow-read --allow-env --env dev/test-harness/runner.ts",
+    "test:script": "deno run --allow-read --allow-env --allow-net --env dev/test-harness/runner.ts",
     "test:live": "deno run --allow-read --allow-env --allow-net",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

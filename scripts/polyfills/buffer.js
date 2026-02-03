@@ -6,6 +6,29 @@
 const BASE64_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const BASE64_URL_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
+/**
+ * Convert a value to a number, handling BigInt, big-integer library objects, and regular numbers.
+ */
+function toNumber(v) {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'bigint') return Number(v);
+  // big-integer library wrapper object (has .value property with native BigInt)
+  if (v && typeof v === 'object') {
+    if (typeof v.toJSNumber === 'function') {
+      return v.toJSNumber();
+    }
+    if (typeof v.value === 'bigint') {
+      return Number(v.value);
+    }
+    if (typeof v.valueOf === 'function') {
+      const val = v.valueOf();
+      if (typeof val === 'bigint') return Number(val);
+      if (typeof val === 'number') return val;
+    }
+  }
+  return Number(v);
+}
+
 function base64Encode(bytes, urlSafe = false) {
   const chars = urlSafe ? BASE64_URL_CHARS : BASE64_CHARS;
   let result = '';
@@ -64,9 +87,79 @@ function base64Decode(str) {
 
 export class Buffer extends Uint8Array {
   /**
+   * Create a new Buffer. Handles BigInt and big-integer library objects.
+   */
+  constructor(arg1, arg2, arg3) {
+    // Handle BigInt or big-integer library object for size
+    if (typeof arg1 === 'bigint' || (arg1 && typeof arg1 === 'object' && typeof arg1.toJSNumber === 'function')) {
+      super(toNumber(arg1));
+    } else if (typeof arg1 === 'number') {
+      super(arg1);
+    } else if (arg1 instanceof ArrayBuffer) {
+      // ArrayBuffer with optional offset and length
+      const offset = toNumber(arg2) || 0;
+      const length = arg3 !== undefined ? toNumber(arg3) : undefined;
+      if (length !== undefined) {
+        super(arg1, offset, length);
+      } else {
+        super(arg1, offset);
+      }
+    } else if (ArrayBuffer.isView(arg1)) {
+      super(arg1);
+    } else if (Array.isArray(arg1)) {
+      // Convert any BigInt/big-integer elements to Numbers before passing to Uint8Array
+      const numArr = arg1.map(toNumber);
+      super(numArr);
+    } else if (arg1 && typeof arg1.length === 'number') {
+      // Array-like object - convert BigInt/big-integer elements to Numbers
+      const arr = Array.from(arg1, toNumber);
+      super(arr);
+    } else {
+      super(arg1);
+    }
+  }
+
+  /**
    * Create a Buffer from various input types.
    */
   static from(data, encodingOrOffset, length) {
+    // Handle BigInt or big-integer library object - convert to bytes
+    if (typeof data === 'bigint' || (data && typeof data === 'object' && typeof data.toJSNumber === 'function')) {
+      // Get native BigInt value
+      let bigVal = typeof data === 'bigint' ? data : data.value;
+      if (typeof bigVal !== 'bigint') bigVal = BigInt(data.valueOf());
+
+      // Convert BigInt to byte array (little-endian, signed)
+      const isNegative = bigVal < 0n;
+      if (isNegative) bigVal = -bigVal;
+      const bytes = [];
+      while (bigVal > 0n) {
+        bytes.push(Number(bigVal & 0xffn));
+        bigVal >>= 8n;
+      }
+      // Ensure at least one byte
+      if (bytes.length === 0) bytes.push(0);
+      // Handle sign for negative numbers (two's complement)
+      if (isNegative) {
+        // Two's complement
+        let carry = 1;
+        for (let i = 0; i < bytes.length; i++) {
+          const val = (~bytes[i] & 0xff) + carry;
+          bytes[i] = val & 0xff;
+          carry = val >> 8;
+        }
+        // Extend with 0xff if needed for sign
+        if ((bytes[bytes.length - 1] & 0x80) === 0) {
+          bytes.push(0xff);
+        }
+      } else {
+        // Ensure positive numbers don't look negative
+        if ((bytes[bytes.length - 1] & 0x80) !== 0) {
+          bytes.push(0);
+        }
+      }
+      return new Buffer(bytes);
+    }
     if (data instanceof ArrayBuffer) {
       return new Buffer(data, encodingOrOffset || 0, length);
     }
@@ -78,11 +171,14 @@ export class Buffer extends Uint8Array {
       return Buffer.fromString(data, encoding);
     }
     if (Array.isArray(data)) {
-      return new Buffer(data);
+      // Convert any BigInt/big-integer elements in the array to Numbers
+      const numData = data.map(toNumber);
+      return new Buffer(numData);
     }
     if (typeof data === 'object' && data !== null && typeof data.length === 'number') {
-      // Array-like object
-      return new Buffer(Array.from(data));
+      // Array-like object - convert BigInt/big-integer elements to Numbers
+      const arr = Array.from(data, toNumber);
+      return new Buffer(arr);
     }
     throw new TypeError(
       'First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object'
@@ -126,11 +222,13 @@ export class Buffer extends Uint8Array {
   }
 
   static alloc(size, fill = 0, encoding) {
-    const buf = new Buffer(size);
+    // Convert BigInt to Number for size
+    const numSize = typeof size === 'bigint' ? Number(size) : size;
+    const buf = new Buffer(numSize);
     if (fill !== 0) {
       if (typeof fill === 'string') {
         const fillBuf = Buffer.from(fill, encoding);
-        for (let i = 0; i < size; i++) {
+        for (let i = 0; i < numSize; i++) {
           buf[i] = fillBuf[i % fillBuf.length];
         }
       } else if (typeof fill === 'number') {
@@ -141,11 +239,15 @@ export class Buffer extends Uint8Array {
   }
 
   static allocUnsafe(size) {
-    return new Buffer(size);
+    // Convert BigInt to Number for size
+    const numSize = typeof size === 'bigint' ? Number(size) : size;
+    return new Buffer(numSize);
   }
 
   static allocUnsafeSlow(size) {
-    return new Buffer(size);
+    // Convert BigInt to Number for size
+    const numSize = typeof size === 'bigint' ? Number(size) : size;
+    return new Buffer(numSize);
   }
 
   static concat(list, totalLength) {

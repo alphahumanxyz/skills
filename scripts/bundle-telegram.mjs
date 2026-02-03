@@ -30,6 +30,31 @@ console.log('[bundle-telegram] Bundling telegram skill with gramjs and polyfills
 
 const polyfillsDir = join(__dirname, 'polyfills');
 
+// Plugin to replace telegram/platform.js with our polyfill that forces isBrowser=true, isNode=false
+const platformPolyfillPlugin = {
+  name: 'platform-polyfill',
+  setup(build) {
+    // Intercept any resolution that ends in "platform" or "platform.js" from telegram package
+    build.onResolve({ filter: /platform(\.js)?$/ }, (args) => {
+      // Only intercept if it's from the telegram package
+      if (args.importer && args.importer.includes('node_modules/telegram')) {
+        console.log(`[platform-polyfill] Redirecting "${args.path}" from ${args.importer.split('/').slice(-2).join('/')}`);
+        return { path: join(polyfillsDir, 'platform.js') };
+      }
+      return null; // Let esbuild handle other cases
+    });
+
+    // Also intercept relative imports like ../platform from subdirectories
+    build.onResolve({ filter: /\.\.\/platform(\.js)?$/ }, (args) => {
+      if (args.importer && args.importer.includes('node_modules/telegram')) {
+        console.log(`[platform-polyfill] Redirecting "${args.path}" from ${args.importer.split('/').slice(-2).join('/')}`);
+        return { path: join(polyfillsDir, 'platform.js') };
+      }
+      return null;
+    });
+  },
+};
+
 try {
   // Ensure output directory exists
   if (!existsSync(telegramOutDir)) {
@@ -52,6 +77,8 @@ try {
     treeShaking: true,
     mainFields: ['browser', 'module', 'main'],
     conditions: ['browser', 'import', 'default'],
+    // Custom plugins
+    plugins: [platformPolyfillPlugin],
     // Define globals
     define: {
       'process.env.NODE_ENV': '"production"',
@@ -183,10 +210,23 @@ globalThis.__skill = exports.default ? { default: exports.default } : __skill_bu
 })();
 `;
 
+  // Fixup to expose GramJS.sessions.StringSession as GramJS.StringSession
+  // The npm 'telegram' package exports StringSession inside sessions object,
+  // but our skill code expects it directly on GramJS for cleaner access.
+  const GRAMJS_FIXUP = `
+// Expose commonly used classes directly on GramJS namespace
+if (GramJS.sessions && GramJS.sessions.StringSession) {
+  GramJS.StringSession = GramJS.sessions.StringSession;
+}
+if (GramJS.sessions && GramJS.sessions.MemorySession) {
+  GramJS.MemorySession = GramJS.sessions.MemorySession;
+}
+`;
+
   // Create the final bundled skill file
   const finalCode = `// Bundled telegram skill with gramjs
 ${gramjsBundleCode}
-
+${GRAMJS_FIXUP}
 // Skill code bundle
 ${SKILL_HEADER}
 ${skillBundleCode}

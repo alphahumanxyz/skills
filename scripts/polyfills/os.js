@@ -4,11 +4,13 @@
  */
 
 // Check if V8 platform bridge is available
-const hasPlatform = typeof platform !== 'undefined';
+// Use globalThis to avoid name collision when esbuild renames the exported 'platform' function
+const __bridgePlatform =
+  typeof globalThis !== 'undefined' && typeof globalThis.platform === 'object' ? globalThis.platform : null;
 
 export function platform() {
-  if (hasPlatform) {
-    const os = platform.os();
+  if (__bridgePlatform && typeof __bridgePlatform.os === 'function') {
+    const os = __bridgePlatform.os();
     switch (os) {
       case 'windows':
         return 'win32';

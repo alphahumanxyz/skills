@@ -11,7 +11,7 @@ import { getMockState, type FetchOptions } from './mock-state.ts';
 /**
  * Create all bridge API globals and inject them into the provided context
  */
-export function createBridgeAPIs(): Record<string, unknown> {
+export async function createBridgeAPIs(): Promise<Record<string, unknown>> {
   const state = getMockState();
 
   // Console - logs to mock state for inspection
@@ -214,8 +214,52 @@ export function createBridgeAPIs(): Record<string, unknown> {
     origin: 'https://localhost',
   };
 
-  // Use actual WebSocket from globalThis (available in Deno/Node/Browser)
-  const RealWebSocket = globalThis.WebSocket;
+  // Mock event listeners storage for browser API compatibility (gramjs uses these for offline detection)
+  const mockEventListeners: Map<string, Set<EventListener>> = new Map();
+
+  // Mock window event methods
+  const addEventListener = (type: string, listener: EventListener): void => {
+    if (!mockEventListeners.has(type)) {
+      mockEventListeners.set(type, new Set());
+    }
+    mockEventListeners.get(type)!.add(listener);
+  };
+
+  const removeEventListener = (type: string, listener: EventListener): void => {
+    const listeners = mockEventListeners.get(type);
+    if (listeners) {
+      listeners.delete(listener);
+    }
+  };
+
+  const dispatchEvent = (event: { type: string }): boolean => {
+    const listeners = mockEventListeners.get(event.type);
+    if (listeners) {
+      listeners.forEach((listener) => {
+        try {
+          listener(event as Event);
+        } catch (e) {
+          globalThis.console.error(`Event listener error for ${event.type}:`, e);
+        }
+      });
+    }
+    return true;
+  };
+
+  // Try to use the 'ws' npm package for WebSocket (more compatible with Telegram)
+  // Falls back to Deno's native WebSocket if not available
+  let RealWebSocket: typeof WebSocket;
+  try {
+    // Dynamic import of ws package (available via npm in Deno 2+)
+    // @ts-ignore - dynamic npm import
+    const wsModule = await import('npm:ws');
+    RealWebSocket = wsModule.default || wsModule.WebSocket;
+    globalThis.console.log('[bootstrap] Using ws npm package for WebSocket');
+  } catch {
+    // Fallback to Deno's native WebSocket
+    RealWebSocket = globalThis.WebSocket;
+    globalThis.console.log('[bootstrap] Using native Deno WebSocket');
+  }
 
   // Mock crypto for gramjs cryptography
   const mockCrypto = {
@@ -417,6 +461,14 @@ export function createBridgeAPIs(): Record<string, unknown> {
     WebSocket: RealWebSocket,
     crypto: mockCrypto,
     Buffer: MockBuffer,
+    // Browser event API mocks (gramjs uses these for offline detection)
+    addEventListener,
+    removeEventListener,
+    dispatchEvent,
+    navigator: {
+      onLine: true,
+      userAgent: 'Deno/1.0 (mock harness)',
+    },
     // Pre-declare skill globals
     tools: [],
     init: undefined,

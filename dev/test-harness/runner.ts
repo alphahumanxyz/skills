@@ -60,15 +60,19 @@ function printBanner(): void {
 function printUsage(): void {
   console.log(`
 ${colors.yellow}Usage:${colors.reset}
-  deno run --allow-read --allow-env dev/test-harness/runner.ts <skill-id> <script-file>
+  deno run --allow-read --allow-env --allow-net dev/test-harness/runner.ts <skill-id> <script-file> [options]
 
 ${colors.yellow}Arguments:${colors.reset}
   skill-id      The skill directory name (e.g., "server-ping")
   script-file   Path to a JavaScript test script
 
+${colors.yellow}Options:${colors.reset}
+  --wait=<ms>   Wait specified milliseconds before cleanup (for async connections)
+
 ${colors.yellow}Examples:${colors.reset}
-  deno run --allow-read --allow-env dev/test-harness/runner.ts server-ping scripts/examples/test-ping-flow.js
+  deno run --allow-read --allow-env --allow-net dev/test-harness/runner.ts server-ping scripts/examples/test-ping-flow.js
   yarn test:script server-ping scripts/examples/test-ping-flow.js
+  yarn test:script telegram scripts/examples/test-telegram-setup.js --wait=10000
 
 ${colors.yellow}Script Helpers Available:${colors.reset}
   callTool(name, args)           - Call a skill tool, returns parsed result
@@ -94,8 +98,27 @@ async function main(): Promise<void> {
     Deno.exit(1);
   }
 
-  const skillId = args[0];
-  const scriptFile = args[1];
+  // Parse --wait flag for async connection waiting
+  let waitMs = 0;
+  const filteredArgs: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--wait' && args[i + 1]) {
+      waitMs = parseInt(args[i + 1], 10);
+      i++; // Skip the value
+    } else if (args[i].startsWith('--wait=')) {
+      waitMs = parseInt(args[i].split('=')[1], 10);
+    } else {
+      filteredArgs.push(args[i]);
+    }
+  }
+
+  if (filteredArgs.length < 2) {
+    printUsage();
+    Deno.exit(1);
+  }
+
+  const skillId = filteredArgs[0];
+  const scriptFile = filteredArgs[1];
 
   // Resolve paths relative to the skills repo root
   const scriptDir = new URL('.', import.meta.url).pathname;
@@ -146,6 +169,7 @@ async function main(): Promise<void> {
     'TELEGRAM_API_ID',
     'TELEGRAM_API_HASH',
     'TELEGRAM_BOT_TOKEN',
+    'TELEGRAM_PHONE_NUMBER',
     'NOTION_API_KEY',
     'OPENAI_API_KEY',
   ];
@@ -156,8 +180,8 @@ async function main(): Promise<void> {
     }
   }
 
-  // Create bridge APIs
-  const bridgeAPIs = createBridgeAPIs();
+  // Create bridge APIs (async to allow dynamic import of ws package)
+  const bridgeAPIs = await createBridgeAPIs();
 
   // Build the global context that will be shared by skill and test script
   // Use a shared object that can be modified and all code sees the changes
@@ -179,6 +203,16 @@ async function main(): Promise<void> {
     setEnv,
     setPlatformOs,
   };
+
+  // IMPORTANT: Set WebSocket on globalThis BEFORE loading skill code
+  // because gramjs IIFE captures WebSocket at parse time, not at context setup time
+  if (bridgeAPIs.WebSocket) {
+    // @ts-ignore - setting global WebSocket
+    globalThis.WebSocket = bridgeAPIs.WebSocket;
+    // Also set window-like globals for gramjs platform detection
+    // @ts-ignore
+    globalThis.window = globalThis;
+  }
 
   // Load the skill code
   console.log(`${colors.dim}Loading skill code...${colors.reset}`);
@@ -505,6 +539,13 @@ function __setPlatformOs(os) {
     console.error(`${colors.red}═══════════════════════════════════════════════════════════════${colors.reset}`);
     console.error(`${colors.red}${e}${colors.reset}`);
     Deno.exit(1);
+  }
+
+  // Wait for async operations if --wait was specified
+  if (waitMs > 0) {
+    console.log(`\n${colors.dim}Waiting ${waitMs}ms for async operations...${colors.reset}`);
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    console.log(`${colors.green}✓${colors.reset} Wait completed`);
   }
 
   // Call stop() if available
