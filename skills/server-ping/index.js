@@ -56,6 +56,15 @@ function init() {
       saved.verboseLogging !== undefined ? saved.verboseLogging : CONFIG.verboseLogging;
   }
 
+  // Fall back to the host's backend URL if no server URL is configured yet
+  if (!CONFIG.serverUrl) {
+    var envUrl = platform.env("BACKEND_URL");
+    if (envUrl) {
+      CONFIG.serverUrl = envUrl;
+      console.log("[server-ping] Using BACKEND_URL from env: " + envUrl);
+    }
+  }
+
   // Load counters from store
   var counters = store.get("counters");
   if (counters) {
@@ -231,6 +240,19 @@ function onListOptions() {
   return {
     options: [
       {
+        name: "pingIntervalSec",
+        type: "select",
+        label: "Ping interval",
+        description: "How often to check the server",
+        value: String(CONFIG.pingIntervalSec),
+        options: [
+          { label: "Every 5 seconds", value: "5" },
+          { label: "Every 10 seconds", value: "10" },
+          { label: "Every 30 seconds", value: "30" },
+          { label: "Every 60 seconds", value: "60" },
+        ],
+      },
+      {
         name: "notifyOnDown",
         type: "boolean",
         label: "Notify on server down",
@@ -259,12 +281,21 @@ function onSetOption(args) {
   var name = args.name;
   var value = args.value;
 
-  if (name === "notifyOnDown") CONFIG.notifyOnDown = !!value;
+  if (name === "pingIntervalSec") {
+    var newInterval = parseInt(value) || 10;
+    CONFIG.pingIntervalSec = newInterval;
+    // Re-register cron with new interval
+    cron.unregister("ping");
+    var cronExpr = "*/" + newInterval + " * * * * *";
+    cron.register("ping", cronExpr);
+    console.log("[server-ping] Ping interval changed to " + newInterval + "s");
+  } else if (name === "notifyOnDown") CONFIG.notifyOnDown = !!value;
   else if (name === "notifyOnRecover") CONFIG.notifyOnRecover = !!value;
   else if (name === "verboseLogging") CONFIG.verboseLogging = !!value;
 
   // Persist updated config
   store.set("config", CONFIG);
+  publishState();
   console.log("[server-ping] Option '" + name + "' set to " + value);
 }
 
