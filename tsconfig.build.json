@@ -8,14 +8,15 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "skipLibCheck": true
   },
   "include": [
     "types/**/*.d.ts",
-    "src/*/index.ts",
+    "src/*/index.ts"
   ],
   "exclude": [
     "node_modules",
-    ".venv",
+    ".venv"
   ]
 }

@@ -112,6 +112,7 @@ interface ToolPropertySchema {
   description?: string;
   enum?: string[];
   default?: unknown;
+  items?: { type: string };
 }
 
 interface NetFetchOptions {

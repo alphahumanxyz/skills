@@ -27,6 +27,11 @@ if (existsSync(srcDir) && existsSync(skillsOutputDir)) {
     const srcSkillDir = join(srcDir, skillName);
     const outputSkillDir = join(skillsOutputDir, skillName);
     
+    // Skip if output directory doesn't exist (skill was excluded from compilation)
+    if (!existsSync(outputSkillDir)) {
+      continue;
+    }
+
     // Process index.js
     const jsFile = join(outputSkillDir, "index.js");
     if (existsSync(jsFile)) {
@@ -46,10 +51,10 @@ if (existsSync(srcDir) && existsSync(skillsOutputDir)) {
       writeFileSync(jsFile, content);
     }
     
-    // Copy manifest.json from source to output
+    // Copy manifest.json from source to output (only if output dir exists)
     const srcManifest = join(srcSkillDir, "manifest.json");
     const outputManifest = join(outputSkillDir, "manifest.json");
-    if (existsSync(srcManifest)) {
+    if (existsSync(srcManifest) && existsSync(outputSkillDir)) {
       copyFileSync(srcManifest, outputManifest);
     }
     

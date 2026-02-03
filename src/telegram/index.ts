@@ -37,6 +37,7 @@ interface TdlibUser {
   phone_number?: string;
   type?: { "@type": string };
   is_premium?: boolean;
+  [key: string]: unknown;
 }
 
 interface TdlibChat {
@@ -51,6 +52,16 @@ interface TdlibChat {
   unread_count?: number;
   last_message?: TdlibMessage;
   positions?: Array<{ is_pinned?: boolean }>;
+  [key: string]: unknown;
+}
+
+interface TdlibMessageContent {
+  "@type": string;
+  text?: { text?: string };
+  caption?: { text?: string };
+  document?: { file_name?: string };
+  sticker?: { emoji?: string };
+  [key: string]: unknown;
 }
 
 interface TdlibMessage {
@@ -60,32 +71,30 @@ interface TdlibMessage {
   date: number;
   is_outgoing?: boolean;
   sender_id?: { user_id?: number; chat_id?: number };
-  content?: {
-    "@type": string;
-    text?: { text?: string };
-    caption?: { text?: string };
-    document?: { file_name?: string };
-    sticker?: { emoji?: string };
-  };
+  content?: TdlibMessageContent;
   reply_to?: { message_id?: number };
+  [key: string]: unknown;
 }
 
 interface TdlibChatsResponse {
   "@type": "chats";
   chat_ids: number[];
   total_count: number;
+  [key: string]: unknown;
 }
 
 interface TdlibMessagesResponse {
   "@type": "messages";
   messages: TdlibMessage[];
   total_count: number;
+  [key: string]: unknown;
 }
 
 interface TdlibUsersResponse {
   "@type": "users";
   user_ids: number[];
   total_count: number;
+  [key: string]: unknown;
 }
 
 interface FormattedMessage {
@@ -476,35 +485,32 @@ function isAuthenticated(): boolean {
 function formatMessage(message: TdlibMessage | null): FormattedMessage | null {
   if (!message) return null;
 
-  const content = message.content || {};
+  const content: TdlibMessageContent = message.content || { "@type": "unknown" };
   let text = "";
   let mediaType: string | null = null;
 
   switch (content["@type"]) {
     case "messageText":
-      text = (content.text as { text?: string })?.text || "";
+      text = content.text?.text || "";
       break;
     case "messagePhoto":
-      text = (content.caption as { text?: string })?.text || "";
+      text = content.caption?.text || "";
       mediaType = "photo";
       break;
     case "messageVideo":
-      text = (content.caption as { text?: string })?.text || "";
+      text = content.caption?.text || "";
       mediaType = "video";
       break;
     case "messageDocument":
-      text =
-        (content.caption as { text?: string })?.text ||
-        (content.document as { file_name?: string })?.file_name ||
-        "";
+      text = content.caption?.text || content.document?.file_name || "";
       mediaType = "document";
       break;
     case "messageVoiceNote":
-      text = (content.caption as { text?: string })?.text || "";
+      text = content.caption?.text || "";
       mediaType = "voice";
       break;
     case "messageSticker":
-      text = (content.sticker as { emoji?: string })?.emoji || "[sticker]";
+      text = content.sticker?.emoji || "[sticker]";
       mediaType = "sticker";
       break;
     default:
