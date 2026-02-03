@@ -1,7 +1,10 @@
 // Tool: telegram-send-code
 // Send a verification code to the specified phone number.
 
-declare const enqueueRequest: (type: string, args: Record<string, unknown>) => string;
+// Access skill state via globalThis (required for bundled code where variable names get mangled)
+interface TelegramGlobalState {
+  enqueueRequest: (type: string, args: Record<string, unknown>) => string;
+}
 
 export const telegramSendCodeTool: ToolDefinition = {
   name: 'telegram-send-code',
@@ -19,9 +22,15 @@ export const telegramSendCodeTool: ToolDefinition = {
     required: ['phone_number'],
   },
   execute(args: Record<string, unknown>): string {
+    const g = globalThis as unknown as TelegramGlobalState;
+    const enqueueRequest = g.enqueueRequest;
+
     const phoneNumber = args.phone_number as string;
     if (!phoneNumber || !phoneNumber.startsWith('+')) {
       return JSON.stringify({ error: 'Phone number must be in international format (+...)' });
+    }
+    if (!enqueueRequest) {
+      return JSON.stringify({ error: 'enqueueRequest not available' });
     }
     const requestId = enqueueRequest('send-code', { phoneNumber });
     return JSON.stringify({ status: 'pending', requestId });
