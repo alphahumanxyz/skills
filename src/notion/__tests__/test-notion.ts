@@ -1,5 +1,5 @@
 // test-notion.ts — Tests for the Notion skill.
-// Runs on QuickJS via the test harness.
+// Runs via the V8 test harness.
 
 // Helpers to access the typed globals
 const _describe = (globalThis as any).describe as (name: string, fn: () => void) => void;

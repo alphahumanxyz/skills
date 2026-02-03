@@ -1,5 +1,5 @@
 // test-server-ping.ts — Comprehensive tests for the server-ping skill.
-// Runs on QuickJS via the test harness.
+// Runs via the V8 test harness.
 
 // All globals (describe, it, assert*, setupSkillTest, callTool, etc.)
 // are available from the harness scripts loaded before this file.
