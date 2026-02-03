@@ -17,13 +17,12 @@
   },
   "include": [
     "types/**/*.d.ts",
-    "skills-ts/*/index.ts",
+    "src/*/index.ts",
     "examples/*/index.ts"
   ],
   "exclude": [
     "node_modules",
     ".venv",
     "dev",
-    "skills-py"
   ]
 }
