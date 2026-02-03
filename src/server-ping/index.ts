@@ -9,7 +9,7 @@ import { updateServerUrlTool } from './tools/update-server-url';
 // server-ping/index.ts
 // Comprehensive demo skill showcasing all V8 runtime capabilities:
 //   Setup flow, DB (SQLite), Store (KV), State (frontend pub), Data (file I/O),
-//   Net (HTTP), Cron (scheduling), Platform (OS/notify), Skills (interop),
+//   Net (HTTP), setInterval (scheduling), Platform (OS/notify), Skills (interop),
 //   Options, Tools, and Session lifecycle.
 
 // ---------------------------------------------------------------------------
@@ -37,6 +37,7 @@ let FAIL_COUNT = 0;
 let CONSECUTIVE_FAILS = 0;
 let WAS_DOWN = false;
 let ACTIVE_SESSIONS: string[] = [];
+let PING_INTERVAL_ID: number | null = null;
 
 // Expose shared state to globalThis for bundled tool modules that use `declare const`
 // This is needed because esbuild bundles tool files in separate CommonJS modules
@@ -111,9 +112,21 @@ function start(): void {
     return;
   }
 
-  const cronExpr = `*/${CONFIG.pingIntervalSec} * * * * *`;
-  console.log(`[server-ping] Starting — ping every ${CONFIG.pingIntervalSec}s (${cronExpr})`);
-  cron.register('ping', cronExpr);
+  const intervalMs = CONFIG.pingIntervalSec * 1000;
+  console.log(`[server-ping] Starting — ping every ${CONFIG.pingIntervalSec}s (using setInterval)`);
+
+  // Clear any existing interval
+  if (PING_INTERVAL_ID !== null) {
+    clearInterval(PING_INTERVAL_ID);
+  }
+
+  // Start the ping interval (cast to number for browser-like V8 environment)
+  PING_INTERVAL_ID = setInterval(() => {
+    doPing();
+  }, intervalMs) as unknown as number;
+
+  // Do an immediate first ping
+  doPing();
 
   // Publish initial state to frontend
   publishState();
@@ -121,7 +134,12 @@ function start(): void {
 
 function stop(): void {
   console.log('[server-ping] Stopping');
-  cron.unregister('ping');
+
+  // Clear the ping interval
+  if (PING_INTERVAL_ID !== null) {
+    clearInterval(PING_INTERVAL_ID);
+    PING_INTERVAL_ID = null;
+  }
 
   // Persist counters
   store.set('counters', { pingCount: PING_COUNT, failCount: FAIL_COUNT });
@@ -299,10 +317,15 @@ function onSetOption(args: { name: string; value: unknown }): void {
   if (name === 'pingIntervalSec') {
     const newInterval = parseInt(value as string) || 10;
     CONFIG.pingIntervalSec = newInterval;
-    // Re-register cron with new interval
-    cron.unregister('ping');
-    const cronExpr = `*/${newInterval} * * * * *`;
-    cron.register('ping', cronExpr);
+
+    // Restart interval with new timing
+    if (PING_INTERVAL_ID !== null) {
+      clearInterval(PING_INTERVAL_ID);
+      const intervalMs = newInterval * 1000;
+      PING_INTERVAL_ID = setInterval(() => {
+        doPing();
+      }, intervalMs) as unknown as number;
+    }
     console.log(`[server-ping] Ping interval changed to ${newInterval}s`);
   } else if (name === 'notifyOnDown') {
     CONFIG.notifyOnDown = !!value;
@@ -335,12 +358,12 @@ function onSessionEnd(args: { sessionId: string }): void {
 }
 
 // ---------------------------------------------------------------------------
-// Cron handler — the main ping logic
+// Cron handler (legacy — now using setInterval instead)
 // ---------------------------------------------------------------------------
 
-function onCronTrigger(scheduleId: string): void {
-  if (scheduleId !== 'ping') return;
-  doPing();
+function onCronTrigger(_scheduleId: string): void {
+  // No longer using cron — ping is driven by setInterval in start()
+  // This handler is kept for backwards compatibility
 }
 
 function doPing(): void {
@@ -520,9 +543,9 @@ const skill: Skill = {
     name: 'Server Ping',
     runtime: 'v8',
     entry: 'index.js',
-    version: '2.0.0',
+    version: '2.1.0',
     description:
-      'Monitors server health with configurable ping intervals. Demos setup flow, DB, state, data, cron, net, platform, skills interop, options, and tools.',
+      'Monitors server health with configurable ping intervals using setInterval. Demos setup flow, DB, state, data, net, platform, skills interop, options, and tools.',
     auto_start: false,
     setup: { required: true, label: 'Configure Server Ping' },
   },
