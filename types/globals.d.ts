@@ -91,25 +91,6 @@ declare const data: {
 declare var tools: ToolDefinition[];
 
 // ---------------------------------------------------------------------------
-// Lifecycle hooks (implemented by skills as top-level functions)
-// ---------------------------------------------------------------------------
-
-// These are declared so TypeScript recognises them as valid top-level
-// function declarations in script mode without "unused" warnings.
-
-declare function init(): void;
-declare function start(): void;
-declare function stop(): void;
-declare function onCronTrigger(scheduleId: string): void;
-declare function onSetupStart(): SetupStartResult;
-declare function onSetupSubmit(args: { stepId: string; values: Record<string, unknown> }): SetupSubmitResult;
-declare function onSetupCancel(): void;
-declare function onListOptions(): { options: SkillOption[] };
-declare function onSetOption(args: { name: string; value: unknown }): void;
-declare function onSessionStart(args: { sessionId: string }): void;
-declare function onSessionEnd(args: { sessionId: string }): void;
-
-// ---------------------------------------------------------------------------
 // Supporting interfaces
 // ---------------------------------------------------------------------------
 

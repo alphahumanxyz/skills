@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# test-js.sh — Compile TypeScript and run QuickJS skill tests.
+# Usage:
+#   ./scripts/test-js.sh                                    # run all tests
+#   ./scripts/test-js.sh skills/server-ping/__tests__/test-server-ping.ts  # run one
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+# ── Check prerequisites ─────────────────────────────────────────────────────
+
+if ! command -v qjs &>/dev/null; then
+  echo "Error: qjs (QuickJS) not found. Install with: brew install quickjs"
+  exit 1
+fi
+
+if ! command -v npx &>/dev/null; then
+  echo "Error: npx not found. Install Node.js first."
+  exit 1
+fi
+
+# ── Compile TypeScript ───────────────────────────────────────────────────────
+
+echo "Compiling TypeScript (tsconfig.test.json)..."
+npx tsc -p tsconfig.test.json
+
+# Strip "export {};" from compiled scripts. QuickJS loadScript() runs files as
+# scripts (not modules), but tsc emits "export {};" for files with no
+# imports/exports. The runner.js (loaded with --module) is unaffected.
+find skills dev/js-harness -name '*.js' -not -name 'runner.js' -exec \
+  sed -i '' '/^export \{\};$/d' {} +
+
+echo "Compilation complete."
+
+# ── Discover test files ──────────────────────────────────────────────────────
+
+TEST_FILES=()
+
+if [ $# -gt 0 ]; then
+  # Use provided arguments (convert .ts to .js if needed)
+  for arg in "$@"; do
+    js_file="${arg%.ts}.js"
+    if [ ! -f "$js_file" ]; then
+      echo "Error: Compiled test file not found: $js_file"
+      exit 1
+    fi
+    TEST_FILES+=("$js_file")
+  done
+else
+  # Auto-discover all test files
+  while IFS= read -r -d '' file; do
+    TEST_FILES+=("$file")
+  done < <(find skills -path '*/__tests__/test-*.js' -print0 2>/dev/null)
+fi
+
+if [ ${#TEST_FILES[@]} -eq 0 ]; then
+  echo "No test files found."
+  exit 0
+fi
+
+echo "Found ${#TEST_FILES[@]} test file(s)."
+echo ""
+
+# ── Run tests ────────────────────────────────────────────────────────────────
+
+FAILED=0
+PASSED=0
+
+for test_file in "${TEST_FILES[@]}"; do
+  echo "━━━ Running: $test_file ━━━"
+  if qjs --module dev/js-harness/runner.js "$test_file"; then
+    PASSED=$((PASSED + 1))
+  else
+    FAILED=$((FAILED + 1))
+  fi
+done
+
+# ── Summary ──────────────────────────────────────────────────────────────────
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+if [ "$FAILED" -eq 0 ]; then
+  echo "  All $PASSED test suite(s) passed."
+else
+  echo "  $FAILED of $((PASSED + FAILED)) test suite(s) failed."
+  exit 1
+fi

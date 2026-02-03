@@ -464,6 +464,12 @@ function sendNotification(title: string, body: string): void {
 // Tools (callable by AI and other skills)
 // ---------------------------------------------------------------------------
 
+// Runtime lifecycle hooks (called by QuickJS host, not within this module)
+void init; void start; void stop; void onCronTrigger;
+void onSetupStart; void onSetupSubmit; void onSetupCancel;
+void onListOptions; void onSetOption;
+void onSessionStart; void onSessionEnd;
+
 tools = [
   {
     name: "get-ping-stats",
@@ -607,3 +613,5 @@ tools = [
     },
   },
 ];
+
+export {};

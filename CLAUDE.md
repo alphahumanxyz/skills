@@ -145,6 +145,14 @@ skills/                          # Repo root
 │   ├── test-entities.py         # Entity emission tester (live Telegram)
 │   ├── debug-graph.py           # Entity graph inspector / REPL
 │   └── update-catalog.py        # Skills catalog builder
+├── dev/
+│   └── js-harness/              # QuickJS test harness (TypeScript)
+│       ├── mock-sql.ts          # In-memory SQL engine
+│       ├── mock-bridge.ts       # Mock bridge globals (__db, __store, etc.)
+│       ├── helper-layer.ts      # JS wrapper layer (from skill_instance.rs)
+│       ├── assertions.ts        # describe/it/assert test framework
+│       ├── test-utils.ts        # setupSkillTest(), callTool() helpers
+│       └── runner.ts            # Entry point (ES module, uses QuickJS std/os)
 ├── .github/                     # CI/CD and PR templates
 ├── CONTRIBUTING.md              # Contribution guidelines
 └── README.md                    # Project README
@@ -191,6 +199,46 @@ skill-scan
 skill-new my-skill
 skill-catalog
 ```
+
+## JS Skill Testing (QuickJS)
+
+QuickJS skills (TypeScript compiled to JS) are tested with a dedicated harness that runs on the `qjs` CLI. All Rust bridge globals are mocked in-memory.
+
+### Prerequisites
+
+```bash
+brew install quickjs    # provides `qjs` CLI
+yarn install            # TypeScript compiler
+```
+
+### Commands
+
+```bash
+# Run all JS skill tests (compiles + discovers + runs)
+./scripts/test-js.sh
+
+# Run a specific test
+./scripts/test-js.sh skills/server-ping/__tests__/test-server-ping.ts
+
+# Compile only (no run)
+npx tsc -p tsconfig.test.json
+
+# Run already-compiled test directly
+qjs --module dev/js-harness/runner.js skills/server-ping/__tests__/test-server-ping.js
+```
+
+### Writing Tests
+
+1. Create `skills/<name>/__tests__/test-<name>.ts`
+2. Use `setupSkillTest()` to reset mocks before each test group
+3. Call skill lifecycle hooks directly: `init()`, `start()`, `onCronTrigger("id")`
+4. Use `callTool("tool-name", { args })` to test tools
+5. Use `getMockState()` to inspect mock internals (store, cron, notifications, etc.)
+6. Must run from repo root (loadScript paths are relative to CWD)
+
+### Test Config
+
+`tsconfig.test.json` extends the base config but includes `dev/js-harness/` and `skills/*/__tests__/`. Relaxes unused-variable checks for test code.
 
 ## Code Quality Tools
 

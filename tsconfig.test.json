@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": ".",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": [
+    "types/**/*.d.ts",
+    "skills/*/index.ts",
+    "skills/*/__tests__/**/*.ts",
+    "dev/js-harness/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".venv",
+    "skills-py"
+  ]
+}
