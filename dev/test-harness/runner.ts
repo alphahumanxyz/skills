@@ -140,6 +140,22 @@ async function main(): Promise<void> {
   // Initialize mock state
   initMockState();
 
+  // Forward environment variables from Deno.env to mock state
+  // This allows .env files loaded via --env flag to be accessible via platform.env()
+  const envVarsToForward = [
+    'TELEGRAM_API_ID',
+    'TELEGRAM_API_HASH',
+    'TELEGRAM_BOT_TOKEN',
+    'NOTION_API_KEY',
+    'OPENAI_API_KEY',
+  ];
+  for (const key of envVarsToForward) {
+    const value = Deno.env.get(key);
+    if (value) {
+      setEnv(key, value);
+    }
+  }
+
   // Create bridge APIs
   const bridgeAPIs = createBridgeAPIs();
 
