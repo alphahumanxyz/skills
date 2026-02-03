@@ -106,34 +106,61 @@ try {
   writeFileSync(gramjsBundlePath, gramjsBundleCode);
   console.log(`[bundle-telegram] Wrote gramjs bundle to: gramjs-bundle.js`);
 
-  // Now read the compiled telegram skill and bundle with gramjs
-  console.log('[bundle-telegram] Step 2: Bundling telegram skill with gramjs...');
+  // Now bundle the compiled telegram skill with its dependencies
+  console.log('[bundle-telegram] Step 2: Bundling telegram skill code...');
 
-  let skillCode = readFileSync(telegramTsOutPath, 'utf-8');
+  // Bundle the skill code with its tool files
+  const skillBundleResult = await esbuild.build({
+    entryPoints: [telegramTsOutPath],
+    bundle: true,
+    write: false,
+    format: 'iife',
+    globalName: '__skill_bundle',
+    platform: 'browser',
+    target: 'es2020',
+    minify: false,
+    sourcemap: false,
+    treeShaking: true,
+    legalComments: 'none',
+    // Mark 'telegram' as external since we're providing GramJS separately
+    external: ['telegram'],
+    // Inject polyfills
+    inject: [join(polyfillsDir, 'buffer-inject.js')],
+    alias: {
+      buffer: join(polyfillsDir, 'buffer.js'),
+      crypto: join(polyfillsDir, 'crypto.js'),
+      events: join(polyfillsDir, 'events.js'),
+    },
+  });
 
-  // The skill code should work as-is since it declares GramJS as a global
-  // We just need to prepend the gramjs bundle to make GramJS available
+  if (!skillBundleResult.outputFiles || skillBundleResult.outputFiles.length === 0) {
+    throw new Error('Failed to bundle skill code');
+  }
 
-  // Footer to expose skill to globalThis (same as bundle-skills.mjs)
+  let skillBundleCode = skillBundleResult.outputFiles[0].text;
+
+  // Replace require("telegram") with GramJS since we're providing it
+  skillBundleCode = skillBundleCode.replace(/require\s*\(\s*["']telegram["']\s*\)/g, 'GramJS');
+
+  // CommonJS shim for skill code that references 'exports'
+  const SKILL_HEADER = `// CommonJS shim for skill entry point
+var exports = {};
+var module = { exports: exports };
+`;
+
+  // Footer to expose skill to globalThis
   const SKILL_FOOTER = `
 // Expose skill bundle to globalThis for V8 runtime access
 globalThis.__skill = __skill_bundle;
 `;
 
   // Create the final bundled skill file
-  // Wrap skill code in an IIFE like bundle-skills does for consistency
   const finalCode = `// Bundled telegram skill with gramjs
 ${gramjsBundleCode}
 
-// Main skill code (wrapped in IIFE)
-var __skill_bundle = (function() {
-  var exports = {};
-  var module = { exports: exports };
-
-${skillCode}
-
-  return module.exports;
-})();
+// Skill code bundle
+${SKILL_HEADER}
+${skillBundleCode}
 
 ${SKILL_FOOTER}
 `;

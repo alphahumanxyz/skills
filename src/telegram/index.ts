@@ -235,24 +235,63 @@ async function initClient(): Promise<void> {
 
   CLIENT_CONNECTING = true;
   CLIENT_ERROR = null;
-
-  const client = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 5 });
-
-  await client.connect();
-  const authorized = await client.checkAuthorization();
-  if (authorized) {
-    CONFIG.isAuthenticated = true;
-    // const sessionString = client.session.save();
-    // if (sessionString) {
-    //   CONFIG.sessionString = sessionString;
-    //   store.set('config', CONFIG);
-    // }
-    await loadMe();
-  }
-
-  CLIENT_CONNECTING = false;
   _syncState();
   publishState();
+
+  console.log('[telegram] Creating TelegramClient with apiId:', apiId);
+
+  try {
+    const client = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 5 });
+
+    console.log('[telegram] Connecting to Telegram servers...');
+    await client.connect();
+    console.log('[telegram] Connected successfully');
+
+    // Test connectivity with help.getAppConfig (no auth required)
+    try {
+      console.log('[telegram] Testing connectivity with help.getAppConfig...');
+      const appConfig = await client.invoke(new GramJS.Api.help.GetAppConfig({ hash: 0 }));
+      console.log('[telegram] Connectivity test passed - received app config');
+      // Log a small sample of the config to confirm it's working
+      if (appConfig && typeof appConfig === 'object') {
+        console.log('[telegram] App config type:', appConfig.className || 'unknown');
+      }
+    } catch (configErr) {
+      // This is not fatal - just log the connectivity test failure
+      console.warn('[telegram] Connectivity test (help.getAppConfig) failed:', configErr);
+    }
+
+    // Assign to global CLIENT
+    CLIENT = client;
+    _syncState();
+
+    const authorized = await client.checkAuthorization();
+    console.log('[telegram] Authorization check:', authorized ? 'authorized' : 'not authorized');
+
+    if (authorized) {
+      CONFIG.isAuthenticated = true;
+      // StringSession.save() returns string, but abstract Session declares void
+      const sessionStr = (client.session.save as () => string)();
+      if (sessionStr) {
+        CONFIG.sessionString = sessionStr;
+        store.set('config', CONFIG);
+      }
+      await loadMe();
+    }
+
+    CLIENT_CONNECTING = false;
+    _syncState();
+    publishState();
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('[telegram] Failed to connect:', errorMsg);
+    CLIENT_ERROR = errorMsg;
+    CLIENT_CONNECTING = false;
+    CLIENT = null;
+    _syncState();
+    publishState();
+    throw err;
+  }
 }
 
 async function loadMe(): Promise<void> {
@@ -507,14 +546,82 @@ function init(): void {
     CONFIG.apiHash = platform.env('TELEGRAM_API_HASH') || '';
   }
 
+  console.log(`[telegram] Config loaded — apiId: ${CONFIG.apiId ? 'set' : 'not set'}, apiHash: ${CONFIG.apiHash ? 'set' : 'not set'}`);
+  console.log(`[telegram] Session: ${CONFIG.sessionString ? 'present' : 'not present'}, authenticated: ${CONFIG.isAuthenticated}`);
+
   // Sync state to globalThis for tool modules
   _syncState();
 
   // Start the worker loop immediately so requests can be processed during setup
   startWorkerLoop();
 
-  console.log(`[telegram] Config loaded — authenticated: ${CONFIG.isAuthenticated}`);
+  // Test connectivity on init if we have credentials (even without a session)
+  // This helps diagnose connection issues early
+  if (CONFIG.apiId && CONFIG.apiHash) {
+    console.log('[telegram] Credentials available, testing connectivity on init...');
+    testConnectivity();
+  } else {
+    console.log('[telegram] No credentials available yet, skipping connectivity test');
+  }
+
   publishState();
+}
+
+// Separate async function for connectivity test (can't use async in init directly)
+function testConnectivity(): void {
+  // Use setTimeout to run async test without blocking init
+  setTimeout(async () => {
+    try {
+      console.log('[telegram] Starting connectivity test...');
+      const stringSession = new GramJS.StringSession(CONFIG.sessionString || '');
+      const testClient = new TelegramClient(stringSession, CONFIG.apiId, CONFIG.apiHash, {
+        connectionRetries: 3,
+      });
+
+      console.log('[telegram] Connecting to Telegram for connectivity test...');
+      await testClient.connect();
+      console.log('[telegram] Connected to Telegram successfully');
+
+      // Test with help.getAppConfig (no auth required)
+      console.log('[telegram] Calling help.getAppConfig...');
+      const appConfig = await testClient.invoke(new GramJS.Api.help.GetAppConfig({ hash: 0 }));
+      console.log('[telegram] help.getAppConfig succeeded!');
+
+      if (appConfig && typeof appConfig === 'object') {
+        console.log('[telegram] App config className:', (appConfig as { className?: string }).className || 'AppConfig');
+      }
+
+      // If this test client connected, check if we should keep it or dispose
+      // If we have a session, we'll use it as the main client
+      if (CONFIG.sessionString) {
+        // We have a session, so this test client can become the main client
+        CLIENT = testClient;
+        CLIENT_ERROR = null;
+
+        // Check authorization
+        const authorized = await testClient.checkAuthorization();
+        console.log('[telegram] Authorization status:', authorized ? 'authorized' : 'not authorized');
+
+        if (authorized) {
+          CONFIG.isAuthenticated = true;
+          await loadMe();
+        }
+      } else {
+        // No session, disconnect the test client
+        console.log('[telegram] No session, disconnecting test client');
+        await testClient.disconnect();
+      }
+
+      _syncState();
+      publishState();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error('[telegram] Connectivity test failed:', errorMsg);
+      CLIENT_ERROR = `Connectivity test failed: ${errorMsg}`;
+      _syncState();
+      publishState();
+    }
+  }, 0);
 }
 
 function start(): void {
@@ -525,9 +632,13 @@ function start(): void {
     startWorkerLoop();
   }
 
-  // Auto-connect if we have credentials and session
-  if (CONFIG.apiId && CONFIG.apiHash && CONFIG.sessionString) {
+  // Auto-connect if we have credentials and session, but only if not already connected
+  // The init() connectivity test may have already established a connection
+  if (CONFIG.apiId && CONFIG.apiHash && CONFIG.sessionString && !CLIENT && !CLIENT_CONNECTING) {
+    console.log('[telegram] Auto-connecting with existing session...');
     enqueueRequest('connect', {});
+  } else if (CLIENT) {
+    console.log('[telegram] Already connected from init');
   }
 
   publishState();

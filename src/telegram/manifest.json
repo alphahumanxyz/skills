@@ -5,7 +5,7 @@
   "entry": "index.js",
   "version": "2.0.0",
   "description": "Telegram integration via TDLib — 50+ tools for chats, messages, contacts, admin, and search.",
-  "auto_start": false,
+  "auto_start": true,
   "platforms": ["windows", "macos", "linux", "android", "ios"],
   "env": ["TELEGRAM_API_ID", "TELEGRAM_API_HASH"],
   "setup": { "required": true, "label": "Connect Telegram" },

@@ -15,11 +15,21 @@ const rootDir = join(__dirname, '..');
 const skillsOutDir = join(rootDir, 'skills');
 const skillsSrcDir = join(rootDir, 'skills-ts-out');
 
+// Header code that provides CommonJS shim for the entry point
+// This fixes "exports is not defined" error when entry point uses CommonJS
+const SKILL_HEADER = `/* Bundled skill with esbuild */
+"use strict";
+// CommonJS shim for entry point
+var exports = {};
+var module = { exports: exports };
+`;
+
 // Footer code that exposes the bundled skill object to globalThis.__skill
 // The V8 runtime will access the skill via globalThis.__skill.default
 const SKILL_FOOTER = `
 // Expose skill bundle to globalThis for V8 runtime access
-globalThis.__skill = __skill_bundle;
+// Use module.exports.default if available (CommonJS), otherwise use __skill_bundle
+globalThis.__skill = module.exports.default ? { default: module.exports.default } : __skill_bundle;
 `;
 
 // Find all skills that have a tools directory
@@ -28,6 +38,12 @@ const skills = readdirSync(skillsSrcDir, { withFileTypes: true })
   .map(dirent => dirent.name);
 
 for (const skillName of skills) {
+  // Skip telegram skill - it has a dedicated bundler (bundle-telegram.mjs)
+  if (skillName === 'telegram') {
+    console.log(`[bundle-skills] Skipping ${skillName} (handled by bundle-telegram.mjs)`);
+    continue;
+  }
+
   const skillDirInput = join(skillsSrcDir, skillName);
   const skillDirOutput = join(skillsOutDir, skillName);
   const skillIndexPath = join(skillDirInput, 'index.js');
@@ -110,6 +126,10 @@ for (const skillName of skills) {
     }
 
     let bundledCode = result.outputFiles[0].text;
+
+    // Remove the default esbuild header and add our CommonJS shim header
+    bundledCode = bundledCode.replace(/^\/\* Bundled skill with esbuild \*\/\n"use strict";\n/, '');
+    bundledCode = SKILL_HEADER + bundledCode;
 
     // Append footer that exposes skill functions to globalThis
     bundledCode = bundledCode + SKILL_FOOTER;
