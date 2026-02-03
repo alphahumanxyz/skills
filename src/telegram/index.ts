@@ -744,30 +744,6 @@ function onSetupCancel(): void {
   console.log('[telegram] Setup cancelled');
 }
 
-function onDisconnect(): void {
-  console.log('[telegram] Disconnecting');
-
-  CONFIG.isAuthenticated = false;
-  CONFIG.phoneNumber = '';
-  CONFIG.sessionString = '';
-  CONFIG.phoneCodeHash = '';
-  CONFIG.pendingCode = false;
-  CACHE.me = null;
-  CACHE.dialogs = [];
-
-  if (CLIENT) {
-    try {
-      CLIENT.disconnect();
-    } catch (e) {
-      console.warn('[telegram] Error disconnecting:', e);
-    }
-    CLIENT = null;
-  }
-
-  store.set('config', CONFIG);
-  publishState();
-}
-
 // ---------------------------------------------------------------------------
 // State Publishing
 // ---------------------------------------------------------------------------
@@ -1012,24 +988,25 @@ tools = [
 // Exports to globalThis (required for V8 runtime)
 // ---------------------------------------------------------------------------
 
-const g = globalThis as unknown as {
-  init: typeof init;
-  start: typeof start;
-  stop: typeof stop;
-  onCronTrigger: typeof onCronTrigger;
-  onSetupStart: typeof onSetupStart;
-  onSetupSubmit: typeof onSetupSubmit;
-  onSetupCancel: typeof onSetupCancel;
-  onDisconnect: typeof onDisconnect;
-  tools: typeof tools;
+const skill: Skill = {
+  info: {
+    id: 'telegram',
+    name: 'Telegram',
+    runtime: 'v8',
+    entry: 'index.js',
+    version: '1.0.0',
+    description: 'Telegram integration',
+    auto_start: false,
+    setup: { required: true, label: 'Configure Telegram' },
+  },
+  tools,
+  init,
+  start,
+  stop,
+  onCronTrigger,
+  onSetupStart,
+  onSetupSubmit,
+  onSetupCancel,
 };
 
-g.init = init;
-g.start = start;
-g.stop = stop;
-g.onCronTrigger = onCronTrigger;
-g.onSetupStart = onSetupStart;
-g.onSetupSubmit = onSetupSubmit;
-g.onSetupCancel = onSetupCancel;
-g.onDisconnect = onDisconnect;
-g.tools = tools;
+export default skill;
