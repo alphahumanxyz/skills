@@ -20,7 +20,6 @@
   "exclude": [
     "node_modules",
     ".venv",
-    "skills-py",
     "src/*/__tests__/**/*.ts"
   ]
 }

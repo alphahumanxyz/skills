@@ -6,7 +6,6 @@
   "version": "2.0.0",
   "description": "Monitors server health with configurable ping intervals. Demos setup flow, DB, state, data, cron, net, platform, skills interop, options, and tools.",
   "auto_start": false,
-  "platforms": ["windows", "macos", "linux"],
   "setup": {
     "required": true,
     "label": "Configure Server Ping"
