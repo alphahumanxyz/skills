@@ -2,70 +2,11 @@
 // Telegram integration skill using TDLib via V8 runtime.
 // Provides 50+ tools for chats, messages, contacts, admin, and search.
 
-// ---------------------------------------------------------------------------
-// Runtime Globals (provided by V8 bootstrap)
-// ---------------------------------------------------------------------------
-
-declare const store: {
-  get(key: string): unknown;
-  set(key: string, value: unknown): void;
-  delete(key: string): void;
-  keys(): string[];
-};
-
-declare const state: {
-  get(key: string): unknown;
-  set(key: string, value: unknown): void;
-  setPartial(partial: Record<string, unknown>): void;
-};
-
-declare const platform: {
-  os(): string;
-  env(key: string): string;
-};
-
-declare let tools: ToolDefinition[];
+// Runtime globals (store, state, platform, tools) are declared in types/globals.d.ts
 
 // ---------------------------------------------------------------------------
-// Type Definitions
+// TDLib-Specific Type Definitions
 // ---------------------------------------------------------------------------
-
-interface ToolDefinition {
-  name: string;
-  description: string;
-  input_schema: {
-    type: string;
-    properties: Record<string, unknown>;
-    required?: string[];
-  };
-  execute(args?: Record<string, unknown>): string;
-}
-
-interface SetupField {
-  name: string;
-  type: string;
-  label: string;
-  description: string;
-  required?: boolean;
-  placeholder?: string;
-}
-
-interface SetupStep {
-  id: string;
-  title: string;
-  description: string;
-  fields: SetupField[];
-}
-
-interface SetupStartResult {
-  step: SetupStep;
-}
-
-interface SetupSubmitResult {
-  status: "next" | "complete" | "error";
-  nextStep?: SetupStep;
-  errors?: Array<{ field: string; message: string }>;
-}
 
 interface TdlibQuery {
   "@type": string;
@@ -2165,59 +2106,36 @@ tools = [
 // Exports to globalThis (required for V8 runtime)
 // ---------------------------------------------------------------------------
 
-// Augment globalThis for TypeScript
-declare global {
-  // eslint-disable-next-line no-var
-  var init: typeof _init;
-  // eslint-disable-next-line no-var
-  var start: typeof _start;
-  // eslint-disable-next-line no-var
-  var stop: typeof _stop;
-  // eslint-disable-next-line no-var
-  var onSetupStart: typeof _onSetupStart;
-  // eslint-disable-next-line no-var
-  var onSetupSubmit: typeof _onSetupSubmit;
-  // eslint-disable-next-line no-var
-  var onSetupCancel: typeof _onSetupCancel;
-  // eslint-disable-next-line no-var
-  var onDisconnect: typeof _onDisconnect;
-  // eslint-disable-next-line no-var
-  var TdlibState: typeof _TdlibState;
-  // eslint-disable-next-line no-var
-  var CONFIG: typeof _CONFIG;
-  // eslint-disable-next-line no-var
-  var CACHE: typeof _CACHE;
-  // eslint-disable-next-line no-var
-  var tdlib: typeof _tdlib;
-}
-
-// Rename for export
-const _init = init;
-const _start = start;
-const _stop = stop;
-const _onSetupStart = onSetupStart;
-const _onSetupSubmit = onSetupSubmit;
-const _onSetupCancel = onSetupCancel;
-const _onDisconnect = onDisconnect;
-const _TdlibState = TdlibState;
-const _CONFIG = CONFIG;
-const _CACHE = CACHE;
-const _tdlib = tdlib;
+// Use type assertion to extend globalThis with skill-specific exports
+const g = globalThis as unknown as {
+  init: typeof init;
+  start: typeof start;
+  stop: typeof stop;
+  onSetupStart: typeof onSetupStart;
+  onSetupSubmit: typeof onSetupSubmit;
+  onSetupCancel: typeof onSetupCancel;
+  onDisconnect: typeof onDisconnect;
+  tools: typeof tools;
+  TdlibState: typeof TdlibState;
+  CONFIG: typeof CONFIG;
+  CACHE: typeof CACHE;
+  tdlib: typeof tdlib;
+};
 
 // Export lifecycle hooks
-globalThis.init = init;
-globalThis.start = start;
-globalThis.stop = stop;
-globalThis.onSetupStart = onSetupStart;
-globalThis.onSetupSubmit = onSetupSubmit;
-globalThis.onSetupCancel = onSetupCancel;
-globalThis.onDisconnect = onDisconnect;
+g.init = init;
+g.start = start;
+g.stop = stop;
+g.onSetupStart = onSetupStart;
+g.onSetupSubmit = onSetupSubmit;
+g.onSetupCancel = onSetupCancel;
+g.onDisconnect = onDisconnect;
 
 // Export tools array
-globalThis.tools = tools;
+g.tools = tools;
 
 // Export state (for testing)
-globalThis.TdlibState = TdlibState;
-globalThis.CONFIG = CONFIG;
-globalThis.CACHE = CACHE;
-globalThis.tdlib = tdlib;
+g.TdlibState = TdlibState;
+g.CONFIG = CONFIG;
+g.CACHE = CACHE;
+g.tdlib = tdlib;
