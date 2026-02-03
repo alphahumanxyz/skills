@@ -13,12 +13,20 @@
  * Example:
  *   yarn test:script simple-skill scripts/examples/test-simple-skill.js
  *
- * Supported Skill Formats:
- *   - Plain JavaScript skills (like simple-skill) that expose functions via
- *     globalThis.__skill or directly on globalThis work correctly.
- *   - esbuild IIFE-bundled skills have a known issue where tool definitions
- *     may be undefined due to CommonJS interop problems. Lifecycle hooks
- *     (init, start, stop) typically work, but tools may not.
+ * Supported Features:
+ *   - Bridge APIs: db, store, net, platform, state, data, cron, skills
+ *   - Lifecycle hooks: init, start, stop
+ *   - Setup flow: onSetupStart, onSetupSubmit
+ *   - Options: onListOptions, onSetOption
+ *   - Session events: onSessionStart, onSessionEnd
+ *   - Timer mocking: setTimeout, setInterval
+ *
+ * Limitations:
+ *   - Tools that reference IIFE-scoped state variables (like PING_COUNT, FAIL_COUNT)
+ *     may throw ReferenceError because the new Function() sandbox doesn't expose
+ *     globalThis properties as variable bindings. The production Rust V8 runtime
+ *     handles this correctly.
+ *   - Use simple-skill as a reference for harness-compatible skill structure.
  */
 
 import { createBridgeAPIs } from './bootstrap.ts';
@@ -237,7 +245,8 @@ async function main(): Promise<void> {
       // Write back skill exports to G
       G.__skill = (typeof __skill !== 'undefined') ? __skill : ((typeof globalThis !== 'undefined' && globalThis.__skill) ? globalThis.__skill : G.__skill);
       // Copy lifecycle functions to G (skill may define them directly or via globalThis)
-      if (typeof tools !== 'undefined') G.tools = tools;
+      // NOTE: Don't write back 'tools' here - bundled skills have fixed tools in __skill.default.tools
+      // and the local 'tools' variable may have broken references due to CommonJS interop issues
       if (typeof init !== 'undefined') G.init = init;
       if (typeof start !== 'undefined') G.start = start;
       if (typeof stop !== 'undefined') G.stop = stop;
@@ -283,7 +292,9 @@ async function main(): Promise<void> {
   if (skill) {
     // Expose skill functions to G for test script access (from __skill.default)
     // This is in addition to any direct globalThis assignments the skill makes
-    if (skill.tools && !G.tools) G.tools = skill.tools;
+    // Always prefer skill.tools over G.tools - bundled skills have fixup code that
+    // repairs the tools array after the CommonJS interop issue
+    if (skill.tools) G.tools = skill.tools;
     if (skill.init && !G.init) G.init = skill.init;
     if (skill.start && !G.start) G.start = skill.start;
     if (skill.stop && !G.stop) G.stop = skill.stop;

@@ -6,7 +6,7 @@
  * Similar to bundle-telegram.mjs but for skills with tool files.
  */
 import * as esbuild from 'esbuild';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -16,7 +16,7 @@ const skillsOutDir = join(rootDir, 'skills');
 const skillsSrcDir = join(rootDir, 'skills-ts-out');
 
 // Header code that provides CommonJS shim for the entry point
-// This fixes "exports is not defined" error when entry point uses CommonJS
+// This is needed because the bundled modules write to `exports`
 const SKILL_HEADER = `/* Bundled skill with esbuild */
 "use strict";
 // CommonJS shim for entry point
@@ -30,6 +30,31 @@ const SKILL_FOOTER = `
 // Expose skill bundle to globalThis for V8 runtime access
 // Use module.exports.default if available (CommonJS), otherwise use __skill_bundle
 globalThis.__skill = module.exports.default ? { default: module.exports.default } : __skill_bundle;
+
+// IMPORTANT: Fix for esbuild CommonJS interop issue
+// Tool modules write to global 'exports' object, but the tools array references
+// empty module-specific exports. Rebuild tools array from global exports.
+(function() {
+  var skill = globalThis.__skill && globalThis.__skill.default;
+  if (!skill || !skill.tools) return;
+
+  // Check if tools array has undefined elements (sign of the CommonJS issue)
+  var hasUndefined = skill.tools.some(function(t) { return t === undefined || t === null; });
+  if (!hasUndefined) return;
+
+  // Collect tools from global exports object (where they actually ended up)
+  var fixedTools = [];
+  for (var key in exports) {
+    if (key.endsWith('Tool') && exports[key] && exports[key].name && exports[key].execute) {
+      fixedTools.push(exports[key]);
+    }
+  }
+
+  if (fixedTools.length > 0) {
+    skill.tools = fixedTools;
+    console.log('[skill-fixup] Rebuilt tools array from exports (' + fixedTools.length + ' tools)');
+  }
+})();
 `;
 
 // Find all skills that have a tools directory
@@ -154,6 +179,36 @@ for (const skillName of skills) {
     }
     // Don't exit - continue with other skills
   }
+}
+
+// Copy non-bundled skills (no tools dir) from skills-ts-out to skills; wrap with CommonJS shim so V8 sees globalThis.__skill
+const srcDir = join(rootDir, 'src');
+const COPY_HEADER = `/* Skill (no tools - copied from TS build) */
+"use strict";
+var exports = {};
+var module = { exports: exports };
+`;
+const COPY_FOOTER = `
+globalThis.__skill = module.exports && module.exports.default ? { default: module.exports.default } : (module.exports || {});
+`;
+for (const skillName of skills) {
+  if (skillName === 'telegram') continue;
+  const skillDirInput = join(skillsSrcDir, skillName);
+  const skillDirOutput = join(skillsOutDir, skillName);
+  const skillIndexPath = join(skillDirInput, 'index.js');
+  const skillIndexPathOutput = join(skillDirOutput, 'index.js');
+  const toolsDir = join(skillDirInput, 'tools');
+  if (!existsSync(skillIndexPath)) continue;
+  if (existsSync(skillIndexPathOutput)) continue; // Already written by bundle step
+  if (existsSync(toolsDir) && readdirSync(toolsDir).some(f => f.endsWith('.js'))) continue; // Would have been bundled
+  if (!existsSync(skillDirOutput)) mkdirSync(skillDirOutput, { recursive: true });
+  let code = readFileSync(skillIndexPath, 'utf-8');
+  code = COPY_HEADER + code + COPY_FOOTER;
+  writeFileSync(skillIndexPathOutput, code);
+  const srcManifest = join(srcDir, skillName, 'manifest.json');
+  const outManifest = join(skillDirOutput, 'manifest.json');
+  if (existsSync(srcManifest)) copyFileSync(srcManifest, outManifest);
+  console.log(`[bundle-skills] Copied ${skillName} (no tools)`);
 }
 
 console.log('[bundle-skills] Bundle complete');

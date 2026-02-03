@@ -6,6 +6,10 @@ import { pingNowTool } from './tools/ping-now';
 import { readConfigTool } from './tools/read-config';
 import { updateServerUrlTool } from './tools/update-server-url';
 
+// Import to initialize state; getSkillState() is called as global at runtime
+import './skill-state';
+import type { SkillConfig } from './types';
+
 // server-ping/index.ts
 // Comprehensive demo skill showcasing all V8 runtime capabilities:
 //   Setup flow, DB (SQLite), Store (KV), State (frontend pub), Data (file I/O),
@@ -13,54 +17,12 @@ import { updateServerUrlTool } from './tools/update-server-url';
 //   Options, Tools, and Session lifecycle.
 
 // ---------------------------------------------------------------------------
-// Configuration (populated by setup flow, persisted in store)
-// ---------------------------------------------------------------------------
-
-interface SkillConfig {
-  serverUrl: string;
-  pingIntervalSec: number;
-  notifyOnDown: boolean;
-  notifyOnRecover: boolean;
-  verboseLogging: boolean;
-}
-
-const CONFIG: SkillConfig = {
-  serverUrl: '',
-  pingIntervalSec: 10,
-  notifyOnDown: true,
-  notifyOnRecover: true,
-  verboseLogging: false,
-};
-
-let PING_COUNT = 0;
-let FAIL_COUNT = 0;
-let CONSECUTIVE_FAILS = 0;
-let WAS_DOWN = false;
-let ACTIVE_SESSIONS: string[] = [];
-let PING_INTERVAL_ID: number | null = null;
-
-// Expose shared state to globalThis for bundled tool modules that use `declare const`
-// This is needed because esbuild bundles tool files in separate CommonJS modules
-// and they reference these variables as globals via ambient TypeScript declarations
-const _g = globalThis as Record<string, unknown>;
-_g.CONFIG = CONFIG;
-_g.PING_COUNT = PING_COUNT;
-_g.FAIL_COUNT = FAIL_COUNT;
-_g.CONSECUTIVE_FAILS = CONSECUTIVE_FAILS;
-
-// Helper to sync mutable state to globalThis after changes
-function _syncState(): void {
-  _g.PING_COUNT = PING_COUNT;
-  _g.FAIL_COUNT = FAIL_COUNT;
-  _g.CONSECUTIVE_FAILS = CONSECUTIVE_FAILS;
-}
-
-// ---------------------------------------------------------------------------
 // Lifecycle hooks
 // ---------------------------------------------------------------------------
 
 function init(): void {
   console.log(`[server-ping] Initializing on ${platform.os()}`);
+  const s = getSkillState();
 
   // Create DB table for ping history
   db.exec(
@@ -79,19 +41,19 @@ function init(): void {
   // Load persisted config from store
   const saved = store.get('config') as Partial<SkillConfig> | null;
   if (saved) {
-    CONFIG.serverUrl = saved.serverUrl ?? CONFIG.serverUrl;
-    CONFIG.pingIntervalSec = saved.pingIntervalSec ?? CONFIG.pingIntervalSec;
-    CONFIG.notifyOnDown = saved.notifyOnDown ?? CONFIG.notifyOnDown;
-    CONFIG.notifyOnRecover = saved.notifyOnRecover ?? CONFIG.notifyOnRecover;
-    CONFIG.verboseLogging = saved.verboseLogging ?? CONFIG.verboseLogging;
+    s.config.serverUrl = saved.serverUrl ?? s.config.serverUrl;
+    s.config.pingIntervalSec = saved.pingIntervalSec ?? s.config.pingIntervalSec;
+    s.config.notifyOnDown = saved.notifyOnDown ?? s.config.notifyOnDown;
+    s.config.notifyOnRecover = saved.notifyOnRecover ?? s.config.notifyOnRecover;
+    s.config.verboseLogging = saved.verboseLogging ?? s.config.verboseLogging;
   }
 
   // Fall back to the host's backend URL if no server URL is configured yet
-  if (!CONFIG.serverUrl) {
+  if (!s.config.serverUrl) {
     // Try both BACKEND_URL and VITE_BACKEND_URL (Vite uses VITE_ prefix)
     const envUrl = platform.env('BACKEND_URL') || platform.env('VITE_BACKEND_URL');
     if (envUrl) {
-      CONFIG.serverUrl = envUrl;
+      s.config.serverUrl = envUrl;
       console.log(`[server-ping] Using BACKEND_URL from env: ${envUrl}`);
     }
   }
@@ -99,29 +61,31 @@ function init(): void {
   // Load counters from store
   const counters = store.get('counters') as { pingCount?: number; failCount?: number } | null;
   if (counters) {
-    PING_COUNT = counters.pingCount ?? 0;
-    FAIL_COUNT = counters.failCount ?? 0;
+    s.pingCount = counters.pingCount ?? 0;
+    s.failCount = counters.failCount ?? 0;
   }
 
-  console.log(`[server-ping] Config loaded — target: ${CONFIG.serverUrl}`);
+  console.log(`[server-ping] Config loaded — target: ${s.config.serverUrl}`);
 }
 
 function start(): void {
-  if (!CONFIG.serverUrl) {
+  const s = getSkillState();
+
+  if (!s.config.serverUrl) {
     console.warn('[server-ping] No server URL configured — waiting for setup');
     return;
   }
 
-  const intervalMs = CONFIG.pingIntervalSec * 1000;
-  console.log(`[server-ping] Starting — ping every ${CONFIG.pingIntervalSec}s (using setInterval)`);
+  const intervalMs = s.config.pingIntervalSec * 1000;
+  console.log(`[server-ping] Starting — ping every ${s.config.pingIntervalSec}s (using setInterval)`);
 
   // Clear any existing interval
-  if (PING_INTERVAL_ID !== null) {
-    clearInterval(PING_INTERVAL_ID);
+  if (s.pingIntervalId !== null) {
+    clearInterval(s.pingIntervalId);
   }
 
   // Start the ping interval (cast to number for browser-like V8 environment)
-  PING_INTERVAL_ID = setInterval(() => {
+  s.pingIntervalId = setInterval(() => {
     doPing();
   }, intervalMs) as unknown as number;
 
@@ -134,15 +98,19 @@ function start(): void {
 
 function stop(): void {
   console.log('[server-ping] Stopping');
+  const s = getSkillState();
 
   // Clear the ping interval
-  if (PING_INTERVAL_ID !== null) {
-    clearInterval(PING_INTERVAL_ID);
-    PING_INTERVAL_ID = null;
+  if (s.pingIntervalId !== null) {
+    clearInterval(s.pingIntervalId);
+    s.pingIntervalId = null;
   }
 
   // Persist counters
-  store.set('counters', { pingCount: PING_COUNT, failCount: FAIL_COUNT });
+  store.set('counters', {
+    pingCount: s.pingCount,
+    failCount: s.failCount,
+  });
 
   state.set('status', 'stopped');
 }
@@ -195,6 +163,7 @@ function onSetupSubmit(args: {
   values: Record<string, unknown>;
 }): SetupSubmitResult {
   const { stepId, values } = args;
+  const s = getSkillState();
 
   if (stepId === 'server-config') {
     // Validate URL
@@ -213,8 +182,8 @@ function onSetupSubmit(args: {
     }
 
     // Store values and move to next step
-    CONFIG.serverUrl = url;
-    CONFIG.pingIntervalSec = parseInt(values.pingIntervalSec as string) || 10;
+    s.config.serverUrl = url;
+    s.config.pingIntervalSec = parseInt(values.pingIntervalSec as string) || 10;
 
     return {
       status: 'next',
@@ -245,16 +214,16 @@ function onSetupSubmit(args: {
   }
 
   if (stepId === 'notification-config') {
-    CONFIG.notifyOnDown = (values.notifyOnDown as boolean) ?? true;
-    CONFIG.notifyOnRecover = (values.notifyOnRecover as boolean) ?? true;
+    s.config.notifyOnDown = (values.notifyOnDown as boolean) ?? true;
+    s.config.notifyOnRecover = (values.notifyOnRecover as boolean) ?? true;
 
     // Persist full config to store
-    store.set('config', CONFIG);
+    store.set('config', s.config);
 
     // Write a human-readable config file to data dir
-    data.write('config.json', JSON.stringify(CONFIG, null, 2));
+    data.write('config.json', JSON.stringify(s.config, null, 2));
 
-    console.log(`[server-ping] Setup complete — monitoring ${CONFIG.serverUrl}`);
+    console.log(`[server-ping] Setup complete — monitoring ${s.config.serverUrl}`);
 
     return { status: 'complete' };
   }
@@ -271,6 +240,7 @@ function onSetupCancel(): void {
 // ---------------------------------------------------------------------------
 
 function onListOptions(): { options: SkillOption[] } {
+  const s = getSkillState();
   return {
     options: [
       {
@@ -278,7 +248,7 @@ function onListOptions(): { options: SkillOption[] } {
         type: 'select',
         label: 'Ping interval',
         description: 'How often to check the server',
-        value: String(CONFIG.pingIntervalSec),
+        value: String(s.config.pingIntervalSec),
         options: [
           { label: 'Every 5 seconds', value: '5' },
           { label: 'Every 10 seconds', value: '10' },
@@ -291,21 +261,21 @@ function onListOptions(): { options: SkillOption[] } {
         type: 'boolean',
         label: 'Notify on server down',
         description: 'Send desktop notification when server is unreachable',
-        value: CONFIG.notifyOnDown,
+        value: s.config.notifyOnDown,
       },
       {
         name: 'notifyOnRecover',
         type: 'boolean',
         label: 'Notify on recovery',
         description: 'Send desktop notification when server recovers',
-        value: CONFIG.notifyOnRecover,
+        value: s.config.notifyOnRecover,
       },
       {
         name: 'verboseLogging',
         type: 'boolean',
         label: 'Verbose logging',
         description: 'Log every ping result to console',
-        value: CONFIG.verboseLogging,
+        value: s.config.verboseLogging,
       },
     ],
   };
@@ -313,30 +283,31 @@ function onListOptions(): { options: SkillOption[] } {
 
 function onSetOption(args: { name: string; value: unknown }): void {
   const { name, value } = args;
+  const s = getSkillState();
 
   if (name === 'pingIntervalSec') {
     const newInterval = parseInt(value as string) || 10;
-    CONFIG.pingIntervalSec = newInterval;
+    s.config.pingIntervalSec = newInterval;
 
     // Restart interval with new timing
-    if (PING_INTERVAL_ID !== null) {
-      clearInterval(PING_INTERVAL_ID);
+    if (s.pingIntervalId !== null) {
+      clearInterval(s.pingIntervalId);
       const intervalMs = newInterval * 1000;
-      PING_INTERVAL_ID = setInterval(() => {
+      s.pingIntervalId = setInterval(() => {
         doPing();
       }, intervalMs) as unknown as number;
     }
     console.log(`[server-ping] Ping interval changed to ${newInterval}s`);
   } else if (name === 'notifyOnDown') {
-    CONFIG.notifyOnDown = !!value;
+    s.config.notifyOnDown = !!value;
   } else if (name === 'notifyOnRecover') {
-    CONFIG.notifyOnRecover = !!value;
+    s.config.notifyOnRecover = !!value;
   } else if (name === 'verboseLogging') {
-    CONFIG.verboseLogging = !!value;
+    s.config.verboseLogging = !!value;
   }
 
   // Persist updated config
-  store.set('config', CONFIG);
+  store.set('config', s.config);
   publishState();
   console.log(`[server-ping] Option '${name}' set to ${value}`);
 }
@@ -347,14 +318,16 @@ function onSetOption(args: { name: string; value: unknown }): void {
 
 function onSessionStart(args: { sessionId: string }): void {
   const { sessionId } = args;
-  ACTIVE_SESSIONS.push(sessionId);
-  console.log(`[server-ping] Session started: ${sessionId} (active: ${ACTIVE_SESSIONS.length})`);
+  const s = getSkillState();
+  s.activeSessions.push(sessionId);
+  console.log(`[server-ping] Session started: ${sessionId} (active: ${s.activeSessions.length})`);
 }
 
 function onSessionEnd(args: { sessionId: string }): void {
   const { sessionId } = args;
-  ACTIVE_SESSIONS = ACTIVE_SESSIONS.filter(s => s !== sessionId);
-  console.log(`[server-ping] Session ended: ${sessionId} (active: ${ACTIVE_SESSIONS.length})`);
+  const s = getSkillState();
+  s.activeSessions = s.activeSessions.filter(sid => sid !== sessionId);
+  console.log(`[server-ping] Session ended: ${sessionId} (active: ${s.activeSessions.length})`);
 }
 
 // ---------------------------------------------------------------------------
@@ -367,66 +340,67 @@ function onCronTrigger(_scheduleId: string): void {
 }
 
 function doPing(): void {
-  PING_COUNT++;
+  const s = getSkillState();
+  s.pingCount++;
   const timestamp = new Date().toISOString();
   const startTime = Date.now();
 
   try {
-    const response = net.fetch(CONFIG.serverUrl, { method: 'GET', timeout: 10 });
+    const response = net.fetch(s.config.serverUrl, { method: 'GET', timeout: 10 });
 
     const latencyMs = Date.now() - startTime;
     const success = response.status >= 200 && response.status < 400;
 
     if (!success) {
-      FAIL_COUNT++;
-      CONSECUTIVE_FAILS++;
+      s.failCount++;
+      s.consecutiveFails++;
     } else {
       // Check if recovering from downtime
-      if (WAS_DOWN && CONFIG.notifyOnRecover) {
+      if (s.wasDown && s.config.notifyOnRecover) {
         sendNotification(
           'Server Recovered',
-          `${CONFIG.serverUrl} is back online (was down for ${CONSECUTIVE_FAILS} checks)`
+          `${s.config.serverUrl} is back online (was down for ${s.consecutiveFails} checks)`
         );
       }
-      CONSECUTIVE_FAILS = 0;
-      WAS_DOWN = false;
+      s.consecutiveFails = 0;
+      s.wasDown = false;
     }
 
-    if (CONFIG.verboseLogging) {
-      console.log(`[server-ping] #${PING_COUNT} ${response.status} ${latencyMs}ms`);
+    if (s.config.verboseLogging) {
+      console.log(`[server-ping] #${s.pingCount} ${response.status} ${latencyMs}ms`);
     }
 
     // Log to DB
     db.exec(
       'INSERT INTO ping_log (timestamp, url, status, latency_ms, success, error) VALUES (?, ?, ?, ?, ?, ?)',
-      [timestamp, CONFIG.serverUrl, response.status, latencyMs, success ? 1 : 0, null]
+      [timestamp, s.config.serverUrl, response.status, latencyMs, success ? 1 : 0, null]
     );
   } catch (e) {
     const latencyMs = Date.now() - startTime;
-    FAIL_COUNT++;
-    CONSECUTIVE_FAILS++;
+    s.failCount++;
+    s.consecutiveFails++;
 
-    console.error(`[server-ping] #${PING_COUNT} FAILED: ${e}`);
+    console.error(`[server-ping] #${s.pingCount} FAILED: ${e}`);
 
     // Log failure to DB
     db.exec(
       'INSERT INTO ping_log (timestamp, url, status, latency_ms, success, error) VALUES (?, ?, ?, ?, ?, ?)',
-      [timestamp, CONFIG.serverUrl, 0, latencyMs, 0, String(e)]
+      [timestamp, s.config.serverUrl, 0, latencyMs, 0, String(e)]
     );
 
     // Notify on first failure
-    if (CONSECUTIVE_FAILS === 1 && CONFIG.notifyOnDown) {
-      WAS_DOWN = true;
-      sendNotification('Server Down', `${CONFIG.serverUrl} is unreachable: ${e}`);
+    if (s.consecutiveFails === 1 && s.config.notifyOnDown) {
+      s.wasDown = true;
+      sendNotification('Server Down', `${s.config.serverUrl} is unreachable: ${e}`);
     }
   }
 
-  // Sync state to globalThis for bundled tools
-  _syncState();
-
   // Persist counters periodically (every 10 pings)
-  if (PING_COUNT % 10 === 0) {
-    store.set('counters', { pingCount: PING_COUNT, failCount: FAIL_COUNT });
+  if (s.pingCount % 10 === 0) {
+    store.set('counters', {
+      pingCount: s.pingCount,
+      failCount: s.failCount,
+    });
   }
 
   // Publish state to frontend
@@ -441,8 +415,12 @@ function doPing(): void {
 // ---------------------------------------------------------------------------
 
 function publishState(): void {
+  const s = getSkillState();
+
   const uptimePct =
-    PING_COUNT > 0 ? Math.round(((PING_COUNT - FAIL_COUNT) / PING_COUNT) * 10000) / 100 : 100;
+    s.pingCount > 0
+      ? Math.round(((s.pingCount - s.failCount) / s.pingCount) * 10000) / 100
+      : 100;
 
   // Get latest latency from DB
   const latest = db.get(
@@ -451,20 +429,21 @@ function publishState(): void {
   ) as { latency_ms: number; status: number; success: number } | null;
 
   state.setPartial({
-    status: CONSECUTIVE_FAILS > 0 ? 'down' : 'healthy',
-    pingCount: PING_COUNT,
-    failCount: FAIL_COUNT,
-    consecutiveFails: CONSECUTIVE_FAILS,
+    status: s.consecutiveFails > 0 ? 'down' : 'healthy',
+    pingCount: s.pingCount,
+    failCount: s.failCount,
+    consecutiveFails: s.consecutiveFails,
     uptimePercent: uptimePct,
     lastLatencyMs: latest ? latest.latency_ms : null,
     lastStatus: latest ? latest.status : null,
-    serverUrl: CONFIG.serverUrl,
-    activeSessions: ACTIVE_SESSIONS.length,
+    serverUrl: s.config.serverUrl,
+    activeSessions: s.activeSessions.length,
     platform: platform.os(),
   });
 }
 
 // Expose functions to globalThis for bundled tool modules
+const _g = globalThis as Record<string, unknown>;
 _g.doPing = doPing;
 _g.publishState = publishState;
 
@@ -543,7 +522,7 @@ const skill: Skill = {
     name: 'Server Ping',
     runtime: 'v8',
     entry: 'index.js',
-    version: '2.1.0',
+    version: '2.2.0',
     description:
       'Monitors server health with configurable ping intervals using setInterval. Demos setup flow, DB, state, data, net, platform, skills interop, options, and tools.',
     auto_start: false,
