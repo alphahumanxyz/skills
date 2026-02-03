@@ -31,6 +31,7 @@ dmypy.json
 # Compiled JavaScript from TypeScript skills
 skills
 examples/**/*.js
+src/**/*.js
 
 # Compiled JavaScript from test harness
 dev/js-harness/**/*.js

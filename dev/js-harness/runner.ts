@@ -19,9 +19,9 @@ if (!testFile) {
 }
 
 // Resolve skill source from test file path.
-// Convention: skills/<name>/__tests__/test-*.js → skills/<name>/index.js
+// Convention: src/<name>/__tests__/test-*.js → src/<name>/index.js
 function resolveSkillSource(testPath: string): string | null {
-  const match = testPath.match(/^(skills\/[^/]+)\/__tests__\//);
+  const match = testPath.match(/^(src\/[^/]+)\/__tests__\//);
   if (!match) return null;
   return match[1] + "/index.js";
 }

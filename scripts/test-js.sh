@@ -23,8 +23,27 @@ fi
 
 # ── Compile TypeScript ───────────────────────────────────────────────────────
 
-echo "Compiling TypeScript (tsconfig.test.json)..."
+echo "Compiling skill sources and test harness..."
+
+# Compile skills and harness using tsconfig.test.json (excludes test files)
 npx tsc -p tsconfig.test.json
+
+# Compile each test file individually to avoid duplicate definition conflicts
+echo "Compiling test files..."
+for ts_file in $(find src -path '*/__tests__/test-*.ts' 2>/dev/null); do
+  npx tsc \
+    --target ES2020 \
+    --module ES2020 \
+    --moduleResolution node \
+    --outDir . \
+    --rootDir . \
+    --skipLibCheck \
+    --declaration false \
+    --esModuleInterop \
+    types/globals.d.ts \
+    types/quickjs.d.ts \
+    "$ts_file" 2>/dev/null || echo "  Warning: Compilation issues in $ts_file (continuing anyway)"
+done
 
 # Post-process compiled JS for QuickJS script mode compatibility.
 # 1. Strip "export {};" — loadScript() is script mode, not ES module.

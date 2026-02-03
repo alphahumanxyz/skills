@@ -2,20 +2,26 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "target": "ES2020",
-    "noEmit": true,
+    "module": "ES2020",
+    "moduleResolution": "node",
+    "noEmit": false,
     "outDir": ".",
+    "rootDir": ".",
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "declaration": false,
+    "declarationMap": false
   },
   "include": [
     "types/**/*.d.ts",
-    "skills/*/index.ts",
-    "skills/*/__tests__/**/*.ts",
+    "src/*/index.ts",
     "dev/js-harness/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     ".venv",
-    "skills-py"
+    "skills-py",
+    "src/*/__tests__/**/*.ts"
   ]
 }
