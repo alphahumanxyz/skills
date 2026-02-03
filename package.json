@@ -3,11 +3,15 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/strip-exports.mjs",
+    "clean": "rimraf skills",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build:strip": "node scripts/strip-exports.mjs",
+    "build": "npm run clean && npm run build:ts && npm run build:strip",
     "build:watch": "tsc --watch",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "rimraf": "^6.1.2",
     "typescript": "~5.8.3"
   }
 }
