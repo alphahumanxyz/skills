@@ -8,7 +8,8 @@
     "build:strip": "node scripts/strip-exports.mjs",
     "build": "npm run clean && npm run build:ts && npm run build:strip",
     "build:watch": "tsc --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bash scripts/test-js.sh"
   },
   "devDependencies": {
     "rimraf": "^6.1.2",

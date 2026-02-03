@@ -2,7 +2,7 @@
 # test-js.sh — Compile TypeScript and run QuickJS skill tests.
 # Usage:
 #   ./scripts/test-js.sh                                    # run all tests
-#   ./scripts/test-js.sh skills/server-ping/__tests__/test-server-ping.ts  # run one
+#   ./scripts/test-js.sh src/server-ping/__tests__/test-server-ping.ts  # run one
 
 set -euo pipefail
 
@@ -32,7 +32,7 @@ npx tsc -p tsconfig.test.json
 #    properties, enabling test reset between test cases.
 # The runner.js is an ES module and excluded from these transforms.
 # Use a for-loop to avoid sed regex escaping issues with find -exec {} +
-for js_file in $(find skills dev/js-harness -name '*.js' -not -name 'runner.js'); do
+for js_file in $(find src dev/js-harness -name '*.js' -not -name 'runner.js'); do
   sed -i '' -e '/^export {};$/d' -e 's/^let /var /g' -e 's/^const /var /g' "$js_file"
 done
 
@@ -56,7 +56,7 @@ else
   # Auto-discover all test files
   while IFS= read -r -d '' file; do
     TEST_FILES+=("$file")
-  done < <(find skills -path '*/__tests__/test-*.js' -print0 2>/dev/null)
+  done < <(find src -path '*/__tests__/test-*.js' -print0 2>/dev/null)
 fi
 
 if [ ${#TEST_FILES[@]} -eq 0 ]; then
