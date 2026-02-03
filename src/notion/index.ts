@@ -1352,4 +1352,24 @@ tools = [
   },
 ];
 
-export {};
+const skill: Skill = {
+  info: {
+    id: 'notion',
+    name: 'Notion',
+    description: 'Notion workspace integration',
+    version: '1.0.0',
+    runtime: 'v8',
+    entry: 'index.js',
+    auto_start: false,
+    setup: { required: true, label: 'Notion' },
+  },
+  tools,
+  init,
+  start,
+  stop,
+  onSetupStart,
+  onSetupSubmit,
+  onSetupCancel,
+};
+
+export default skill;
