@@ -7,14 +7,8 @@
   "description": "Telegram integration via TDLib — 50+ tools for chats, messages, contacts, admin, and search.",
   "auto_start": false,
   "platforms": ["windows", "macos", "linux", "android", "ios"],
-  "env": [
-    "TELEGRAM_API_ID",
-    "TELEGRAM_API_HASH"
-  ],
-  "setup": {
-    "required": true,
-    "label": "Connect Telegram"
-  },
+  "env": ["TELEGRAM_API_ID", "TELEGRAM_API_HASH"],
+  "setup": { "required": true, "label": "Connect Telegram" },
   "entity_schema": {
     "entity_types": [
       {
@@ -24,8 +18,18 @@
         "properties": [
           { "name": "first_name", "type": "string", "description": "First name" },
           { "name": "last_name", "type": "string", "description": "Last name", "optional": true },
-          { "name": "username", "type": "string", "description": "Telegram @username", "optional": true },
-          { "name": "phone_number", "type": "string", "description": "Phone number", "optional": true },
+          {
+            "name": "username",
+            "type": "string",
+            "description": "Telegram @username",
+            "optional": true
+          },
+          {
+            "name": "phone_number",
+            "type": "string",
+            "description": "Phone number",
+            "optional": true
+          },
           { "name": "is_bot", "type": "boolean", "description": "Whether this user is a bot" }
         ]
       },
@@ -35,9 +39,23 @@
         "description": "A Telegram group or supergroup chat.",
         "properties": [
           { "name": "title", "type": "string", "description": "Group title" },
-          { "name": "username", "type": "string", "description": "Public @username", "optional": true },
-          { "name": "participants_count", "type": "number", "description": "Number of members", "optional": true },
-          { "name": "unread_count", "type": "number", "description": "Current unread message count" }
+          {
+            "name": "username",
+            "type": "string",
+            "description": "Public @username",
+            "optional": true
+          },
+          {
+            "name": "participants_count",
+            "type": "number",
+            "description": "Number of members",
+            "optional": true
+          },
+          {
+            "name": "unread_count",
+            "type": "number",
+            "description": "Current unread message count"
+          }
         ]
       },
       {
@@ -46,9 +64,23 @@
         "description": "A Telegram broadcast channel.",
         "properties": [
           { "name": "title", "type": "string", "description": "Channel title" },
-          { "name": "username", "type": "string", "description": "Public @username", "optional": true },
-          { "name": "participants_count", "type": "number", "description": "Number of subscribers", "optional": true },
-          { "name": "unread_count", "type": "number", "description": "Current unread message count" }
+          {
+            "name": "username",
+            "type": "string",
+            "description": "Public @username",
+            "optional": true
+          },
+          {
+            "name": "participants_count",
+            "type": "number",
+            "description": "Number of subscribers",
+            "optional": true
+          },
+          {
+            "name": "unread_count",
+            "type": "number",
+            "description": "Current unread message count"
+          }
         ]
       },
       {
@@ -57,7 +89,11 @@
         "description": "A private (direct message) conversation with a single contact.",
         "properties": [
           { "name": "title", "type": "string", "description": "Display name of the conversation" },
-          { "name": "unread_count", "type": "number", "description": "Current unread message count" }
+          {
+            "name": "unread_count",
+            "type": "number",
+            "description": "Current unread message count"
+          }
         ]
       }
     ],
