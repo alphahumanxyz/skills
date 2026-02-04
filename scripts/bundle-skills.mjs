@@ -3,7 +3,6 @@
  *
  * This script uses esbuild to bundle tool files into the main skill file,
  * making them available to the V8 runtime which doesn't support ES modules.
- * Similar to bundle-telegram.mjs but for skills with tool files.
  */
 import * as esbuild from 'esbuild';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
@@ -62,30 +61,18 @@ const skills = readdirSync(skillsSrcDir, { withFileTypes: true })
   .filter(dirent => dirent.isDirectory())
   .map(dirent => dirent.name);
 
-for (const skillName of skills) {
-  // Skip telegram skill - it has a dedicated bundler (bundle-telegram.mjs)
-  if (skillName === 'telegram') {
-    console.log(`[bundle-skills] Skipping ${skillName} (handled by bundle-telegram.mjs)`);
-    continue;
-  }
+// Track which skills get bundled (so we skip them in the copy step)
+const bundledSkills = new Set();
 
+for (const skillName of skills) {
   const skillDirInput = join(skillsSrcDir, skillName);
   const skillDirOutput = join(skillsOutDir, skillName);
   const skillIndexPath = join(skillDirInput, 'index.js');
   const skillIndexPathOutput = join(skillDirOutput, 'index.js');
   const toolsDir = join(skillDirInput, 'tools');
 
-  // Skip if index.js doesn't exist or tools directory doesn't exist
-  if (!existsSync(skillIndexPath) || !existsSync(toolsDir)) {
-    continue;
-  }
-
-  // Check if tools directory has any .js files
-  const toolFiles = readdirSync(toolsDir)
-    .filter(file => file.endsWith('.js'))
-    .map(file => join(toolsDir, file));
-
-  if (toolFiles.length === 0) {
+  // Skip if index.js doesn't exist
+  if (!existsSync(skillIndexPath)) {
     continue;
   }
 
@@ -97,7 +84,26 @@ for (const skillName of skills) {
     continue;
   }
 
-  console.log(`[bundle-skills] Bundling ${skillName} with ${toolFiles.length} tool files...`);
+  // Check if tools directory exists and has any .js files
+  let hasTools = false;
+  let toolCount = 0;
+  if (existsSync(toolsDir)) {
+    const toolFiles = readdirSync(toolsDir).filter(file => file.endsWith('.js'));
+    toolCount = toolFiles.length;
+    hasTools = toolCount > 0;
+  }
+
+  // Check if skill has local imports (require('./...') or require("./..."))
+  // These need bundling even without a tools directory
+  const hasLocalImports = /require\(['"]\.\//.test(skillCode);
+
+  // Skip if no tools and no local imports
+  if (!hasTools && !hasLocalImports) {
+    continue;
+  }
+
+  const bundleReason = hasTools ? `${toolCount} tool files` : 'local imports';
+  console.log(`[bundle-skills] Bundling ${skillName} (${bundleReason})...`);
 
   try {
     const polyfillsDir = join(__dirname, 'polyfills');
@@ -167,6 +173,9 @@ for (const skillName of skills) {
     // Write the bundled file
     writeFileSync(skillIndexPathOutput, bundledCode);
 
+    // Track that this skill was bundled
+    bundledSkills.add(skillName);
+
     console.log(
       `[bundle-skills] Bundled ${skillName} (${(bundledCode.length / 1024).toFixed(1)} KB)`
     );
@@ -192,15 +201,14 @@ const COPY_FOOTER = `
 globalThis.__skill = module.exports && module.exports.default ? { default: module.exports.default } : (module.exports || {});
 `;
 for (const skillName of skills) {
-  if (skillName === 'telegram') continue;
+  // Skip if already bundled
+  if (bundledSkills.has(skillName)) continue;
+
   const skillDirInput = join(skillsSrcDir, skillName);
   const skillDirOutput = join(skillsOutDir, skillName);
   const skillIndexPath = join(skillDirInput, 'index.js');
   const skillIndexPathOutput = join(skillDirOutput, 'index.js');
-  const toolsDir = join(skillDirInput, 'tools');
   if (!existsSync(skillIndexPath)) continue;
-  if (existsSync(skillIndexPathOutput)) continue; // Already written by bundle step
-  if (existsSync(toolsDir) && readdirSync(toolsDir).some(f => f.endsWith('.js'))) continue; // Would have been bundled
   if (!existsSync(skillDirOutput)) mkdirSync(skillDirOutput, { recursive: true });
   let code = readFileSync(skillIndexPath, 'utf-8');
   code = COPY_HEADER + code + COPY_FOOTER;

@@ -2,7 +2,7 @@
 // Tools and lifecycle functions access state through globalThis.getSkillState()
 // This pattern works in both production V8 runtime and test harness sandbox.
 
-import type { TelegramClient } from 'telegram';
+import type { TdLibClient } from './tdlib-client';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -13,8 +13,7 @@ export interface SkillConfig {
   apiHash: string;
   phoneNumber: string;
   isAuthenticated: boolean;
-  sessionString: string;
-  phoneCodeHash: string;
+  dataDir: string; // TDLib data directory path
   pendingCode: boolean;
 }
 
@@ -49,14 +48,28 @@ export interface SetupSubmitArgs {
 }
 
 /**
+ * TDLib authorization state for tracking login flow.
+ */
+export type AuthorizationState =
+  | 'waitTdlibParameters'
+  | 'waitPhoneNumber'
+  | 'waitCode'
+  | 'waitPassword'
+  | 'ready'
+  | 'closed'
+  | 'unknown';
+
+/**
  * Telegram skill state interface - defines the shape of our mutable state
  */
 export interface TelegramState {
   config: SkillConfig;
   cache: Cache;
-  client: InstanceType<typeof TelegramClient> | null;
+  client: TdLibClient | null;
   clientConnecting: boolean;
   clientError: string | null;
+  authState: AuthorizationState;
+  passwordHint: string | null;
   workerRunning: boolean;
   workerTimeoutId: ReturnType<typeof setTimeout> | null;
 }
@@ -85,8 +98,7 @@ function initSkillState(): TelegramState {
       apiHash: '',
       phoneNumber: '',
       isAuthenticated: false,
-      sessionString: '',
-      phoneCodeHash: '',
+      dataDir: '',
       pendingCode: false,
     },
     cache: {
@@ -97,6 +109,8 @@ function initSkillState(): TelegramState {
     client: null,
     clientConnecting: false,
     clientError: null,
+    authState: 'unknown',
+    passwordHint: null,
     workerRunning: false,
     workerTimeoutId: null,
   };

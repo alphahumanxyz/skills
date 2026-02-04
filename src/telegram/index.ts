@@ -1,49 +1,27 @@
 // telegram/index.ts
-// Telegram integration skill using gramjs library via V8 runtime.
-// Provides tools for Telegram API access with async request queue pattern.
+// Telegram integration skill using TDLib via V8 runtime.
+// Provides tools for Telegram API access with native TDLib bindings.
 
 // Import skill state (initializes globalThis.getTelegramSkillState)
 import './skill-state';
-import type { SetupSubmitArgs } from './skill-state';
+import type { SetupSubmitArgs, AuthorizationState } from './skill-state';
 
-import { TelegramClient } from 'telegram';
+// Import TDLib client wrapper - this also assigns TdLibClient to globalThis
+import './tdlib-client';
+import type { TdUpdate, TdUser } from './tdlib-client';
+// Import the class type for type assertions
+import type { TdLibClient as TdLibClientType } from './tdlib-client';
 
-
-// Runtime globals (store, state, platform, db, cron, tools) are declared in types/globals.d.ts
-
-// ---------------------------------------------------------------------------
-// Import gramjs components (bundled with polyfills)
-// ---------------------------------------------------------------------------
-
-// The gramjs bundle exposes TelegramClient and other exports globally as GramJS
-// after bundling. The gramjs folder is NOT compiled by TypeScript - it's bundled
-// separately by esbuild with polyfills.
-
-// Runtime types for gramjs (actual implementation provided by bundled gramjs)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GramJSClient = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GramJSSession = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type GramJSApi = any;
-
-// GramJS global is injected by the bundled gramjs code
-declare const GramJS: {
-  TelegramClient: new (
-    session: GramJSSession,
-    apiId: number,
-    apiHash: string,
-    options: { connectionRetries?: number; useWSS?: boolean }
-  ) => GramJSClient;
-  StringSession: new (session?: string) => GramJSSession;
-  Api: GramJSApi;
+// Access TdLibClient from globalThis (workaround for esbuild bundling issues)
+const getTdLibClientClass = (): typeof TdLibClientType => {
+  const cls = (globalThis as Record<string, unknown>).TdLibClient as typeof TdLibClientType;
+  if (!cls) {
+    throw new Error('TdLibClient not available on globalThis');
+  }
+  return cls;
 };
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const WORKER_INTERVAL_MS = 100; // Check every 100ms for pending requests
+// Runtime globals (store, state, platform, db, cron, tools) are declared in types/globals.d.ts
 
 // ---------------------------------------------------------------------------
 // Database Schema
@@ -65,66 +43,150 @@ CREATE INDEX IF NOT EXISTS idx_telegram_requests_status ON telegram_requests(sta
 CREATE INDEX IF NOT EXISTS idx_telegram_requests_created ON telegram_requests(created_at);
 `;
 
+// ---------------------------------------------------------------------------
+// Authorization State Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse TDLib authorization state update to our simplified state type.
+ */
+function parseAuthState(update: TdUpdate): AuthorizationState {
+  const stateType = (update as { authorization_state?: { '@type': string } }).authorization_state?.[
+    '@type'
+  ];
+  switch (stateType) {
+    case 'authorizationStateWaitTdlibParameters':
+      return 'waitTdlibParameters';
+    case 'authorizationStateWaitPhoneNumber':
+      return 'waitPhoneNumber';
+    case 'authorizationStateWaitCode':
+      return 'waitCode';
+    case 'authorizationStateWaitPassword':
+      return 'waitPassword';
+    case 'authorizationStateReady':
+      return 'ready';
+    case 'authorizationStateClosed':
+      return 'closed';
+    default:
+      return 'unknown';
+  }
+}
+
+/**
+ * Handle TDLib updates (authorization state changes, etc.)
+ */
+function handleUpdate(update: TdUpdate): void {
+  const s = globalThis.getTelegramSkillState();
+  const updateType = update['@type'];
+
+  console.log('[telegram] TDLib update:', updateType);
+
+  if (updateType === 'updateAuthorizationState') {
+    const prevState = s.authState;
+    s.authState = parseAuthState(update);
+    console.log(`[telegram] Auth state changed: ${prevState} -> ${s.authState}`);
+
+    // Extract password hint if waiting for password
+    if (s.authState === 'waitPassword') {
+      const authState = (update as { authorization_state?: { password_hint?: string } })
+        .authorization_state;
+      s.passwordHint = authState?.password_hint || null;
+    }
+
+    // Handle ready state
+    if (s.authState === 'ready') {
+      s.config.isAuthenticated = true;
+      s.config.pendingCode = false;
+      store.set('config', s.config);
+      console.log('[telegram] User authenticated successfully');
+      loadMe();
+    }
+
+    publishState();
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Client Management
 // ---------------------------------------------------------------------------
 
+/**
+ * Initialize the TDLib client and start the update loop.
+ */
 async function initClient(): Promise<void> {
   const s = globalThis.getTelegramSkillState();
-  const stringSession = new GramJS.StringSession(s.config.sessionString || '');
-  const apiId = s.config.apiId;
-  const apiHash = s.config.apiHash;
+
+  // Check if client already exists or is being created
+  if (s.client) {
+    console.log('[telegram] Client already exists, skipping init');
+    return;
+  }
+  if (s.clientConnecting) {
+    console.log('[telegram] Client is already connecting, skipping init');
+    return;
+  }
+
+  // Get TdLibClient class from globalThis
+  const TdLibClientClass = getTdLibClientClass();
+
+  // Check if TDLib is available
+  if (!TdLibClientClass.isAvailable()) {
+    console.warn('[telegram] TDLib is not available on this platform');
+    s.clientError = 'TDLib is not available on this platform';
+    publishState();
+    return;
+  }
+
+  // Need API credentials to initialize
+  if (!s.config.apiId || !s.config.apiHash) {
+    console.log('[telegram] No API credentials configured, skipping client init');
+    return;
+  }
 
   s.clientConnecting = true;
   s.clientError = null;
   publishState();
 
-  console.log('[telegram] Creating TelegramClient with apiId:', apiId);
+  console.log('[telegram] Creating TDLib client with apiId:', s.config.apiId);
 
   try {
-    const client = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 5 });
+    // Create TDLib client
+    const client = new TdLibClientClass();
 
-    console.log('[telegram] Connecting to Telegram servers...');
-    await client.connect();
-    console.log('[telegram] Connected successfully');
+    // Determine data directory (use skill data directory)
+    const dataDir = s.config.dataDir || getDefaultDataDir();
+    s.config.dataDir = dataDir;
 
-    // Test connectivity with help.getAppConfig (no auth required)
-    try {
-      console.log('[telegram] Testing connectivity with help.getAppConfig...');
-      const appConfig = await client.invoke(new GramJS.Api.help.GetAppConfig({ hash: 0 }));
-      console.log('[telegram] Connectivity test passed - received app config');
-      // Log a small sample of the config to confirm it's working
-      if (appConfig && typeof appConfig === 'object') {
-        console.log('[telegram] App config type:', appConfig.className || 'unknown');
-      }
-    } catch (configErr) {
-      // This is not fatal - just log the connectivity test failure
-      console.warn('[telegram] Connectivity test (help.getAppConfig) failed:', configErr);
-    }
+    console.log('[telegram] Initializing TDLib with data dir:', dataDir);
+    await client.init(dataDir);
 
-    // Assign to state
+    // Store client in state
     s.client = client;
 
-    const authorized = await client.checkAuthorization();
-    console.log('[telegram] Authorization check:', authorized ? 'authorized' : 'not authorized');
+    // Start update loop
+    client.startUpdateLoop(handleUpdate);
 
-    if (authorized) {
-      s.config.isAuthenticated = true;
-      // StringSession.save() returns string, but abstract Session declares void
-      const sessionStr = (client.session.save as () => string)();
-      if (sessionStr) {
-        s.config.sessionString = sessionStr;
-        store.set('config', s.config);
-      }
-      await loadMe();
-    }
+    // Set TDLib parameters (this triggers the auth flow)
+    console.log('[telegram] Setting TDLib parameters...');
+    await client.setTdlibParameters({
+      api_id: s.config.apiId,
+      api_hash: s.config.apiHash,
+      database_directory: dataDir,
+      files_directory: dataDir + '/files',
+      use_message_database: true,
+      use_secret_chats: false,
+      system_language_code: 'en',
+      device_model: 'Desktop',
+      application_version: '1.0.0',
+    });
+
+    console.log('[telegram] TDLib parameters set, waiting for auth state...');
 
     s.clientConnecting = false;
     publishState();
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error('[telegram] Failed to connect:', errorMsg);
+    console.error('[telegram] Failed to initialize TDLib:', errorMsg);
     s.clientError = errorMsg;
     s.clientConnecting = false;
     s.client = null;
@@ -133,28 +195,97 @@ async function initClient(): Promise<void> {
   }
 }
 
+/**
+ * Get default data directory for TDLib files.
+ */
+function getDefaultDataDir(): string {
+  // Use the skill's data directory if available via platform
+  // Otherwise use a reasonable default
+  const os = platform.os();
+  if (os === 'windows') {
+    return 'C:/Users/Public/AlphaHuman/telegram';
+  } else if (os === 'macos') {
+    return '/tmp/alphahuman/telegram';
+  } else {
+    return '/tmp/alphahuman/telegram';
+  }
+}
+
+/**
+ * Load current user info after authentication.
+ */
 async function loadMe(): Promise<void> {
   const s = globalThis.getTelegramSkillState();
   if (!s.client) return;
+
   try {
-    const me = await s.client.getMe();
+    console.log('[telegram] Loading user info...');
+    const me: TdUser = await s.client.getMe();
     if (me) {
       s.cache.me = {
-        id: me.id.toString(),
-        firstName: me.firstName,
-        lastName: me.lastName,
-        username: me.username,
-        phoneNumber: me.phone,
-        isBot: me.bot,
-        isPremium: me.premium,
+        id: String(me.id),
+        firstName: me.first_name,
+        lastName: me.last_name,
+        username: me.usernames?.active_usernames?.[0],
+        phoneNumber: me.phone_number,
+        isBot: false,
+        isPremium: me.is_premium,
       };
       s.cache.lastSync = Date.now();
+      console.log('[telegram] Loaded user:', s.cache.me.username || s.cache.me.firstName);
     }
+    publishState();
   } catch (e) {
     console.error('[telegram] Failed to load me:', e);
   }
 }
 
+/**
+ * Send phone number for authentication.
+ */
+async function sendPhoneNumber(phoneNumber: string): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+  if (!s.client) {
+    throw new Error('TDLib client not initialized');
+  }
+
+  console.log('[telegram] Sending phone number for auth...');
+  s.config.phoneNumber = phoneNumber;
+  s.config.pendingCode = true;
+  store.set('config', s.config);
+
+  await s.client.setAuthenticationPhoneNumber(phoneNumber);
+  console.log('[telegram] Phone number sent, waiting for code...');
+  publishState();
+}
+
+/**
+ * Submit verification code.
+ */
+async function submitCode(code: string): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+  if (!s.client) {
+    throw new Error('TDLib client not initialized');
+  }
+
+  console.log('[telegram] Submitting verification code...');
+  await s.client.checkAuthenticationCode(code);
+  console.log('[telegram] Code submitted');
+}
+
+/**
+ * Submit 2FA password.
+ */
+async function submitPassword(password: string): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+  if (!s.client) {
+    throw new Error('TDLib client not initialized');
+  }
+
+  console.log('[telegram] Submitting 2FA password...');
+  await s.client.checkAuthenticationPassword(password);
+  console.log('[telegram] Password submitted');
+}
 
 // ---------------------------------------------------------------------------
 // Lifecycle Hooks
@@ -163,9 +294,11 @@ async function loadMe(): Promise<void> {
 function init(): void {
   console.log('[telegram] Initializing skill');
 
+  // Get TdLibClient class from globalThis
+  const TdLibClientClass = getTdLibClientClass();
+
   // Check runtime capabilities
-  console.log(`[telegram] WebSocket available: ${typeof WebSocket !== 'undefined'}`);
-  console.log(`[telegram] GramJS available: ${typeof GramJS !== 'undefined'}`);
+  console.log(`[telegram] TDLib available: ${TdLibClientClass.isAvailable()}`);
   console.log(`[telegram] setTimeout available: ${typeof setTimeout !== 'undefined'}`);
 
   // Create database tables
@@ -179,8 +312,7 @@ function init(): void {
     s.config.apiHash = saved.apiHash || '';
     s.config.phoneNumber = saved.phoneNumber || '';
     s.config.isAuthenticated = saved.isAuthenticated || false;
-    s.config.sessionString = saved.sessionString || '';
-    s.config.phoneCodeHash = saved.phoneCodeHash || '';
+    s.config.dataDir = saved.dataDir || '';
     s.config.pendingCode = saved.pendingCode || false;
   }
 
@@ -198,32 +330,35 @@ function init(): void {
   console.log(
     `[telegram] Config loaded — apiId: ${s.config.apiId ? 'set' : 'not set'}, apiHash: ${s.config.apiHash ? 'set' : 'not set'}`
   );
-  console.log(
-    `[telegram] Session: ${s.config.sessionString ? 'present' : 'not present'}, authenticated: ${s.config.isAuthenticated}`
-  );
+  console.log(`[telegram] Authenticated: ${s.config.isAuthenticated}`);
 
-  initClient();
+  // Initialize client if we have credentials
+  if (s.config.apiId && s.config.apiHash) {
+    initClient().catch((err) => {
+      console.error('[telegram] Init client failed:', err);
+    });
+  }
+
   publishState();
 }
 
-
 function start(): void {
   console.log('[telegram] Starting skill');
-  const s = globalThis.getTelegramSkillState();
-
-  // todo: start
+  // The update loop is already running from initClient
 }
 
 function stop(): void {
   console.log('[telegram] Stopping skill');
   const s = globalThis.getTelegramSkillState();
 
-  // Disconnect client
+  // Destroy TDLib client
   if (s.client) {
     try {
-      s.client.disconnect();
+      s.client.destroy().catch((e) => {
+        console.warn('[telegram] Error destroying client:', e);
+      });
     } catch (e) {
-      console.warn('[telegram] Error disconnecting:', e);
+      console.warn('[telegram] Error destroying client:', e);
     }
     s.client = null;
   }
@@ -233,9 +368,8 @@ function stop(): void {
   state.set('status', 'stopped');
 }
 
-// onCronTrigger is kept for compatibility but worker loop handles processing now
 function onCronTrigger(_scheduleId: string): void {
-  // No-op: worker loop handles request processing via setTimeout
+  // No-op: TDLib update loop handles everything
 }
 
 // ---------------------------------------------------------------------------
@@ -245,9 +379,22 @@ function onCronTrigger(_scheduleId: string): void {
 function onSetupStart(): SetupStartResult {
   const envApiId = platform.env('TELEGRAM_API_ID');
   const envApiHash = platform.env('TELEGRAM_API_HASH');
-  console.log(`[telegram] onSetupStart: envApiId: ${envApiId}, envApiHash: ${envApiHash}`);
+  console.log(`[telegram] onSetupStart: envApiId: ${envApiId ? 'set' : 'not set'}`);
 
+  // If API credentials are in environment, skip to phone step
   if (envApiId && envApiHash) {
+    const s = globalThis.getTelegramSkillState();
+    s.config.apiId = parseInt(envApiId, 10);
+    s.config.apiHash = envApiHash;
+    store.set('config', s.config);
+
+    // Start client initialization in background
+    if (!s.client && !s.clientConnecting) {
+      initClient().catch((err) => {
+        console.error('[telegram] Init client failed:', err);
+      });
+    }
+
     return {
       step: {
         id: 'phone',
@@ -319,8 +466,10 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     s.config.apiHash = apiHash;
     store.set('config', s.config);
 
-    // Queue connect request
-    // todo: connect
+    // Start client initialization in background
+    initClient().catch((err) => {
+      console.error('[telegram] Init client failed:', err);
+    });
 
     return {
       status: 'next',
@@ -350,7 +499,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       `[telegram] Setup: phone step - number: ${phoneNumber ? phoneNumber.slice(0, 4) + '****' : '[empty]'}`
     );
     console.log(
-      `[telegram] Setup: CLIENT connected: ${s.client !== null}, connecting: ${s.clientConnecting}, error: ${s.clientError}`
+      `[telegram] Setup: client connected: ${s.client !== null}, connecting: ${s.clientConnecting}, authState: ${s.authState}`
     );
 
     if (!phoneNumber || !phoneNumber.startsWith('+')) {
@@ -365,14 +514,41 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       };
     }
 
-    // Check if we're connected before trying to send code
-    if (!s.client && !s.clientConnecting) {
-      console.log('[telegram] Setup: Client not connected, re-queuing connect request');
-      // todo throw error asking to re-run setup
+    // Check if client is ready
+    if (!s.client) {
+      if (s.clientConnecting) {
+        return {
+          status: 'error',
+          errors: [
+            {
+              field: 'phoneNumber',
+              message: 'Still connecting to Telegram. Please wait a moment and try again.',
+            },
+          ],
+        };
+      }
+      return {
+        status: 'error',
+        errors: [
+          {
+            field: 'phoneNumber',
+            message: 'Client not connected. Please restart setup.',
+          },
+        ],
+      };
     }
 
-    // Queue send-code request
-    // todo: send code
+    // Check auth state - should be waiting for phone number
+    if (s.authState !== 'waitPhoneNumber' && s.authState !== 'unknown') {
+      console.log(`[telegram] Unexpected auth state for phone step: ${s.authState}`);
+    }
+
+    // Send phone number (async - errors will be caught by update handler)
+    sendPhoneNumber(phoneNumber).catch((err) => {
+      console.error('[telegram] Failed to send phone number:', err);
+      s.clientError = err instanceof Error ? err.message : String(err);
+      publishState();
+    });
 
     return {
       status: 'next',
@@ -380,7 +556,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
         id: 'code',
         title: 'Enter Verification Code',
         description:
-          'A verification code has been requested. Check your Telegram app or SMS. It may take a few seconds to arrive.',
+          'A verification code has been sent to your Telegram app or SMS. Enter it below.',
         fields: [
           {
             name: 'code',
@@ -398,6 +574,8 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
   if (stepId === 'code') {
     const code = ((values.code as string) || '').trim();
 
+    console.log(`[telegram] Setup: code step - authState: ${s.authState}`);
+
     if (!code) {
       return {
         status: 'error',
@@ -405,10 +583,61 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       };
     }
 
-    // todo: sign in
+    // Submit code (async)
+    submitCode(code).catch((err) => {
+      console.error('[telegram] Failed to submit code:', err);
+      s.clientError = err instanceof Error ? err.message : String(err);
+      publishState();
+    });
 
-    // Note: In a real implementation, we'd wait for the sign-in to complete
-    // For now, we mark setup as complete and let the async process handle it
+    // Check if we need 2FA password
+    // Give TDLib a moment to process
+    // In practice, the update handler will set authState
+    if (s.authState === 'waitPassword') {
+      return {
+        status: 'next',
+        nextStep: {
+          id: 'password',
+          title: 'Two-Factor Authentication',
+          description: s.passwordHint
+            ? `Enter your 2FA password. Hint: ${s.passwordHint}`
+            : 'Enter your 2FA password.',
+          fields: [
+            {
+              name: 'password',
+              type: 'password',
+              label: '2FA Password',
+              description: 'Your Telegram 2FA password',
+              required: true,
+            },
+          ],
+        },
+      };
+    }
+
+    // If already authenticated or will be soon, complete setup
+    return { status: 'complete' };
+  }
+
+  if (stepId === 'password') {
+    const password = ((values.password as string) || '').trim();
+
+    console.log('[telegram] Setup: password step');
+
+    if (!password) {
+      return {
+        status: 'error',
+        errors: [{ field: 'password', message: '2FA password is required' }],
+      };
+    }
+
+    // Submit password (async)
+    submitPassword(password).catch((err) => {
+      console.error('[telegram] Failed to submit password:', err);
+      s.clientError = err instanceof Error ? err.message : String(err);
+      publishState();
+    });
+
     return { status: 'complete' };
   }
 
@@ -417,14 +646,18 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
 
 function onSetupCancel(): void {
   console.log('[telegram] Setup cancelled');
+  const s = globalThis.getTelegramSkillState();
+  s.config.pendingCode = false;
+  store.set('config', s.config);
 }
 
 function publishState(): void {
   const s = globalThis.getTelegramSkillState();
   state.setPartial({
-    connected: s.client !== null,
+    connected: s.client !== null && s.client.initialized,
     connecting: s.clientConnecting,
     authenticated: s.config.isAuthenticated,
+    authState: s.authState,
     pendingCode: s.config.pendingCode,
     phoneNumber: s.config.phoneNumber ? s.config.phoneNumber.slice(0, 4) + '****' : null,
     hasCredentials: !!(s.config.apiId && s.config.apiHash),
@@ -445,8 +678,8 @@ const skill: Skill = {
     name: 'Telegram',
     runtime: 'v8',
     entry: 'index.js',
-    version: '1.0.0',
-    description: 'Telegram integration',
+    version: '2.0.0', // Bumped for TDLib migration
+    description: 'Telegram integration via TDLib',
     auto_start: false,
     setup: { required: true, label: 'Configure Telegram' },
   },
