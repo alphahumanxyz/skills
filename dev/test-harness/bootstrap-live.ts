@@ -314,6 +314,16 @@ export async function createBridgeAPIs(
     },
   };
 
+  // OAuth state — managed by the REPL/runner for dev mode
+  let oauthCredential: {
+    credentialId: string;
+    provider: string;
+    scopes: string[];
+    isValid: boolean;
+    createdAt: number;
+    accountLabel?: string;
+  } | null = null;
+
   // Socket.io — connect to backend for real-time events
   let socket: Socket | null = null;
   if (jwtToken) {
@@ -466,6 +476,82 @@ export async function createBridgeAPIs(
     },
   };
 
+  // OAuth — credential management and authenticated API proxy
+  const oauth = {
+    getCredential: (): unknown => oauthCredential,
+    fetch: (
+      path: string,
+      fetchOpts?: {
+        method?: string;
+        headers?: Record<string, string>;
+        body?: string;
+        timeout?: number;
+        baseUrl?: string;
+      },
+    ): { status: number; headers: Record<string, string>; body: string } => {
+      if (!oauthCredential) {
+        return {
+          status: 401,
+          headers: {},
+          body: JSON.stringify({ error: 'No OAuth credential. Complete OAuth setup first.' }),
+        };
+      }
+      const proxyPayload = JSON.stringify({
+        credentialId: oauthCredential.credentialId,
+        path,
+        method: fetchOpts?.method || 'GET',
+        headers: fetchOpts?.headers,
+        body: fetchOpts?.body,
+        baseUrl: fetchOpts?.baseUrl,
+      });
+      globalThis.console.log(
+        `[oauth.fetch] ${fetchOpts?.method ?? 'GET'} ${path}`,
+      );
+      return realFetch(`${backendUrl}/api/oauth/fetch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {}),
+        },
+        body: proxyPayload,
+        timeout: fetchOpts?.timeout ? fetchOpts.timeout * 1000 : 30000,
+      });
+    },
+    revoke: (): boolean => {
+      if (oauthCredential && jwtToken) {
+        try {
+          realFetch(`${backendUrl}/api/oauth/revoke`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${jwtToken}`,
+            },
+            body: JSON.stringify({
+              credentialId: oauthCredential.credentialId,
+            }),
+          });
+        } catch {
+          /* best effort */
+        }
+      }
+      oauthCredential = null;
+      return true;
+    },
+    /** Internal: set credential (used by REPL OAuth flow) */
+    __setCredential: (
+      cred: {
+        credentialId: string;
+        provider: string;
+        scopes: string[];
+        isValid: boolean;
+        createdAt: number;
+        accountLabel?: string;
+      } | null,
+    ): void => {
+      oauthCredential = cred;
+    },
+  };
+
   // Timers — tracked in live state for manual triggering
   const setTimeout = (callback: () => void, delay = 0): number => {
     const id = liveState.nextTimerId++;
@@ -573,6 +659,7 @@ export async function createBridgeAPIs(
     cron,
     skills,
     model,
+    oauth,
     setTimeout,
     setInterval,
     clearTimeout,
@@ -647,6 +734,8 @@ export async function createBridgeAPIs(
     onDisconnect: undefined,
     onListOptions: undefined,
     onSetOption: undefined,
+    onOAuthComplete: undefined,
+    onOAuthRevoked: undefined,
     // Cleanup hook for persistent DB, model, and socket
     __cleanup: () => {
       if (socket) {

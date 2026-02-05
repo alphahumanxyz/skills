@@ -17,6 +17,7 @@ import * as readline from 'readline/promises';
 import { existsSync, readFileSync, readdirSync, rmSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import vm from 'vm';
 import { config as loadDotenv } from 'dotenv';
 import { createBridgeAPIs, getLiveState } from './bootstrap-live';
 
@@ -46,7 +47,15 @@ interface Manifest {
   name: string;
   version: string;
   description?: string;
-  setup?: { required?: boolean; label?: string };
+  setup?: {
+    required?: boolean;
+    label?: string;
+    oauth?: {
+      provider: string;
+      scopes: string[];
+      apiBaseUrl: string;
+    };
+  };
 }
 
 interface ToolDef {
@@ -119,91 +128,12 @@ function discoverSkills(): Array<{ id: string; manifest: Manifest }> {
 // ─── Skill Loader ──────────────────────────────────────────────────
 
 function runInContext(G: G, code: string): void {
-  const fn = new Function('G', `
-    "use strict";
-    var console = G.console;
-    var store = G.store;
-    var db = G.db;
-    var net = G.net;
-    var platform = G.platform;
-    var backend = G.backend;
-    var socket = G.socket;
-    var state = G.state;
-    var data = G.data;
-    var cron = G.cron;
-    var skills = G.skills;
-    var model = G.model;
-    var setTimeout = G.setTimeout;
-    var setInterval = G.setInterval;
-    var clearTimeout = G.clearTimeout;
-    var clearInterval = G.clearInterval;
-    var Date = G.Date;
-    var JSON = G.JSON;
-    var Object = G.Object;
-    var Array = G.Array;
-    var String = G.String;
-    var Number = G.Number;
-    var Boolean = G.Boolean;
-    var Math = G.Math;
-    var Error = G.Error;
-    var TypeError = G.TypeError;
-    var ReferenceError = G.ReferenceError;
-    var Map = G.Map;
-    var Set = G.Set;
-    var WeakMap = G.WeakMap;
-    var WeakSet = G.WeakSet;
-    var Promise = G.Promise;
-    var RegExp = G.RegExp;
-    var Symbol = G.Symbol;
-    var BigInt = G.BigInt;
-    var parseInt = G.parseInt;
-    var parseFloat = G.parseFloat;
-    var isNaN = G.isNaN;
-    var isFinite = G.isFinite;
-    var encodeURIComponent = G.encodeURIComponent;
-    var decodeURIComponent = G.decodeURIComponent;
-    var encodeURI = G.encodeURI;
-    var decodeURI = G.decodeURI;
-    var Uint8Array = G.Uint8Array;
-    var Int8Array = G.Int8Array;
-    var Uint16Array = G.Uint16Array;
-    var Int16Array = G.Int16Array;
-    var Uint32Array = G.Uint32Array;
-    var Int32Array = G.Int32Array;
-    var Float32Array = G.Float32Array;
-    var Float64Array = G.Float64Array;
-    var ArrayBuffer = G.ArrayBuffer;
-    var DataView = G.DataView;
-    var TextEncoder = G.TextEncoder;
-    var TextDecoder = G.TextDecoder;
-    var btoa = G.btoa;
-    var atob = G.atob;
-    var globalThis = G;
-    var self = G;
-    var window = G;
-    var __helpers = G.__helpers;
-    var Buffer = G.Buffer;
-    var location = G.location;
-    var WebSocket = G.WebSocket;
-    var crypto = G.crypto;
-
-    ${code}
-
-    G.__skill = (typeof __skill !== 'undefined') ? __skill : ((typeof globalThis !== 'undefined' && globalThis.__skill) ? globalThis.__skill : G.__skill);
-    if (typeof init !== 'undefined') G.init = init;
-    if (typeof start !== 'undefined') G.start = start;
-    if (typeof stop !== 'undefined') G.stop = stop;
-    if (typeof onCronTrigger !== 'undefined') G.onCronTrigger = onCronTrigger;
-    if (typeof onSetupStart !== 'undefined') G.onSetupStart = onSetupStart;
-    if (typeof onSetupSubmit !== 'undefined') G.onSetupSubmit = onSetupSubmit;
-    if (typeof onSetupCancel !== 'undefined') G.onSetupCancel = onSetupCancel;
-    if (typeof onDisconnect !== 'undefined') G.onDisconnect = onDisconnect;
-    if (typeof onSessionStart !== 'undefined') G.onSessionStart = onSessionStart;
-    if (typeof onSessionEnd !== 'undefined') G.onSessionEnd = onSessionEnd;
-    if (typeof onListOptions !== 'undefined') G.onListOptions = onListOptions;
-    if (typeof onSetOption !== 'undefined') G.onSetOption = onSetOption;
-  `);
-  fn(G);
+  // Use vm.createContext for QuickJS-like sandboxing.
+  // All properties on G become globals in the sandbox context.
+  // The skill code accesses bridge APIs (store, db, net, oauth, etc.)
+  // directly as globals, matching QuickJS runtime behavior.
+  const context = vm.createContext(G);
+  vm.runInContext(code, context, { filename: 'skill.js', timeout: 30000 });
 }
 
 function extractSkillExports(G: G): void {
@@ -215,6 +145,7 @@ function extractSkillExports(G: G): void {
     'init', 'start', 'stop', 'onCronTrigger', 'onSetupStart',
     'onSetupSubmit', 'onSetupCancel', 'onDisconnect',
     'onSessionStart', 'onSessionEnd', 'onListOptions', 'onSetOption',
+    'onOAuthComplete', 'onOAuthRevoked',
   ];
   for (const hook of hooks) {
     if (skill[hook] && !G[hook]) G[hook] = skill[hook];
@@ -336,6 +267,85 @@ async function runSetupWizard(G: G, rl: readline.Interface): Promise<void> {
     // Unknown status
     console.log(`${c.yellow}Unknown setup status: ${submitResult.status}${c.reset}`);
     return;
+  }
+}
+
+// ─── OAuth Flow ─────────────────────────────────────────────────
+
+async function runOAuthFlow(
+  G: G,
+  manifest: Manifest,
+  rl: readline.Interface,
+  backendUrl: string,
+): Promise<void> {
+  const oauthConfig = manifest.setup?.oauth;
+  if (!oauthConfig) {
+    console.log(`${c.yellow}This skill does not have OAuth configuration in manifest${c.reset}`);
+    return;
+  }
+
+  console.log(`\n${c.magenta}${c.bold}OAuth Setup${c.reset}`);
+  console.log(`${c.dim}${'─'.repeat(50)}${c.reset}`);
+  console.log(`  ${c.cyan}Provider${c.reset}: ${oauthConfig.provider}`);
+  console.log(`  ${c.cyan}Scopes${c.reset}: ${oauthConfig.scopes.join(', ') || '(default)'}`);
+  console.log(`  ${c.cyan}API Base${c.reset}: ${oauthConfig.apiBaseUrl}`);
+
+  // Construct the OAuth redirect URL
+  const params = new URLSearchParams({
+    provider: oauthConfig.provider,
+    skillId: manifest.id,
+  });
+  if (oauthConfig.scopes.length > 0) {
+    params.set('scopes', oauthConfig.scopes.join(','));
+  }
+  const oauthUrl = `${backendUrl}/oauth/start?${params.toString()}`;
+
+  console.log(`\n${c.bold}Open this URL in your browser to authorize:${c.reset}`);
+  console.log(`  ${c.cyan}${oauthUrl}${c.reset}\n`);
+  console.log(`${c.dim}After completing authorization, paste the credential ID below.${c.reset}`);
+
+  const credentialId = await rl.question(`${c.cyan}Credential ID:${c.reset} `);
+  if (!credentialId.trim()) {
+    console.log(`${c.yellow}OAuth setup cancelled (no credential ID provided)${c.reset}`);
+    return;
+  }
+
+  // Set the credential on the bridge
+  const oauthApi = G.oauth as { __setCredential?: (cred: unknown) => void } | undefined;
+  if (oauthApi?.__setCredential) {
+    oauthApi.__setCredential({
+      credentialId: credentialId.trim(),
+      provider: oauthConfig.provider,
+      scopes: oauthConfig.scopes,
+      isValid: true,
+      createdAt: Date.now(),
+    });
+  }
+
+  // Call onOAuthComplete on the skill
+  const onOAuthComplete = G.onOAuthComplete as ((args: {
+    credentialId: string;
+    provider: string;
+    grantedScopes: string[];
+    accountLabel?: string;
+  }) => unknown) | undefined;
+
+  if (typeof onOAuthComplete === 'function') {
+    try {
+      const result = onOAuthComplete({
+        credentialId: credentialId.trim(),
+        provider: oauthConfig.provider,
+        grantedScopes: oauthConfig.scopes,
+      });
+      console.log(`${c.green}OAuth complete!${c.reset}`);
+      if (result) {
+        console.log(prettyJson(result));
+      }
+    } catch (e) {
+      console.log(`${c.red}onOAuthComplete error: ${e}${c.reset}`);
+    }
+  } else {
+    console.log(`${c.yellow}onOAuthComplete not defined — credential set on bridge only${c.reset}`);
   }
 }
 
@@ -480,7 +490,8 @@ ${c.bold}Commands:${c.reset}
   ${c.cyan}cron <id>${c.reset}                   Trigger onCronTrigger(id)
   ${c.cyan}session start [id]${c.reset}          Trigger onSessionStart
   ${c.cyan}session end [id]${c.reset}            Trigger onSessionEnd
-  ${c.cyan}setup${c.reset}                       Run setup wizard
+  ${c.cyan}setup${c.reset}                       Run setup wizard (traditional form-based)
+  ${c.cyan}oauth${c.reset}                       Run OAuth flow (redirect + paste credential ID)
   ${c.cyan}options${c.reset}                     List runtime options
   ${c.cyan}option <name> <value>${c.reset}       Set a runtime option
   ${c.cyan}state${c.reset}                       Show published state
@@ -998,17 +1009,24 @@ async function main(): Promise<void> {
   }
 
   // Auto-detect setup needed
-  if (
-    ctx.manifest.setup?.required &&
-    typeof ctx.G.onSetupStart === 'function'
-  ) {
+  if (ctx.manifest.setup?.required) {
     const storeApi = ctx.G.store as { get?: (key: string) => unknown } | undefined;
     const config = storeApi?.get?.('config');
     if (!config) {
-      console.log(`\n${c.yellow}Setup required but no config found.${c.reset}`);
-      const answer = await rl.question(`${c.cyan}Run setup wizard? [Y/n]:${c.reset} `);
-      if (answer === '' || answer.toLowerCase().startsWith('y')) {
-        await runSetupWizard(ctx.G, rl);
+      if (ctx.manifest.setup.oauth) {
+        // OAuth-based setup
+        console.log(`\n${c.yellow}OAuth setup required but no config found.${c.reset}`);
+        const answer = await rl.question(`${c.cyan}Run OAuth flow? [Y/n]:${c.reset} `);
+        if (answer === '' || answer.toLowerCase().startsWith('y')) {
+          await runOAuthFlow(ctx.G, ctx.manifest, rl, backendUrl);
+        }
+      } else if (typeof ctx.G.onSetupStart === 'function') {
+        // Traditional form-based setup wizard
+        console.log(`\n${c.yellow}Setup required but no config found.${c.reset}`);
+        const answer = await rl.question(`${c.cyan}Run setup wizard? [Y/n]:${c.reset} `);
+        if (answer === '' || answer.toLowerCase().startsWith('y')) {
+          await runSetupWizard(ctx.G, rl);
+        }
       }
     }
   }
@@ -1071,6 +1089,10 @@ async function main(): Promise<void> {
 
         case 'setup':
           await runSetupWizard(ctx.G, rl);
+          break;
+
+        case 'oauth':
+          await runOAuthFlow(ctx.G, ctx.manifest, rl, backendUrl);
           break;
 
         case 'options':
