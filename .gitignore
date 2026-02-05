@@ -8,6 +8,8 @@ package-lock.json
 .env.test.local
 .env.production.local
 
+.idea
+
 # Python
 __pycache__/
 *.py[cod]
@@ -31,7 +33,6 @@ dmypy.json
 # Compiled JavaScript from TypeScript skills
 skills
 skills-ts-out
-examples/**/*.js
 src/**/*.js
 
 # Compiled JavaScript from test harness
