@@ -302,7 +302,7 @@ async function runOAuthFlow(
   let oauthUrl: string;
   try {
     console.log(`\n${c.dim}Requesting OAuth URL from backend...${c.reset}`);
-    const connectUrl = `${backendUrl}/auth/${oauthConfig.provider}/connect`;
+    const connectUrl = `${backendUrl}/auth/${oauthConfig.provider}/connect?responseType=json&skillId=${manifest.id}`;
     console.log(`[connectUrl] ${connectUrl}`);
     const resp = await globalThis.fetch(connectUrl, {
       headers: { Authorization: `Bearer ${jwtToken}` },
