@@ -180,6 +180,18 @@ tools = [
   listCommentsTool,
 ];
 
-// Suppress noUnusedLocals for runtime-called lifecycle functions
-void init; void start; void stop; void onOAuthComplete; void onOAuthRevoked; void onDisconnect;
+// ---------------------------------------------------------------------------
+// Expose lifecycle hooks on globalThis so the REPL/runtime can call them.
+// esbuild IIFE bundling traps function declarations in the closure scope —
+// without explicit assignment they are unreachable from outside.
+// ---------------------------------------------------------------------------
+
+_g.init = init;
+_g.start = start;
+_g.stop = stop;
+_g.onOAuthComplete = onOAuthComplete;
+_g.onOAuthRevoked = onOAuthRevoked;
+_g.onDisconnect = onDisconnect;
+
+// Suppress noUnusedLocals
 void credentialId;

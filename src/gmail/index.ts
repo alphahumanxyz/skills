@@ -449,15 +449,16 @@ tools = [
   getProfileTool,
 ];
 
-// Mark lifecycle functions as used (called by runtime, not in-module)
-void init;
-void start;
-void stop;
-void onCronTrigger;
-void onSessionStart;
-void onSessionEnd;
-void onOAuthComplete;
-void onOAuthRevoked;
-void onDisconnect;
-void onListOptions;
-void onSetOption;
+// Expose lifecycle hooks on globalThis so the REPL/runtime can call them.
+// esbuild IIFE bundling traps function declarations in the closure scope.
+_g.init = init;
+_g.start = start;
+_g.stop = stop;
+_g.onCronTrigger = onCronTrigger;
+_g.onSessionStart = onSessionStart;
+_g.onSessionEnd = onSessionEnd;
+_g.onOAuthComplete = onOAuthComplete;
+_g.onOAuthRevoked = onOAuthRevoked;
+_g.onDisconnect = onDisconnect;
+_g.onListOptions = onListOptions;
+_g.onSetOption = onSetOption;

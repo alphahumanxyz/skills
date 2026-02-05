@@ -463,16 +463,17 @@ function publishState(): void {
 const _g = globalThis as Record<string, unknown>;
 _g.publishState = publishState;
 
-// Runtime lifecycle hooks (called by QuickJS host, not within this module)
-void init;
-void start;
-void stop;
-void onCronTrigger;
-void onSetupStart;
-void onSetupSubmit;
-void onSetupCancel;
-void onListOptions;
-void onSetOption;
-void onSessionStart;
-void onSessionEnd;
-void onDisconnect;
+// Expose lifecycle hooks on globalThis so the REPL/runtime can call them.
+// esbuild IIFE bundling traps function declarations in the closure scope.
+_g.init = init;
+_g.start = start;
+_g.stop = stop;
+_g.onCronTrigger = onCronTrigger;
+_g.onSetupStart = onSetupStart;
+_g.onSetupSubmit = onSetupSubmit;
+_g.onSetupCancel = onSetupCancel;
+_g.onListOptions = onListOptions;
+_g.onSetOption = onSetOption;
+_g.onSessionStart = onSessionStart;
+_g.onSessionEnd = onSessionEnd;
+_g.onDisconnect = onDisconnect;
