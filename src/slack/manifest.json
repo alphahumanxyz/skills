@@ -1,0 +1,11 @@
+{
+  "id": "slack",
+  "name": "Slack",
+  "runtime": "v8",
+  "entry": "index.js",
+  "version": "1.0.0",
+  "description": "Full-fledged Slack bot: read and send messages, receive real-time events, and store all received messages in the skill DB.",
+  "auto_start": false,
+  "platforms": ["windows", "macos", "linux"],
+  "setup": { "required": true, "label": "Connect Slack" }
+}

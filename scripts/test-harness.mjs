@@ -319,6 +319,7 @@ function testSkill(skillDir, skillName) {
     sandbox.onDisconnect = undefined;
     sandbox.onListOptions = undefined;
     sandbox.onSetOption = undefined;
+    sandbox.onServerEvent = undefined;
 
     const context = vm.createContext(sandbox);
 
@@ -328,27 +329,37 @@ function testSkill(skillDir, skillName) {
     console.log(`  ${colors.green}✓${colors.reset} Skill code evaluates without errors`);
     testsPassed++;
 
+    // Resolve skill object: bundled skills use __skill.default
+    const skillObj = sandbox.globalThis.__skill?.default || sandbox.globalThis;
+    const initFn = skillObj.init || sandbox.globalThis.init;
+    const startFn = skillObj.start || sandbox.globalThis.start;
+    const stopFn = skillObj.stop || sandbox.globalThis.stop;
+    const toolsArr = skillObj.tools || sandbox.globalThis.tools;
+
     // Check lifecycle hooks are exported
-    const hooks = ['init', 'start', 'stop'];
-    let hasHooks = true;
-    for (const hook of hooks) {
-      if (typeof sandbox.globalThis[hook] === 'function') {
-        console.log(`  ${colors.green}✓${colors.reset} ${hook}() exported`);
+    const hooks = [
+      ['init', initFn],
+      ['start', startFn],
+      ['stop', stopFn],
+    ];
+    for (const [name, fn] of hooks) {
+      if (typeof fn === 'function') {
+        console.log(`  ${colors.green}✓${colors.reset} ${name}() exported`);
         testsPassed++;
       } else {
-        console.log(`  ${colors.yellow}○${colors.reset} ${hook}() not found (optional)`);
+        console.log(`  ${colors.yellow}○${colors.reset} ${name}() not found (optional)`);
       }
     }
 
     // Check tools
-    if (Array.isArray(sandbox.globalThis.tools)) {
+    if (Array.isArray(toolsArr)) {
       console.log(
-        `  ${colors.green}✓${colors.reset} tools array exported (${sandbox.globalThis.tools.length} tools)`
+        `  ${colors.green}✓${colors.reset} tools array exported (${toolsArr.length} tools)`
       );
       testsPassed++;
 
       // List tools
-      for (const tool of sandbox.globalThis.tools) {
+      for (const tool of toolsArr) {
         if (tool.name && tool.description && typeof tool.execute === 'function') {
           console.log(`    - ${tool.name}`);
         }
@@ -358,9 +369,9 @@ function testSkill(skillDir, skillName) {
     }
 
     // Try calling init()
-    if (typeof sandbox.globalThis.init === 'function') {
+    if (typeof initFn === 'function') {
       try {
-        sandbox.globalThis.init();
+        initFn();
         console.log(`  ${colors.green}✓${colors.reset} init() runs without error`);
         testsPassed++;
       } catch (e) {
