@@ -91,6 +91,43 @@ declare const data: {
 declare var tools: ToolDefinition[];
 
 // ---------------------------------------------------------------------------
+// V8 Runtime Globals (available at runtime but not in TypeScript by default)
+// ---------------------------------------------------------------------------
+
+/** Console logging (available in V8 runtime) */
+declare const console: {
+  log(...args: any[]): void;
+  error(...args: any[]): void;
+  warn(...args: any[]): void;
+  info(...args: any[]): void;
+};
+
+/** Base64 encoding/decoding (available in V8 runtime) */
+declare function atob(data: string): string;
+declare function btoa(data: string): string;
+
+/** URI encoding (available in V8 runtime) */
+declare function encodeURIComponent(str: string): string;
+declare function decodeURIComponent(str: string): string;
+
+/** Timer functions (available in V8 runtime) */
+declare function setTimeout(callback: (...args: any[]) => void, delay: number, ...args: any[]): number;
+declare function clearTimeout(id: number): void;
+declare function setInterval(callback: (...args: any[]) => void, delay: number, ...args: any[]): number;
+declare function clearInterval(id: number): void;
+
+/** AbortController for request cancellation (available in V8 runtime) */
+declare class AbortController {
+  readonly signal: AbortSignal;
+  abort(): void;
+}
+
+declare class AbortSignal {
+  readonly aborted: boolean;
+  onabort: ((this: AbortSignal, ev: any) => any) | null;
+}
+
+// ---------------------------------------------------------------------------
 // Supporting interfaces
 // ---------------------------------------------------------------------------
 
@@ -112,7 +149,12 @@ interface ToolPropertySchema {
   description?: string;
   enum?: string[];
   default?: unknown;
-  items?: { type: string };
+  items?: { type: string; properties?: Record<string, any>; required?: string[] };
+  properties?: Record<string, any>;
+  required?: string[];
+  minimum?: number;
+  maximum?: number;
+  format?: string;
 }
 
 interface NetFetchOptions {
