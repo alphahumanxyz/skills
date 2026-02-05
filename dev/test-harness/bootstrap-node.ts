@@ -168,6 +168,34 @@ export async function createBridgeAPIs(): Promise<Record<string, unknown>> {
     },
   };
 
+  // Model API - local LLM inference mock
+  const model = {
+    isAvailable: (): boolean => {
+      return state.modelAvailable;
+    },
+    getStatus: (): Record<string, unknown> => {
+      return {
+        available: state.modelAvailable,
+        loaded: state.modelAvailable,
+        loading: false,
+        downloaded: state.modelAvailable,
+      };
+    },
+    generate: (prompt: string, options?: unknown): string => {
+      state.modelCalls.push({ method: 'generate', prompt, options });
+      for (const [substring, response] of Object.entries(state.modelResponses)) {
+        if (prompt.includes(substring)) return response;
+      }
+      if (!state.modelAvailable) throw new Error('Model not available');
+      return '(mock model response)';
+    },
+    summarize: (text: string, options?: unknown): string => {
+      state.modelCalls.push({ method: 'summarize', prompt: text, options });
+      if (!state.modelAvailable) throw new Error('Model not available');
+      return '(mock summary)';
+    },
+  };
+
   // Timer mocks
   const setTimeout = (callback: () => void, delay = 0): number => {
     const id = state.nextTimerId++;
@@ -277,6 +305,7 @@ export async function createBridgeAPIs(): Promise<Record<string, unknown>> {
     data,
     cron,
     skills,
+    model,
     setTimeout,
     setInterval,
     clearTimeout,

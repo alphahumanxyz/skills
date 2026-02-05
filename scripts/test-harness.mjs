@@ -158,6 +158,14 @@ function createBridgeAPIs() {
     // Skills API
     skills: { list: () => [], callTool: () => null },
 
+    // Model API
+    model: {
+      isAvailable: () => true,
+      getStatus: () => ({ available: true, loaded: true, loading: false, downloaded: true }),
+      generate: (prompt, options) => '(mock model response)',
+      summarize: (text, options) => '(mock summary)',
+    },
+
     // Console
     console: {
       log: (...args) => {

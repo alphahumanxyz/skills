@@ -83,6 +83,18 @@ declare const data: {
   write(filename: string, content: string): void;
 };
 
+/** Local LLM inference. */
+declare const model: {
+  /** Check if a local model is available for inference. */
+  isAvailable(): boolean;
+  /** Get detailed model status (loaded, downloading, error, etc.). */
+  getStatus(): ModelStatus;
+  /** Generate text from a prompt. Returns the generated text. */
+  generate(prompt: string, options?: ModelGenerateOptions): string;
+  /** Summarize a block of text. Returns the summary. */
+  summarize(text: string, options?: ModelSummarizeOptions): string;
+};
+
 // ---------------------------------------------------------------------------
 // Tools (assigned by skills on globalThis)
 // ---------------------------------------------------------------------------
@@ -222,4 +234,24 @@ interface SkillInfo {
   name: string;
   version?: string;
   status?: string;
+}
+
+interface ModelStatus {
+  available: boolean;
+  loaded: boolean;
+  loading: boolean;
+  downloaded: boolean;
+  downloadProgress?: number;
+  error?: string;
+  modelPath?: string;
+}
+
+interface ModelGenerateOptions {
+  maxTokens?: number;
+  temperature?: number;
+  topP?: number;
+}
+
+interface ModelSummarizeOptions {
+  maxTokens?: number;
 }

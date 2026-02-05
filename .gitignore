@@ -38,3 +38,6 @@ src/**/*.js
 
 # Compiled JavaScript from test harness
 dev/js-harness/**/*.js
+
+# Local model files (large GGUF binaries)
+.models/

@@ -51,6 +51,15 @@ export interface MockState {
   /** Timer tracking */
   timers: Map<number, TimerEntry>;
   nextTimerId: number;
+
+  /** model.generate/summarize call log */
+  modelCalls: Array<{ method: string; prompt: string; options?: unknown }>;
+
+  /** Prompt-substring → response mapping for model mock */
+  modelResponses: Record<string, string>;
+
+  /** Whether the mock model is available */
+  modelAvailable: boolean;
 }
 
 export interface DbTable {
@@ -102,6 +111,9 @@ function createFreshState(): MockState {
     consoleOutput: [],
     timers: new Map(),
     nextTimerId: 1,
+    modelCalls: [],
+    modelResponses: {},
+    modelAvailable: true,
   };
 }
 
@@ -124,6 +136,8 @@ export function initMockState(options?: {
   platformOs?: string;
   peerSkills?: SkillInfo[];
   dataFiles?: Record<string, string>;
+  modelResponses?: Record<string, string>;
+  modelAvailable?: boolean;
 }): void {
   resetMockState();
 
@@ -147,6 +161,12 @@ export function initMockState(options?: {
   }
   if (options?.dataFiles) {
     mockState.dataFiles = { ...options.dataFiles };
+  }
+  if (options?.modelResponses) {
+    mockState.modelResponses = { ...options.modelResponses };
+  }
+  if (options?.modelAvailable !== undefined) {
+    mockState.modelAvailable = options.modelAvailable;
   }
 }
 
@@ -175,4 +195,14 @@ export function setEnv(key: string, value: string): void {
 /** Set platform OS */
 export function setPlatformOs(os: string): void {
   mockState.platformOs = os;
+}
+
+/** Set up a mock model response for prompts containing a substring */
+export function mockModelResponse(promptSubstring: string, response: string): void {
+  mockState.modelResponses[promptSubstring] = response;
+}
+
+/** Set whether the mock model is available */
+export function setModelAvailable(available: boolean): void {
+  mockState.modelAvailable = available;
 }

@@ -38,8 +38,10 @@ import {
   initMockState,
   mockFetchError,
   mockFetchResponse,
+  mockModelResponse,
   resetMockState,
   setEnv,
+  setModelAvailable,
   setPlatformOs,
 } from './mock-state';
 
@@ -92,6 +94,8 @@ ${colors.yellow}Script Helpers Available:${colors.reset}
   __resetMockState()             - Reset all mocks to initial state
   __setEnv(key, value)           - Set environment variable
   __setPlatformOs(os)            - Set platform.os() return value
+  __mockModelResponse(sub, resp) - Set mock model response for prompt substring
+  __setModelAvailable(bool)      - Set model availability
 `);
 }
 
@@ -196,8 +200,10 @@ async function main(): Promise<void> {
     getMockState,
     mockFetchResponse,
     mockFetchError,
+    mockModelResponse,
     resetMockState,
     setEnv,
+    setModelAvailable,
     setPlatformOs,
   };
 
@@ -227,6 +233,7 @@ async function main(): Promise<void> {
       var data = G.data;
       var cron = G.cron;
       var skills = G.skills;
+      var model = G.model;
       var setTimeout = G.setTimeout;
       var setInterval = G.setInterval;
       var clearTimeout = G.clearTimeout;
@@ -453,6 +460,14 @@ function __setEnv(key, value) {
 
 function __setPlatformOs(os) {
   __helpers.setPlatformOs(os);
+}
+
+function __mockModelResponse(promptSubstring, response) {
+  __helpers.mockModelResponse(promptSubstring, response);
+}
+
+function __setModelAvailable(available) {
+  __helpers.setModelAvailable(available);
 }
 `;
 

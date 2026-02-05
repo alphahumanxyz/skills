@@ -16,6 +16,8 @@
     "test": "bash scripts/test-js.sh",
     "test:script": "tsx dev/test-harness/runner-node.ts",
     "test:live": "tsx dev/test-harness/live-runner-node.ts",
+    "model:download": "node scripts/download-model.mjs",
+    "test:model": "node scripts/test-model.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate": "node scripts/validate.mjs",
@@ -39,6 +41,7 @@
     "rimraf": "^6.1.2",
     "tsx": "^4.19.0",
     "typescript": "~5.8.3",
+    "node-llama-cpp": "^3.5.0",
     "ws": "^8.18.0"
   }
 }

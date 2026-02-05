@@ -98,6 +98,12 @@ yarn test src/server-ping/__tests__/test-server-ping.ts
 # Lint and format
 yarn lint
 yarn format:check
+
+# Download local model for inference testing
+yarn model:download
+
+# Run test script with real local model
+yarn test:model <skill-id> <script-file>
 ```
 
 ## Bridge APIs
@@ -114,6 +120,7 @@ Skills have access to these global namespaces (defined in `types/globals.d.ts`):
 | `platform` | OS info, env vars, notifications    |
 | `state`    | Real-time frontend state publishing |
 | `data`     | File I/O in skill's data directory  |
+| `model`    | Local LLM inference (generate, summarize) |
 
 ### Database (`db`)
 
@@ -169,6 +176,24 @@ const status = state.get('status');
 ```typescript
 data.write('config.json', JSON.stringify(config, null, 2));
 const content = data.read('config.json'); // null if not found
+```
+
+### Model (`model`)
+
+```typescript
+// Check if a local model is available
+const available = model.isAvailable();
+const status = model.getStatus(); // { available, loaded, loading, downloaded, error? }
+
+// Generate text from a prompt
+const response = model.generate('What is Bitcoin?', {
+  maxTokens: 200,    // default: 2048
+  temperature: 0.7,  // default: 0.7
+  topP: 0.9,         // default: 0.9
+});
+
+// Summarize a block of text
+const summary = model.summarize(longText, { maxTokens: 100 });
 ```
 
 ### Platform (`platform`)
