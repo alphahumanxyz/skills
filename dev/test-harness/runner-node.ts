@@ -96,6 +96,8 @@ ${colors.yellow}Script Helpers Available:${colors.reset}
   __setPlatformOs(os)            - Set platform.os() return value
   __mockModelResponse(sub, resp) - Set mock model response for prompt substring
   __setModelAvailable(bool)      - Set model availability
+  __getSubmittedSummaries()      - Get all model.submitSummary() submissions
+  __clearSummaries()             - Clear submitted summaries array
 `);
 }
 
@@ -468,6 +470,14 @@ function __mockModelResponse(promptSubstring, response) {
 
 function __setModelAvailable(available) {
   __helpers.setModelAvailable(available);
+}
+
+function __getSubmittedSummaries() {
+  return __helpers.getMockState().summarySubmissions;
+}
+
+function __clearSummaries() {
+  __helpers.getMockState().summarySubmissions = [];
 }
 `;
 

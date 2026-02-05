@@ -164,6 +164,7 @@ function createBridgeAPIs() {
       getStatus: () => ({ available: true, loaded: true, loading: false, downloaded: true }),
       generate: (prompt, options) => '(mock model response)',
       summarize: (text, options) => '(mock summary)',
+      submitSummary: () => {},
     },
 
     // Console

@@ -194,6 +194,38 @@ export async function createBridgeAPIs(): Promise<Record<string, unknown>> {
       if (!state.modelAvailable) throw new Error('Model not available');
       return '(mock summary)';
     },
+    submitSummary: (submission: Record<string, unknown>): void => {
+      if (
+        !submission ||
+        typeof (submission as any).summary !== 'string' ||
+        ((submission as any).summary as string).trim() === ''
+      ) {
+        throw new Error('model.submitSummary: summary field is required and must be a non-empty string');
+      }
+      const s = submission as any;
+      if (s.sentiment && !['positive', 'neutral', 'negative', 'mixed'].includes(s.sentiment)) {
+        throw new Error(`model.submitSummary: invalid sentiment "${s.sentiment}"`);
+      }
+      if (s.timeRange) {
+        if (typeof s.timeRange.start !== 'number' || typeof s.timeRange.end !== 'number') {
+          throw new Error('model.submitSummary: timeRange.start and timeRange.end must be numbers');
+        }
+      }
+      state.summarySubmissions.push({
+        summary: s.summary,
+        keyPoints: s.keyPoints,
+        category: s.category,
+        sentiment: s.sentiment,
+        dataSource: s.dataSource,
+        timeRange: s.timeRange,
+        entities: s.entities,
+        metadata: s.metadata,
+        submittedAt: Date.now(),
+      });
+      globalThis.console.log(
+        `[model.submitSummary] "${s.summary.substring(0, 80)}${s.summary.length > 80 ? '...' : ''}"`
+      );
+    },
   };
 
   // Timer mocks

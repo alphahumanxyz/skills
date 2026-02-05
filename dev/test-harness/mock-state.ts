@@ -60,6 +60,9 @@ export interface MockState {
 
   /** Whether the mock model is available */
   modelAvailable: boolean;
+
+  /** model.submitSummary() recorded submissions */
+  summarySubmissions: Array<SummarySubmissionRecord>;
 }
 
 export interface DbTable {
@@ -88,6 +91,25 @@ export interface TimerEntry {
   scheduledAt: number;
 }
 
+export interface SummarySubmissionRecord {
+  summary: string;
+  keyPoints?: string[];
+  category?: string;
+  sentiment?: 'positive' | 'neutral' | 'negative' | 'mixed';
+  dataSource?: string;
+  timeRange?: { start: number; end: number };
+  entities?: Array<{
+    id: string;
+    type: string;
+    name?: string;
+    role?: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  metadata?: Record<string, unknown>;
+  /** Timestamp when the mock recorded the submission */
+  submittedAt: number;
+}
+
 /** Global mock state instance */
 let mockState: MockState = createFreshState();
 
@@ -114,6 +136,7 @@ function createFreshState(): MockState {
     modelCalls: [],
     modelResponses: {},
     modelAvailable: true,
+    summarySubmissions: [],
   };
 }
 

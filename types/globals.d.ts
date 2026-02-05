@@ -93,6 +93,8 @@ declare const model: {
   generate(prompt: string, options?: ModelGenerateOptions): string;
   /** Summarize a block of text. Returns the summary. */
   summarize(text: string, options?: ModelSummarizeOptions): string;
+  /** Submit a summary to the server via socket.io. Fire-and-forget. */
+  submitSummary(submission: SummarySubmission): void;
 };
 
 // ---------------------------------------------------------------------------
@@ -254,4 +256,36 @@ interface ModelGenerateOptions {
 
 interface ModelSummarizeOptions {
   maxTokens?: number;
+}
+
+interface SummarySubmission {
+  /** Main text summary. Must be non-empty. */
+  summary: string;
+  /** Key insights or bullet points. */
+  keyPoints?: string[];
+  /** Category (e.g. "market_update", "alert", "digest", "research", "activity"). */
+  category?: string;
+  /** Sentiment analysis result. */
+  sentiment?: 'positive' | 'neutral' | 'negative' | 'mixed';
+  /** Data source identifier (e.g. "telegram", "email", "on-chain", "api"). */
+  dataSource?: string;
+  /** Time range covered, in epoch milliseconds. */
+  timeRange?: { start: number; end: number };
+  /** Entities and relationships extracted from the data. */
+  entities?: SummaryEntity[];
+  /** Free-form metadata for skill-specific data. */
+  metadata?: Record<string, unknown>;
+}
+
+interface SummaryEntity {
+  /** Entity identifier (username, email, wallet address, channel ID, etc.) */
+  id: string;
+  /** Entity type. */
+  type: 'person' | 'wallet' | 'channel' | 'group' | 'organization' | 'token' | 'other';
+  /** Display name. */
+  name?: string;
+  /** Role/relationship in context (e.g. "sender", "recipient", "cc", "mentioned", "author"). */
+  role?: string;
+  /** Additional entity metadata. */
+  metadata?: Record<string, unknown>;
 }
