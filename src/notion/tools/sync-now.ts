@@ -1,7 +1,6 @@
 // Tool: notion-sync-now
 // Triggers an immediate sync and returns the result
 import '../skill-state';
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {
@@ -17,10 +16,7 @@ export const syncNowTool: ToolDefinition = {
   description:
     'Trigger an immediate Notion sync to refresh local data. ' +
     'Returns sync results including counts of synced pages, databases, and users.',
-  input_schema: {
-    type: 'object',
-    properties: {},
-  },
+  input_schema: { type: 'object', properties: {} },
   execute(): string {
     try {
       const s = globalThis.getNotionSkillState();
@@ -61,10 +57,7 @@ export const syncNowTool: ToolDefinition = {
         },
       });
     } catch (e) {
-      return JSON.stringify({
-        success: false,
-        error: e instanceof Error ? e.message : String(e),
-      });
+      return JSON.stringify({ success: false, error: e instanceof Error ? e.message : String(e) });
     }
   },
 };

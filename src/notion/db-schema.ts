@@ -70,14 +70,8 @@ export function initializeNotionSchema(): void {
   );
 
   // Create indexes for performance
-  db.exec(
-    'CREATE INDEX IF NOT EXISTS idx_pages_last_edited ON pages(last_edited_time DESC)',
-    []
-  );
-  db.exec(
-    'CREATE INDEX IF NOT EXISTS idx_pages_parent ON pages(parent_type, parent_id)',
-    []
-  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pages_last_edited ON pages(last_edited_time DESC)', []);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pages_parent ON pages(parent_type, parent_id)', []);
   db.exec('CREATE INDEX IF NOT EXISTS idx_pages_archived ON pages(archived)', []);
   db.exec(
     'CREATE INDEX IF NOT EXISTS idx_databases_last_edited ON databases(last_edited_time DESC)',

@@ -2,7 +2,6 @@
 // Periodically downloads pages, databases, users, and page content from Notion
 // into local SQLite for fast local querying.
 import './skill-state';
-
 import type { NotionGlobals } from './types';
 
 // Access helpers at runtime via the same n() pattern used by tools

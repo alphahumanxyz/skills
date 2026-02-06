@@ -5,8 +5,6 @@
 // Import modules to initialize state and expose functions on globalThis
 import './db-helpers';
 import './db-schema';
-import './skill-state';
-import './sync';
 // Import helpers
 import {
   buildParagraphBlock,
@@ -22,7 +20,9 @@ import {
   formatUserSummary,
   notionFetch,
 } from './helpers';
+import './skill-state';
 import type { NotionSkillConfig } from './skill-state';
+import './sync';
 import { appendBlocksTool } from './tools/append-blocks';
 import { appendTextTool } from './tools/append-text';
 import { createCommentTool } from './tools/create-comment';
@@ -77,8 +77,7 @@ function init(): void {
   const s = globalThis.getNotionSkillState();
 
   // Initialize database schema
-  const initSchema = (globalThis as { initializeNotionSchema?: () => void })
-    .initializeNotionSchema;
+  const initSchema = (globalThis as { initializeNotionSchema?: () => void }).initializeNotionSchema;
   if (initSchema) {
     initSchema();
   }

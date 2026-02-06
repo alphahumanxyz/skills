@@ -120,8 +120,8 @@ export function upsertPage(page: Record<string, unknown>): void {
       iconStr,
       parent.type,
       parent.id,
-      createdBy?.id as string || null,
-      lastEditedBy?.id as string || null,
+      (createdBy?.id as string) || null,
+      (lastEditedBy?.id as string) || null,
       page.created_time as string,
       page.last_edited_time as string,
       (page.archived as boolean) ? 1 : 0,
@@ -136,10 +136,11 @@ export function upsertPage(page: Record<string, unknown>): void {
  * Update a page's extracted content text
  */
 export function updatePageContent(pageId: string, contentText: string): void {
-  db.exec(
-    'UPDATE pages SET content_text = ?, content_synced_at = ? WHERE id = ?',
-    [contentText, Date.now(), pageId]
-  );
+  db.exec('UPDATE pages SET content_text = ?, content_synced_at = ? WHERE id = ?', [
+    contentText,
+    Date.now(),
+    pageId,
+  ]);
 }
 
 /**
@@ -153,11 +154,7 @@ export function getPageById(pageId: string): LocalPage | null {
  * Query local pages with optional search and filtering
  */
 export function getLocalPages(
-  options: {
-    query?: string;
-    limit?: number;
-    includeArchived?: boolean;
-  } = {}
+  options: { query?: string; limit?: number; includeArchived?: boolean } = {}
 ): LocalPage[] {
   let sql = 'SELECT * FROM pages WHERE 1=1';
   const params: unknown[] = [];
@@ -287,7 +284,7 @@ export function upsertUser(user: Record<string, unknown>): void {
       user.id as string,
       (user.name as string) || '(Unknown)',
       (user.type as string) || 'person',
-      person?.email as string || null,
+      (person?.email as string) || null,
       (user.avatar_url as string) || null,
       now,
     ]

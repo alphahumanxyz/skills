@@ -7,10 +7,7 @@ export const syncStatusTool: ToolDefinition = {
   description:
     'Get the current Notion sync status including last sync time, ' +
     'total synced pages/databases/users, sync progress, and any errors.',
-  input_schema: {
-    type: 'object',
-    properties: {},
-  },
+  input_schema: { type: 'object', properties: {} },
   execute(): string {
     try {
       const s = globalThis.getNotionSkillState();
@@ -40,9 +37,7 @@ export const syncStatusTool: ToolDefinition = {
         },
       });
     } catch (e) {
-      return JSON.stringify({
-        error: e instanceof Error ? e.message : String(e),
-      });
+      return JSON.stringify({ error: e instanceof Error ? e.message : String(e) });
     }
   },
 };

@@ -28,10 +28,7 @@ export const searchLocalTool: ToolDefinition = {
         enum: ['page', 'database', 'all'],
         description: 'Filter by type (default: all)',
       },
-      limit: {
-        type: 'number',
-        description: 'Maximum results to return (default: 20, max: 100)',
-      },
+      limit: { type: 'number', description: 'Maximum results to return (default: 20, max: 100)' },
       include_content: {
         type: 'boolean',
         description: 'Include full content_text in results (default: false, only snippet)',
@@ -135,11 +132,7 @@ export const searchLocalTool: ToolDefinition = {
       // Apply limit to combined results
       const trimmed = results.slice(0, limit);
 
-      return JSON.stringify({
-        query,
-        count: trimmed.length,
-        results: trimmed,
-      });
+      return JSON.stringify({ query, count: trimmed.length, results: trimmed });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }
