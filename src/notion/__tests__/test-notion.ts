@@ -149,7 +149,9 @@ function configuredInitWithOAuth(
 
 _describe('init()', () => {
   _it('should load legacy token config from store if available', () => {
-    freshInit({ config: { token: VALID_TOKEN, workspaceName: 'My Workspace', authMethod: 'token' } });
+    freshInit({
+      config: { token: VALID_TOKEN, workspaceName: 'My Workspace', authMethod: 'token' },
+    });
     const mock = _getMockState();
     _assertEqual(mock.stateValues['connected'], true, 'should be connected');
     _assertEqual(mock.stateValues['workspaceName'], 'My Workspace');
@@ -297,10 +299,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupStart should show already-connected when OAuth credentials exist', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS },
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS } });
     const result = (globalThis as any).onSetupStart();
     _assertEqual(result.step.id, 'already-connected');
     _assertContains(result.step.description, 'OAuth Workspace');
@@ -318,10 +317,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupSubmit should handle already-connected keep action', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS },
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS } });
     const result = (globalThis as any).onSetupSubmit({
       stepId: 'already-connected',
       values: { action: 'keep' },
@@ -330,10 +326,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupSubmit should handle already-connected reconnect action', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS },
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS } });
     const result = (globalThis as any).onSetupSubmit({
       stepId: 'already-connected',
       values: { action: 'reconnect' },
@@ -370,10 +363,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupSubmit OAuth step should start flow when triggered', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: null,
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: null });
     const result = (globalThis as any).onSetupSubmit({
       stepId: 'oauth',
       values: { startOAuth: true, workspaceLabel: 'My Label' },
@@ -386,10 +376,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupSubmit OAuth step should complete if credentials already exist', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS },
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS } });
     // Simulate user coming back after OAuth completed
     const result = (globalThis as any).onSetupSubmit({
       stepId: 'oauth',
@@ -401,10 +388,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupSubmit oauth-pending should complete when flow is complete', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS },
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS } });
     // Mock flow status as complete
     (globalThis as any).__mockOAuthFlowStatus = { status: 'complete' };
 
@@ -419,10 +403,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupSubmit oauth-pending should error when flow fails', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: null,
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: null });
     // Mock flow status as failed
     (globalThis as any).__mockOAuthFlowStatus = { status: 'failed', error: 'User denied access' };
 
@@ -435,10 +416,7 @@ _describe('Setup flow - OAuth', () => {
   });
 
   _it('onSetupSubmit oauth-pending should error when flow expires', () => {
-    freshInit({
-      oauthAvailable: true,
-      oauthCredentials: null,
-    });
+    freshInit({ oauthAvailable: true, oauthCredentials: null });
     (globalThis as any).__mockOAuthFlowStatus = { status: 'expired' };
 
     const result = (globalThis as any).onSetupSubmit({
@@ -501,7 +479,10 @@ _describe('API calls with OAuth', () => {
     freshInit({
       config: { workspaceName: 'OAuth Workspace', authMethod: 'oauth' },
       fetchResponses: {
-        'https://api.notion.com/v1/search': { status: 401, body: JSON.stringify({ message: 'Unauthorized' }) },
+        'https://api.notion.com/v1/search': {
+          status: 401,
+          body: JSON.stringify({ message: 'Unauthorized' }),
+        },
       },
       oauthAvailable: true,
       oauthCredentials: { notion: MOCK_OAUTH_CREDENTIALS },
