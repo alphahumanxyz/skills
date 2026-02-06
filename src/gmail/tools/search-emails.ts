@@ -1,17 +1,18 @@
 // Tool: gmail-search-emails
 // Advanced email search using Gmail query syntax
-
 import '../skill-state';
 
 export const searchEmailsTool: ToolDefinition = {
   name: 'gmail-search-emails',
-  description: 'Search emails using advanced Gmail query syntax. Supports complex queries with operators like from:, to:, subject:, has:attachment, is:unread, etc.',
+  description:
+    'Search emails using advanced Gmail query syntax. Supports complex queries with operators like from:, to:, subject:, has:attachment, is:unread, etc.',
   input_schema: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'Gmail search query (e.g., "from:john@example.com subject:meeting is:unread", "has:attachment after:2023/01/01")',
+        description:
+          'Gmail search query (e.g., "from:john@example.com subject:meeting is:unread", "has:attachment after:2023/01/01")',
       },
       max_results: {
         type: 'number',
@@ -23,40 +24,35 @@ export const searchEmailsTool: ToolDefinition = {
         type: 'boolean',
         description: 'Include results from spam and trash folders (default: false)',
       },
-      page_token: {
-        type: 'string',
-        description: 'Token for pagination (from previous search)',
-      },
+      page_token: { type: 'string', description: 'Token for pagination (from previous search)' },
     },
     required: ['query'],
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any }).gmailFetch;
+      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
+        .gmailFetch;
       if (!gmailFetch) {
         return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
       }
 
       if (!oauth.getCredential()) {
-        return JSON.stringify({ success: false, error: 'Gmail not connected. Complete OAuth setup first.' });
+        return JSON.stringify({
+          success: false,
+          error: 'Gmail not connected. Complete OAuth setup first.',
+        });
       }
 
       const query = args.query as string;
       if (!query) {
-        return JSON.stringify({
-          success: false,
-          error: 'Search query is required',
-        });
+        return JSON.stringify({ success: false, error: 'Search query is required' });
       }
 
       // Build API parameters
       const params: string[] = [];
       params.push(`q=${encodeURIComponent(query)}`);
 
-      const maxResults = Math.min(
-        parseInt((args.max_results as string) || '20', 10),
-        100
-      );
+      const maxResults = Math.min(parseInt((args.max_results as string) || '20', 10), 100);
       params.push(`maxResults=${maxResults}`);
 
       if (args.include_spam_trash) {
@@ -123,12 +119,11 @@ export const searchEmailsTool: ToolDefinition = {
               id: message.id,
               thread_id: message.threadId,
               subject: headerMap.subject || '',
-              sender: {
-                email: senderEmail,
-                name: senderName,
-              },
+              sender: { email: senderEmail, name: senderName },
               recipients: headerMap.to || '',
-              date: headerMap.date ? new Date(headerMap.date).toISOString() : new Date(parseInt(message.internalDate)).toISOString(),
+              date: headerMap.date
+                ? new Date(headerMap.date).toISOString()
+                : new Date(parseInt(message.internalDate)).toISOString(),
               snippet: message.snippet,
               label_ids: message.labelIds || [],
               size_estimate: message.sizeEstimate || 0,
@@ -168,7 +163,6 @@ export const searchEmailsTool: ToolDefinition = {
         next_page_token: searchResults.nextPageToken || null,
         search_tips: generateSearchTips(query),
       });
-
     } catch (error) {
       return JSON.stringify({
         success: false,
@@ -184,8 +178,8 @@ export const searchEmailsTool: ToolDefinition = {
 function hasAttachments(message: any): boolean {
   if (message.payload?.body?.attachmentId) return true;
   if (message.payload?.parts) {
-    return message.payload.parts.some((part: any) =>
-      part.body?.attachmentId || (part.filename && part.filename.length > 0)
+    return message.payload.parts.some(
+      (part: any) => part.body?.attachmentId || (part.filename && part.filename.length > 0)
     );
   }
   return false;
@@ -199,7 +193,8 @@ function calculateRelevanceScore(message: any, query: string): number {
   const queryLower = query.toLowerCase();
 
   // Check subject relevance
-  const subject = message.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '';
+  const subject =
+    message.payload?.headers?.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '';
   if (subject.toLowerCase().includes(queryLower)) {
     score += 10;
   }

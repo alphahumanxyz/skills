@@ -1,5 +1,4 @@
 // Tool: notion-get-block
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

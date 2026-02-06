@@ -1,5 +1,4 @@
 // Tool: notion-delete-page
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

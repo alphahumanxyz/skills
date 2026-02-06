@@ -25,28 +25,14 @@ export interface GmailMessage {
     partId: string;
     mimeType: string;
     filename: string;
-    headers: Array<{
-      name: string;
-      value: string;
-    }>;
-    body: {
-      attachmentId?: string;
-      size: number;
-      data?: string;
-    };
+    headers: Array<{ name: string; value: string }>;
+    body: { attachmentId?: string; size: number; data?: string };
     parts?: Array<{
       partId: string;
       mimeType: string;
       filename: string;
-      headers: Array<{
-        name: string;
-        value: string;
-      }>;
-      body: {
-        attachmentId?: string;
-        size: number;
-        data?: string;
-      };
+      headers: Array<{ name: string; value: string }>;
+      body: { attachmentId?: string; size: number; data?: string };
     }>;
   };
   sizeEstimate: number;
@@ -71,10 +57,7 @@ export interface GmailLabel {
   messagesUnread?: number;
   threadsTotal?: number;
   threadsUnread?: number;
-  color?: {
-    textColor: string;
-    backgroundColor: string;
-  };
+  color?: { textColor: string; backgroundColor: string };
 }
 
 export interface GmailAttachment {
@@ -95,11 +78,7 @@ export interface SendEmailRequest {
   subject: string;
   bodyText?: string;
   bodyHtml?: string;
-  attachments?: Array<{
-    filename: string;
-    data: string;
-    mimeType: string;
-  }>;
+  attachments?: Array<{ filename: string; data: string; mimeType: string }>;
   threadId?: string;
   replyToMessageId?: string;
 }
@@ -196,13 +175,8 @@ export interface SyncStatus {
   nextSyncTime: number;
 }
 
-
 export interface ApiError {
   code: number;
   message: string;
-  errors?: Array<{
-    domain: string;
-    reason: string;
-    message: string;
-  }>;
+  errors?: Array<{ domain: string; reason: string; message: string }>;
 }

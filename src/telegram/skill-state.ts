@@ -1,7 +1,6 @@
 // Shared skill state module for Telegram skill
 // Tools and lifecycle functions access state through globalThis.getSkillState()
 // This pattern works in both production V8 runtime and test harness sandbox.
-
 import type { TdLibClient } from './tdlib-client';
 
 // ---------------------------------------------------------------------------
@@ -113,17 +112,8 @@ declare global {
  */
 function initSkillState(): TelegramState {
   const state: TelegramState = {
-    config: {
-      phoneNumber: '',
-      isAuthenticated: false,
-      dataDir: '',
-      pendingCode: false,
-    },
-    cache: {
-      me: null,
-      dialogs: [],
-      lastSync: 0,
-    },
+    config: { phoneNumber: '', isAuthenticated: false, dataDir: '', pendingCode: false },
+    cache: { me: null, dialogs: [], lastSync: 0 },
     client: null,
     clientConnecting: false,
     clientError: null,
@@ -131,18 +121,8 @@ function initSkillState(): TelegramState {
     passwordHint: null,
     workerRunning: false,
     workerTimeoutId: null,
-    sync: {
-      inProgress: false,
-      completed: false,
-      lastSyncTime: null,
-      error: null,
-    },
-    storage: {
-      chatCount: 0,
-      messageCount: 0,
-      contactCount: 0,
-      unreadCount: 0,
-    },
+    sync: { inProgress: false, completed: false, lastSyncTime: null, error: null },
+    storage: { chatCount: 0, messageCount: 0, contactCount: 0, unreadCount: 0 },
   };
 
   globalThis.__telegramSkillState = state;

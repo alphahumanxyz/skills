@@ -1,5 +1,4 @@
 // Tool: notion-list-comments
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

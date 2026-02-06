@@ -1,16 +1,15 @@
 // Database helper functions for Gmail skill
 // CRUD operations for emails, threads, labels, and attachments
-
 import './skill-state';
 import type {
-  DatabaseEmail,
-  DatabaseThread,
-  DatabaseLabel,
   DatabaseAttachment,
+  DatabaseEmail,
+  DatabaseLabel,
+  DatabaseThread,
+  EmailSearchOptions,
+  GmailLabel,
   GmailMessage,
   GmailThread,
-  GmailLabel,
-  EmailSearchOptions,
 } from './types';
 
 /**
@@ -86,7 +85,8 @@ export function upsertThread(thread: GmailThread): void {
 
   if (!firstMessage || !lastMessage) return;
 
-  const subject = firstMessage.payload.headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
+  const subject =
+    firstMessage.payload.headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
   const participants = new Set<string>();
 
   // Collect all participants from all messages
@@ -228,60 +228,50 @@ export function getThreads(options: EmailSearchOptions = {}): DatabaseThread[] {
  * Get all labels
  */
 export function getLabels(): DatabaseLabel[] {
-  return db.all(
-    'SELECT * FROM labels ORDER BY type, name',
-    []
-  ) as unknown as DatabaseLabel[];
+  return db.all('SELECT * FROM labels ORDER BY type, name', []) as unknown as DatabaseLabel[];
 }
 
 /**
  * Get email by ID
  */
 export function getEmailById(id: string): DatabaseEmail | null {
-  return db.get(
-    'SELECT * FROM emails WHERE id = ?',
-    [id]
-  ) as DatabaseEmail | null;
+  return db.get('SELECT * FROM emails WHERE id = ?', [id]) as DatabaseEmail | null;
 }
 
 /**
  * Get thread by ID
  */
 export function getThreadById(id: string): DatabaseThread | null {
-  return db.get(
-    'SELECT * FROM threads WHERE id = ?',
-    [id]
-  ) as DatabaseThread | null;
+  return db.get('SELECT * FROM threads WHERE id = ?', [id]) as DatabaseThread | null;
 }
 
 /**
  * Get attachments for an email
  */
 export function getEmailAttachments(messageId: string): DatabaseAttachment[] {
-  return db.all(
-    'SELECT * FROM attachments WHERE message_id = ?',
-    [messageId]
-  ) as unknown as DatabaseAttachment[];
+  return db.all('SELECT * FROM attachments WHERE message_id = ?', [
+    messageId,
+  ]) as unknown as DatabaseAttachment[];
 }
 
 /**
  * Update email read status
  */
 export function updateEmailReadStatus(emailId: string, isRead: boolean): void {
-  db.exec(
-    'UPDATE emails SET is_read = ?, updated_at = ? WHERE id = ?',
-    [isRead ? 1 : 0, Date.now(), emailId]
-  );
+  db.exec('UPDATE emails SET is_read = ?, updated_at = ? WHERE id = ?', [
+    isRead ? 1 : 0,
+    Date.now(),
+    emailId,
+  ]);
 }
 
 /**
  * Get sync state value
  */
 export function getSyncState(key: string): string | null {
-  const row = db.get(
-    'SELECT value FROM sync_state WHERE key = ?',
-    [key]
-  ) as { value: string } | null;
+  const row = db.get('SELECT value FROM sync_state WHERE key = ?', [key]) as {
+    value: string;
+  } | null;
   return row?.value || null;
 }
 
@@ -310,9 +300,8 @@ function extractEmail(emailStr: string): string {
 function hasEmailAttachments(message: GmailMessage): boolean {
   if (message.payload.body.attachmentId) return true;
   if (message.payload.parts) {
-    return message.payload.parts.some(part =>
-      part.body.attachmentId ||
-      (part.filename && part.filename.length > 0)
+    return message.payload.parts.some(
+      part => part.body.attachmentId || (part.filename && part.filename.length > 0)
     );
   }
   return false;
@@ -400,14 +389,7 @@ function insertEmailAttachments(message: GmailMessage): void {
       `INSERT OR REPLACE INTO attachments
        (message_id, attachment_id, filename, mime_type, size, part_id)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        message.id,
-        att.attachmentId,
-        att.filename,
-        att.mimeType,
-        att.size,
-        att.partId,
-      ]
+      [message.id, att.attachmentId, att.filename, att.mimeType, att.size, att.partId]
     );
   });
 }

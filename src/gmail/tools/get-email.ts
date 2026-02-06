@@ -1,47 +1,42 @@
 // Tool: gmail-get-email
 // Get full details of a specific email by ID
-
 import '../skill-state';
 
 export const getEmailTool: ToolDefinition = {
   name: 'gmail-get-email',
-  description: 'Get full details of a specific email by its ID, including headers, body content, and attachments.',
+  description:
+    'Get full details of a specific email by its ID, including headers, body content, and attachments.',
   input_schema: {
     type: 'object',
     properties: {
-      message_id: {
-        type: 'string',
-        description: 'The Gmail message ID to retrieve',
-      },
+      message_id: { type: 'string', description: 'The Gmail message ID to retrieve' },
       format: {
         type: 'string',
         enum: ['full', 'metadata', 'minimal'],
         description: 'Message format level (default: full)',
       },
-      include_body: {
-        type: 'boolean',
-        description: 'Include email body content (default: true)',
-      },
+      include_body: { type: 'boolean', description: 'Include email body content (default: true)' },
     },
     required: ['message_id'],
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any }).gmailFetch;
+      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
+        .gmailFetch;
       if (!gmailFetch) {
         return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
       }
 
       if (!oauth.getCredential()) {
-        return JSON.stringify({ success: false, error: 'Gmail not connected. Complete OAuth setup first.' });
+        return JSON.stringify({
+          success: false,
+          error: 'Gmail not connected. Complete OAuth setup first.',
+        });
       }
 
       const messageId = args.message_id as string;
       if (!messageId) {
-        return JSON.stringify({
-          success: false,
-          error: 'message_id is required',
-        });
+        return JSON.stringify({ success: false, error: 'message_id is required' });
       }
 
       const format = (args.format as string) || 'full';
@@ -147,11 +142,7 @@ export const getEmailTool: ToolDefinition = {
         };
       }
 
-      return JSON.stringify({
-        success: true,
-        email: result,
-      });
-
+      return JSON.stringify({ success: true, email: result });
     } catch (error) {
       return JSON.stringify({
         success: false,
@@ -180,10 +171,7 @@ function parseEmailAddresses(headerValue: string): Array<{ email: string; name?:
     const name = match[1]?.trim().replace(/^["']|["']$/g, '') || undefined;
     const email = match[2]?.trim() || trimmed;
 
-    addresses.push({
-      email,
-      name: name !== email ? name : undefined,
-    });
+    addresses.push({ email, name: name !== email ? name : undefined });
   });
 
   return addresses;
@@ -228,7 +216,9 @@ function extractEmailBodies(payload: any): { text?: string; html?: string } {
 /**
  * Helper: Extract attachment information
  */
-function extractAttachmentInfo(payload: any): Array<{
+function extractAttachmentInfo(
+  payload: any
+): Array<{
   attachment_id?: string;
   filename: string;
   mime_type: string;

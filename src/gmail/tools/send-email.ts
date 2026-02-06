@@ -1,11 +1,11 @@
 // Tool: gmail-send-email
 // Send emails via Gmail API with support for attachments, HTML/text, and threading
-
 import '../skill-state';
 
 export const sendEmailTool: ToolDefinition = {
   name: 'gmail-send-email',
-  description: 'Send an email through Gmail with support for HTML/text content, attachments, CC/BCC recipients, and reply threading.',
+  description:
+    'Send an email through Gmail with support for HTML/text content, attachments, CC/BCC recipients, and reply threading.',
   input_schema: {
     type: 'object',
     properties: {
@@ -13,10 +13,7 @@ export const sendEmailTool: ToolDefinition = {
         type: 'array',
         items: {
           type: 'object',
-          properties: {
-            email: { type: 'string', format: 'email' },
-            name: { type: 'string' },
-          },
+          properties: { email: { type: 'string', format: 'email' }, name: { type: 'string' } },
           required: ['email'],
         },
         description: 'Primary recipients',
@@ -25,10 +22,7 @@ export const sendEmailTool: ToolDefinition = {
         type: 'array',
         items: {
           type: 'object',
-          properties: {
-            email: { type: 'string', format: 'email' },
-            name: { type: 'string' },
-          },
+          properties: { email: { type: 'string', format: 'email' }, name: { type: 'string' } },
           required: ['email'],
         },
         description: 'CC recipients (optional)',
@@ -37,18 +31,12 @@ export const sendEmailTool: ToolDefinition = {
         type: 'array',
         items: {
           type: 'object',
-          properties: {
-            email: { type: 'string', format: 'email' },
-            name: { type: 'string' },
-          },
+          properties: { email: { type: 'string', format: 'email' }, name: { type: 'string' } },
           required: ['email'],
         },
         description: 'BCC recipients (optional)',
       },
-      subject: {
-        type: 'string',
-        description: 'Email subject line',
-      },
+      subject: { type: 'string', description: 'Email subject line' },
       body_text: {
         type: 'string',
         description: 'Plain text email body (optional if body_html provided)',
@@ -70,10 +58,7 @@ export const sendEmailTool: ToolDefinition = {
         },
         description: 'File attachments (optional)',
       },
-      thread_id: {
-        type: 'string',
-        description: 'Thread ID for replies (optional)',
-      },
+      thread_id: { type: 'string', description: 'Thread ID for replies (optional)' },
       reply_to_message_id: {
         type: 'string',
         description: 'Message ID being replied to (optional)',
@@ -83,13 +68,17 @@ export const sendEmailTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any }).gmailFetch;
+      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
+        .gmailFetch;
       if (!gmailFetch) {
         return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
       }
 
       if (!oauth.getCredential()) {
-        return JSON.stringify({ success: false, error: 'Gmail not connected. Complete OAuth setup first.' });
+        return JSON.stringify({
+          success: false,
+          error: 'Gmail not connected. Complete OAuth setup first.',
+        });
       }
 
       // Validate required fields
@@ -97,17 +86,11 @@ export const sendEmailTool: ToolDefinition = {
       const subject = args.subject as string;
 
       if (!to || !Array.isArray(to) || to.length === 0) {
-        return JSON.stringify({
-          success: false,
-          error: 'At least one recipient is required',
-        });
+        return JSON.stringify({ success: false, error: 'At least one recipient is required' });
       }
 
       if (!subject) {
-        return JSON.stringify({
-          success: false,
-          error: 'Subject is required',
-        });
+        return JSON.stringify({ success: false, error: 'Subject is required' });
       }
 
       const bodyText = args.body_text as string;
@@ -157,11 +140,8 @@ export const sendEmailTool: ToolDefinition = {
 
       rawMessage += `MIME-Version: 1.0\r\n`;
 
-      const attachments = args.attachments as Array<{
-        filename: string;
-        data: string;
-        mime_type: string;
-      }> || [];
+      const attachments =
+        (args.attachments as Array<{ filename: string; data: string; mime_type: string }>) || [];
 
       if (attachments.length > 0) {
         rawMessage += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`;
@@ -210,9 +190,7 @@ export const sendEmailTool: ToolDefinition = {
         .replace(/=+$/, '');
 
       // Prepare API request body
-      const requestBody: any = {
-        raw: encodedMessage,
-      };
+      const requestBody: any = { raw: encodedMessage };
 
       if (args.thread_id) {
         requestBody.threadId = args.thread_id;
@@ -253,7 +231,6 @@ export const sendEmailTool: ToolDefinition = {
         subject,
         size_estimate: sentMessage.sizeEstimate || 0,
       });
-
     } catch (error) {
       return JSON.stringify({
         success: false,

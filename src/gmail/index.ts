@@ -1,20 +1,17 @@
 // Gmail skill main entry point
 // Gmail integration with OAuth bridge, email management, and real-time sync
-
 // Import all tools
-import { getEmailsTool } from './tools/get-emails';
-import { sendEmailTool } from './tools/send-email';
-import { getEmailTool } from './tools/get-email';
-import { getLabelsTool } from './tools/get-labels';
-import { searchEmailsTool } from './tools/search-emails';
-import { markEmailTool } from './tools/mark-email';
-import { getProfileTool } from './tools/get-profile';
-
+import './db-helpers';
+import './db-schema';
 // Import modules to initialize state and expose functions on globalThis
 import './skill-state';
-import './db-schema';
-import './db-helpers';
-
+import { getEmailTool } from './tools/get-email';
+import { getEmailsTool } from './tools/get-emails';
+import { getLabelsTool } from './tools/get-labels';
+import { getProfileTool } from './tools/get-profile';
+import { markEmailTool } from './tools/mark-email';
+import { searchEmailsTool } from './tools/search-emails';
+import { sendEmailTool } from './tools/send-email';
 import type { SkillConfig } from './types';
 
 // ---------------------------------------------------------------------------
@@ -23,20 +20,25 @@ import type { SkillConfig } from './types';
 
 function gmailFetch(
   endpoint: string,
-  options: { method?: string; body?: string; headers?: Record<string, string>; timeout?: number } = {},
+  options: {
+    method?: string;
+    body?: string;
+    headers?: Record<string, string>;
+    timeout?: number;
+  } = {}
 ): { success: boolean; data?: any; error?: { code: number; message: string } } {
   const credential = oauth.getCredential();
   if (!credential) {
-    return { success: false, error: { code: 401, message: 'Gmail not connected. Complete OAuth setup first.' } };
+    return {
+      success: false,
+      error: { code: 401, message: 'Gmail not connected. Complete OAuth setup first.' },
+    };
   }
 
   try {
     const response = oauth.fetch(endpoint, {
       method: options.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {}),
-      },
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
       body: options.body,
       timeout: options.timeout || 30,
     });
@@ -96,7 +98,8 @@ function init(): void {
   }
 
   // Load sync status
-  const getSyncState = (globalThis as { getSyncState?: (key: string) => string | null }).getSyncState;
+  const getSyncState = (globalThis as { getSyncState?: (key: string) => string | null })
+    .getSyncState;
   if (getSyncState) {
     const lastSync = getSyncState('last_sync_time');
     const lastHistoryId = getSyncState('last_history_id');
@@ -142,7 +145,8 @@ function stop(): void {
   // Save current state
   store.set('config', s.config);
 
-  const setSyncState = (globalThis as { setSyncState?: (key: string, value: string) => void }).setSyncState;
+  const setSyncState = (globalThis as { setSyncState?: (key: string, value: string) => void })
+    .setSyncState;
   if (setSyncState) {
     setSyncState('last_sync_time', s.syncStatus.lastSyncTime.toString());
     setSyncState('last_history_id', s.syncStatus.lastHistoryId);

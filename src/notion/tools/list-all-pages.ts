@@ -1,5 +1,4 @@
 // Tool: notion-list-all-pages
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

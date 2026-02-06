@@ -1,5 +1,4 @@
 // Tool: notion-update-block
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {
@@ -60,7 +59,10 @@ export const updateBlockTool: ToolDefinition = {
         return JSON.stringify({ error: 'No updates specified' });
       }
 
-      const block = notionFetch(`/blocks/${blockId}`, { method: 'PATCH', body }) as Record<string, unknown>;
+      const block = notionFetch(`/blocks/${blockId}`, { method: 'PATCH', body }) as Record<
+        string,
+        unknown
+      >;
 
       return JSON.stringify({ success: true, block: formatBlockSummary(block) });
     } catch (e) {

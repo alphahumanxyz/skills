@@ -1,11 +1,11 @@
 // Tool: gmail-mark-email
 // Mark emails as read/unread, important, starred, etc.
-
 import '../skill-state';
 
 export const markEmailTool: ToolDefinition = {
   name: 'gmail-mark-email',
-  description: 'Mark emails with specific status (read/unread, important, starred) or add/remove labels.',
+  description:
+    'Mark emails with specific status (read/unread, important, starred) or add/remove labels.',
   input_schema: {
     type: 'object',
     properties: {
@@ -16,7 +16,16 @@ export const markEmailTool: ToolDefinition = {
       },
       action: {
         type: 'string',
-        enum: ['mark_read', 'mark_unread', 'add_star', 'remove_star', 'mark_important', 'mark_not_important', 'add_labels', 'remove_labels'],
+        enum: [
+          'mark_read',
+          'mark_unread',
+          'add_star',
+          'remove_star',
+          'mark_important',
+          'mark_not_important',
+          'add_labels',
+          'remove_labels',
+        ],
         description: 'Action to perform on the messages',
       },
       label_ids: {
@@ -29,24 +38,25 @@ export const markEmailTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any }).gmailFetch;
+      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
+        .gmailFetch;
       if (!gmailFetch) {
         return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
       }
 
       if (!oauth.getCredential()) {
-        return JSON.stringify({ success: false, error: 'Gmail not connected. Complete OAuth setup first.' });
+        return JSON.stringify({
+          success: false,
+          error: 'Gmail not connected. Complete OAuth setup first.',
+        });
       }
 
       const messageIds = args.message_ids as string[];
       const action = args.action as string;
-      const labelIds = args.label_ids as string[] || [];
+      const labelIds = (args.label_ids as string[]) || [];
 
       if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
-        return JSON.stringify({
-          success: false,
-          error: 'At least one message ID is required',
-        });
+        return JSON.stringify({ success: false, error: 'At least one message ID is required' });
       }
 
       if ((action === 'add_labels' || action === 'remove_labels') && labelIds.length === 0) {
@@ -65,10 +75,7 @@ export const markEmailTool: ToolDefinition = {
       // Process each message
       for (const messageId of messageIds) {
         try {
-          const requestBody = {
-            ids: [messageId],
-            ...labelOperations,
-          };
+          const requestBody = { ids: [messageId], ...labelOperations };
 
           const response = gmailFetch('/users/me/messages/batchModify', {
             method: 'POST',
@@ -76,15 +83,12 @@ export const markEmailTool: ToolDefinition = {
           });
 
           if (response.success) {
-            results.push({
-              message_id: messageId,
-              success: true,
-              action,
-            });
+            results.push({ message_id: messageId, success: true, action });
 
             // Update local database
-            const updateEmailReadStatus = (globalThis as { updateEmailReadStatus?: (id: string, isRead: boolean) => void })
-              .updateEmailReadStatus;
+            const updateEmailReadStatus = (
+              globalThis as { updateEmailReadStatus?: (id: string, isRead: boolean) => void }
+            ).updateEmailReadStatus;
 
             if (updateEmailReadStatus) {
               if (action === 'mark_read') {
@@ -120,7 +124,6 @@ export const markEmailTool: ToolDefinition = {
         results,
         failed_message_ids: errors,
       });
-
     } catch (error) {
       return JSON.stringify({
         success: false,

@@ -76,7 +76,10 @@ tools = [
       try {
         const response = net.fetch(url, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${s.config.apiKey}`, 'Content-Type': 'application/json' },
+          headers: {
+            Authorization: `Bearer ${s.config.apiKey}`,
+            'Content-Type': 'application/json',
+          },
           timeout: 10000,
         });
 

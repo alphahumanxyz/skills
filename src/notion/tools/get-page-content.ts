@@ -1,5 +1,4 @@
 // Tool: notion-get-page-content
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

@@ -1,5 +1,4 @@
 // Tool: notion-delete-block
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

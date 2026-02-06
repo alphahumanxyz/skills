@@ -1,5 +1,4 @@
 // Tool: notion-get-database
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

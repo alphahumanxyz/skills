@@ -1,5 +1,4 @@
 // Tool: notion-create-database
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {
@@ -55,7 +54,10 @@ export const createDatabaseTool: ToolDefinition = {
 
       const body = { parent: { page_id: parentId }, title: buildRichText(title), properties };
 
-      const dbResult = notionFetch('/databases', { method: 'POST', body }) as Record<string, unknown>;
+      const dbResult = notionFetch('/databases', { method: 'POST', body }) as Record<
+        string,
+        unknown
+      >;
 
       return JSON.stringify({ success: true, database: formatDatabaseSummary(dbResult) });
     } catch (e) {

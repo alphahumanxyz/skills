@@ -1,5 +1,4 @@
 // Tool: notion-search
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {
@@ -19,11 +18,7 @@ export const searchTool: ToolDefinition = {
     type: 'object',
     properties: {
       query: { type: 'string', description: 'Search query (optional, returns recent if empty)' },
-      filter: {
-        type: 'string',
-        enum: ['page', 'database'],
-        description: 'Filter results by type',
-      },
+      filter: { type: 'string', enum: ['page', 'database'], description: 'Filter results by type' },
       page_size: {
         type: 'number',
         description: 'Number of results to return (default 20, max 100)',

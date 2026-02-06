@@ -141,9 +141,17 @@ declare function encodeURIComponent(str: string): string;
 declare function decodeURIComponent(str: string): string;
 
 /** Timer functions (available in QuickJS runtime) */
-declare function setTimeout(callback: (...args: any[]) => void, delay: number, ...args: any[]): number;
+declare function setTimeout(
+  callback: (...args: any[]) => void,
+  delay: number,
+  ...args: any[]
+): number;
 declare function clearTimeout(id: number): void;
-declare function setInterval(callback: (...args: any[]) => void, delay: number, ...args: any[]): number;
+declare function setInterval(
+  callback: (...args: any[]) => void,
+  delay: number,
+  ...args: any[]
+): number;
 declare function clearInterval(id: number): void;
 
 /** AbortController for request cancellation (available in QuickJS runtime) */

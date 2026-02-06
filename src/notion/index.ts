@@ -2,45 +2,43 @@
 // Notion integration skill exposing 22 tools for the Notion API.
 // Supports pages, databases, blocks, users, and comments.
 // Authentication is handled via the platform OAuth bridge.
-
 // Import helpers
 import {
-  notionFetch,
+  buildParagraphBlock,
+  buildRichText,
   formatApiError,
-  formatRichText,
-  formatPageTitle,
-  formatPageSummary,
-  formatDatabaseSummary,
   formatBlockContent,
   formatBlockSummary,
+  formatDatabaseSummary,
+  formatPageSummary,
+  formatPageTitle,
+  formatRichText,
   formatUserSummary,
-  buildRichText,
-  buildParagraphBlock,
+  notionFetch,
 } from './helpers';
-
-// Import tools
-import { searchTool } from './tools/search';
-import { getPageTool } from './tools/get-page';
-import { createPageTool } from './tools/create-page';
-import { updatePageTool } from './tools/update-page';
-import { deletePageTool } from './tools/delete-page';
-import { getPageContentTool } from './tools/get-page-content';
-import { listAllPagesTool } from './tools/list-all-pages';
+import { appendBlocksTool } from './tools/append-blocks';
 import { appendTextTool } from './tools/append-text';
-import { queryDatabaseTool } from './tools/query-database';
-import { getDatabaseTool } from './tools/get-database';
+import { createCommentTool } from './tools/create-comment';
 import { createDatabaseTool } from './tools/create-database';
-import { updateDatabaseTool } from './tools/update-database';
-import { listAllDatabasesTool } from './tools/list-all-databases';
+import { createPageTool } from './tools/create-page';
+import { deleteBlockTool } from './tools/delete-block';
+import { deletePageTool } from './tools/delete-page';
 import { getBlockTool } from './tools/get-block';
 import { getBlockChildrenTool } from './tools/get-block-children';
-import { appendBlocksTool } from './tools/append-blocks';
-import { updateBlockTool } from './tools/update-block';
-import { deleteBlockTool } from './tools/delete-block';
-import { listUsersTool } from './tools/list-users';
+import { getDatabaseTool } from './tools/get-database';
+import { getPageTool } from './tools/get-page';
+import { getPageContentTool } from './tools/get-page-content';
 import { getUserTool } from './tools/get-user';
-import { createCommentTool } from './tools/create-comment';
+import { listAllDatabasesTool } from './tools/list-all-databases';
+import { listAllPagesTool } from './tools/list-all-pages';
 import { listCommentsTool } from './tools/list-comments';
+import { listUsersTool } from './tools/list-users';
+import { queryDatabaseTool } from './tools/query-database';
+// Import tools
+import { searchTool } from './tools/search';
+import { updateBlockTool } from './tools/update-block';
+import { updateDatabaseTool } from './tools/update-database';
+import { updatePageTool } from './tools/update-page';
 
 // ---------------------------------------------------------------------------
 // Expose helpers on globalThis for tools to access at runtime
@@ -111,7 +109,9 @@ function stop(): void {
 
 function onOAuthComplete(args: OAuthCompleteArgs): OAuthCompleteResult | void {
   credentialId = args.credentialId;
-  console.log(`[notion] OAuth complete — credential: ${args.credentialId}, account: ${args.accountLabel || '(unknown)'}`);
+  console.log(
+    `[notion] OAuth complete — credential: ${args.credentialId}, account: ${args.accountLabel || '(unknown)'}`
+  );
 
   if (args.accountLabel) {
     workspaceName = args.accountLabel;

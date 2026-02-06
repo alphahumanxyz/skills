@@ -1,5 +1,4 @@
 // Tool: notion-create-comment
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

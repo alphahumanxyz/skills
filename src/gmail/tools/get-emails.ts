@@ -1,17 +1,18 @@
 // Tool: gmail-get-emails
 // Get emails with filtering and search capabilities
-
 import '../skill-state';
 
 export const getEmailsTool: ToolDefinition = {
   name: 'gmail-get-emails',
-  description: 'Get emails from Gmail with optional filtering by query, labels, read status, and pagination. Supports Gmail search syntax.',
+  description:
+    'Get emails from Gmail with optional filtering by query, labels, read status, and pagination. Supports Gmail search syntax.',
   input_schema: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'Search query using Gmail search syntax (e.g., "from:example@gmail.com", "subject:meeting", "is:unread")',
+        description:
+          'Search query using Gmail search syntax (e.g., "from:example@gmail.com", "subject:meeting", "is:unread")',
       },
       label_ids: {
         type: 'array',
@@ -37,13 +38,17 @@ export const getEmailsTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any }).gmailFetch;
+      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
+        .gmailFetch;
       if (!gmailFetch) {
         return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
       }
 
       if (!oauth.getCredential()) {
-        return JSON.stringify({ success: false, error: 'Gmail not connected. Complete OAuth setup first.' });
+        return JSON.stringify({
+          success: false,
+          error: 'Gmail not connected. Complete OAuth setup first.',
+        });
       }
 
       // Build API parameters
@@ -59,10 +64,7 @@ export const getEmailsTool: ToolDefinition = {
         });
       }
 
-      const maxResults = Math.min(
-        parseInt((args.max_results as string) || '20', 10),
-        100
-      );
+      const maxResults = Math.min(parseInt((args.max_results as string) || '20', 10), 100);
       params.push(`maxResults=${maxResults}`);
 
       if (args.include_spam_trash) {
@@ -90,12 +92,7 @@ export const getEmailsTool: ToolDefinition = {
       };
 
       if (!messageList.messages || messageList.messages.length === 0) {
-        return JSON.stringify({
-          success: true,
-          emails: [],
-          total_count: 0,
-          next_page_token: null,
-        });
+        return JSON.stringify({ success: true, emails: [], total_count: 0, next_page_token: null });
       }
 
       // Get detailed email data
@@ -121,12 +118,11 @@ export const getEmailsTool: ToolDefinition = {
             id: message.id,
             thread_id: message.threadId,
             subject,
-            sender: {
-              email: senderEmail,
-              name: senderName,
-            },
+            sender: { email: senderEmail, name: senderName },
             recipients: to,
-            date: date ? new Date(date).toISOString() : new Date(parseInt(message.internalDate)).toISOString(),
+            date: date
+              ? new Date(date).toISOString()
+              : new Date(parseInt(message.internalDate)).toISOString(),
             snippet: message.snippet,
             label_ids: message.labelIds || [],
             is_read: !message.labelIds?.includes('UNREAD'),
@@ -152,7 +148,6 @@ export const getEmailsTool: ToolDefinition = {
         query: args.query || null,
         label_ids: args.label_ids || null,
       });
-
     } catch (error) {
       return JSON.stringify({
         success: false,
@@ -168,8 +163,8 @@ export const getEmailsTool: ToolDefinition = {
 function hasAttachments(message: any): boolean {
   if (message.payload?.body?.attachmentId) return true;
   if (message.payload?.parts) {
-    return message.payload.parts.some((part: any) =>
-      part.body?.attachmentId || (part.filename && part.filename.length > 0)
+    return message.payload.parts.some(
+      (part: any) => part.body?.attachmentId || (part.filename && part.filename.length > 0)
     );
   }
   return false;

@@ -1,11 +1,11 @@
 // Tool: gmail-get-labels
 // Get all Gmail labels with counts and details
-
 import '../skill-state';
 
 export const getLabelsTool: ToolDefinition = {
   name: 'gmail-get-labels',
-  description: 'Get all Gmail labels including system and user-created labels with message counts and details.',
+  description:
+    'Get all Gmail labels including system and user-created labels with message counts and details.',
   input_schema: {
     type: 'object',
     properties: {
@@ -14,22 +14,23 @@ export const getLabelsTool: ToolDefinition = {
         enum: ['system', 'user', 'all'],
         description: 'Filter labels by type (default: all)',
       },
-      include_hidden: {
-        type: 'boolean',
-        description: 'Include hidden labels (default: false)',
-      },
+      include_hidden: { type: 'boolean', description: 'Include hidden labels (default: false)' },
     },
     required: [],
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any }).gmailFetch;
+      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
+        .gmailFetch;
       if (!gmailFetch) {
         return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
       }
 
       if (!oauth.getCredential()) {
-        return JSON.stringify({ success: false, error: 'Gmail not connected. Complete OAuth setup first.' });
+        return JSON.stringify({
+          success: false,
+          error: 'Gmail not connected. Complete OAuth setup first.',
+        });
       }
 
       const typeFilter = (args.type as string) || 'all';
@@ -55,9 +56,10 @@ export const getLabelsTool: ToolDefinition = {
 
       // Filter hidden labels if not requested
       if (!includeHidden) {
-        labels = labels.filter(label =>
-          label.labelListVisibility === 'labelShow' ||
-          label.labelListVisibility === 'labelShowIfUnread'
+        labels = labels.filter(
+          label =>
+            label.labelListVisibility === 'labelShow' ||
+            label.labelListVisibility === 'labelShowIfUnread'
         );
       }
 
@@ -76,10 +78,9 @@ export const getLabelsTool: ToolDefinition = {
           threads_total: label.threadsTotal || 0,
           threads_unread: label.threadsUnread || 0,
         },
-        color: label.color ? {
-          text: label.color.textColor,
-          background: label.color.backgroundColor,
-        } : null,
+        color: label.color
+          ? { text: label.color.textColor, background: label.color.backgroundColor }
+          : null,
       }));
 
       // Update local database
@@ -102,7 +103,6 @@ export const getLabelsTool: ToolDefinition = {
         system_count: categorized.system.length,
         user_count: categorized.user.length,
       });
-
     } catch (error) {
       return JSON.stringify({
         success: false,

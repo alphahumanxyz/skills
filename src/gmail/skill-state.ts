@@ -1,8 +1,7 @@
 // Shared skill state module for Gmail skill
 // Tools and lifecycle functions access state through globalThis.getGmailSkillState()
 // This pattern works in both production V8 runtime and test harness sandbox.
-
-import type { SkillConfig, SyncStatus, GmailProfile } from './types';
+import type { GmailProfile, SkillConfig, SyncStatus } from './types';
 
 export interface GmailSkillState {
   config: SkillConfig;

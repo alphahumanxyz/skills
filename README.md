@@ -452,26 +452,26 @@ Once loaded, the REPL calls `init()` and `start()` automatically. If the skill r
 
 #### REPL Commands
 
-| Command | Description |
-|---------|-------------|
-| `help` | Show all commands |
-| `tools` | List available tools with descriptions and parameters |
-| `call <tool> [json]` | Call a tool; prompts for args interactively if no JSON given |
-| `init` / `start` / `stop` | Call lifecycle hooks |
-| `cron [id]` | List cron schedules, or trigger `onCronTrigger(id)` |
-| `session start [id]` | Trigger `onSessionStart` |
-| `session end [id]` | Trigger `onSessionEnd` |
-| `setup` | Run (or re-run) the setup wizard |
-| `options` | List runtime options via `onListOptions()` |
-| `option <name> <value>` | Set a runtime option via `onSetOption()` |
-| `state` | Show published state (pretty-printed) |
-| `store` | Show persistent store contents |
-| `db <sql>` | Run SQL (SELECT uses `db.all()`, others use `db.exec()`) |
-| `mock fetch <url> <status> <body>` | Mock an HTTP response for `net.fetch` |
-| `env <key> <value>` | Set environment variable for `platform.env()` |
-| `disconnect` | Call `onDisconnect()` |
-| `reload` | Stop, re-read `index.js`, re-init, re-start |
-| `exit` / `quit` | Clean exit (calls `stop()` and persists data) |
+| Command                            | Description                                                  |
+| ---------------------------------- | ------------------------------------------------------------ |
+| `help`                             | Show all commands                                            |
+| `tools`                            | List available tools with descriptions and parameters        |
+| `call <tool> [json]`               | Call a tool; prompts for args interactively if no JSON given |
+| `init` / `start` / `stop`          | Call lifecycle hooks                                         |
+| `cron [id]`                        | List cron schedules, or trigger `onCronTrigger(id)`          |
+| `session start [id]`               | Trigger `onSessionStart`                                     |
+| `session end [id]`                 | Trigger `onSessionEnd`                                       |
+| `setup`                            | Run (or re-run) the setup wizard                             |
+| `options`                          | List runtime options via `onListOptions()`                   |
+| `option <name> <value>`            | Set a runtime option via `onSetOption()`                     |
+| `state`                            | Show published state (pretty-printed)                        |
+| `store`                            | Show persistent store contents                               |
+| `db <sql>`                         | Run SQL (SELECT uses `db.all()`, others use `db.exec()`)     |
+| `mock fetch <url> <status> <body>` | Mock an HTTP response for `net.fetch`                        |
+| `env <key> <value>`                | Set environment variable for `platform.env()`                |
+| `disconnect`                       | Call `onDisconnect()`                                        |
+| `reload`                           | Stop, re-read `index.js`, re-init, re-start                  |
+| `exit` / `quit`                    | Clean exit (calls `stop()` and persists data)                |
 
 When `call <tool>` is invoked without JSON, the REPL inspects the tool's `input_schema` and prompts for each parameter interactively (enum fields show a numbered list, numbers are validated, optional fields can be skipped).
 
@@ -523,28 +523,29 @@ yarn test:script <skill-id> <script-file> [--clean] [--wait=<ms>]
 ```
 
 **Options:**
+
 - `--clean` — wipe the skill's data directory before running
 - `--wait=<ms>` — wait for async operations before cleanup (useful for WebSocket skills)
 
 **Available helpers in scripts:**
 
-| Helper | Description |
-|--------|-------------|
-| `callTool(name, args)` | Call a skill tool, returns parsed result |
-| `triggerCron(scheduleId)` | Trigger `onCronTrigger` |
-| `triggerSetupStart()` | Call `onSetupStart`, returns step definition |
-| `triggerSetupSubmit(stepId, values)` | Submit setup step values |
-| `triggerSessionStart(id)` / `triggerSessionEnd(id)` | Session events |
-| `triggerTimer(timerId)` | Fire a mock timer callback |
-| `listTools()` | Get array of tool names |
-| `__mockFetch(url, response)` | Set mock HTTP response |
-| `__mockFetchError(url, message)` | Set mock HTTP error |
-| `__getMockState()` | Inspect full mock state |
-| `__resetMockState()` | Reset all mocks |
-| `__setEnv(key, value)` | Set environment variable |
-| `__setPlatformOs(os)` | Set `platform.os()` return value |
-| `__mockModelResponse(sub, resp)` | Mock model response for prompt substring |
-| `__setModelAvailable(bool)` | Set model availability |
+| Helper                                              | Description                                  |
+| --------------------------------------------------- | -------------------------------------------- |
+| `callTool(name, args)`                              | Call a skill tool, returns parsed result     |
+| `triggerCron(scheduleId)`                           | Trigger `onCronTrigger`                      |
+| `triggerSetupStart()`                               | Call `onSetupStart`, returns step definition |
+| `triggerSetupSubmit(stepId, values)`                | Submit setup step values                     |
+| `triggerSessionStart(id)` / `triggerSessionEnd(id)` | Session events                               |
+| `triggerTimer(timerId)`                             | Fire a mock timer callback                   |
+| `listTools()`                                       | Get array of tool names                      |
+| `__mockFetch(url, response)`                        | Set mock HTTP response                       |
+| `__mockFetchError(url, message)`                    | Set mock HTTP error                          |
+| `__getMockState()`                                  | Inspect full mock state                      |
+| `__resetMockState()`                                | Reset all mocks                              |
+| `__setEnv(key, value)`                              | Set environment variable                     |
+| `__setPlatformOs(os)`                               | Set `platform.os()` return value             |
+| `__mockModelResponse(sub, resp)`                    | Mock model response for prompt substring     |
+| `__setModelAvailable(bool)`                         | Set model availability                       |
 
 **Example:**
 
@@ -586,16 +587,16 @@ yarn test:model <skill-id> <script-file>   # Run with real inference
 
 Pre-built example scripts in `scripts/examples/`:
 
-| Script | Description |
-|--------|-------------|
-| `test-simple.js` | Basic skill loading test |
-| `test-simple-skill.js` | Simple skill lifecycle test |
-| `test-ping-flow.js` | Server ping setup + cron flow |
-| `test-setup-flow.js` | Multi-step setup wizard test |
-| `test-options-flow.js` | Runtime options configuration |
-| `test-debug.js` | Debug output and mock inspection |
-| `test-telegram-setup.js` | Telegram skill setup flow |
-| `test-telegram-live.js` | Telegram with live connections |
+| Script                   | Description                      |
+| ------------------------ | -------------------------------- |
+| `test-simple.js`         | Basic skill loading test         |
+| `test-simple-skill.js`   | Simple skill lifecycle test      |
+| `test-ping-flow.js`      | Server ping setup + cron flow    |
+| `test-setup-flow.js`     | Multi-step setup wizard test     |
+| `test-options-flow.js`   | Runtime options configuration    |
+| `test-debug.js`          | Debug output and mock inspection |
+| `test-telegram-setup.js` | Telegram skill setup flow        |
+| `test-telegram-live.js`  | Telegram with live connections   |
 
 ### Data Persistence
 

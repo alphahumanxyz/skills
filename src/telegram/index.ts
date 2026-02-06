@@ -1,28 +1,28 @@
 // telegram/index.ts
 // Telegram integration skill using TDLib via V8 runtime.
 // Provides tools for Telegram API access with native TDLib bindings.
-
 // Import skill state (initializes globalThis.getTelegramSkillState)
+// registers globalThis.initializeTelegramSchema
+import './db-helpers';
+// Import modules to register globalThis functions
+import './db-schema';
 import './skill-state';
-import type { SetupSubmitArgs, AuthorizationState } from './skill-state';
-
+import type { AuthorizationState, SetupSubmitArgs } from './skill-state';
+// registers globalThis.telegramDispatchUpdate
+import './sync';
 // Import TDLib client wrapper - this also assigns TdLibClient to globalThis
 import './tdlib-client';
 import type { TdUpdate, TdUser } from './tdlib-client';
 // Import the class type for type assertions
 import type { TdLibClient as TdLibClientType } from './tdlib-client';
-
-// Import modules to register globalThis functions
-import './db-schema'; // registers globalThis.initializeTelegramSchema
-import './db-helpers'; // registers globalThis.telegramDb
-import './update-handlers'; // registers globalThis.telegramDispatchUpdate
-import './sync'; // registers globalThis.telegramSync
-
+import { getChatStatsToolDefinition } from './tools/get-chat-stats';
+// registers globalThis.telegramSync
 // Import tool definitions
 import { getChatsToolDefinition } from './tools/get-chats';
-import { getMessagesToolDefinition } from './tools/get-messages';
 import { getContactsToolDefinition } from './tools/get-contacts';
-import { getChatStatsToolDefinition } from './tools/get-chat-stats';
+import { getMessagesToolDefinition } from './tools/get-messages';
+// registers globalThis.telegramDb
+import './update-handlers';
 
 // Access TdLibClient from globalThis (workaround for esbuild bundling issues)
 const getTdLibClientClass = (): typeof TdLibClientType => {
@@ -161,8 +161,8 @@ async function initClient(): Promise<void> {
     // Start update loop
     client.startUpdateLoop(handleUpdate);
 
-    const apiId = 28685916
-    const apiHash = 'd540ab21dece5404af298c44f4f6386d'
+    const apiId = 28685916;
+    const apiHash = 'd540ab21dece5404af298c44f4f6386d';
 
     // Set TDLib parameters (this triggers the auth flow)
     console.log('[telegram] Setting TDLib parameters...');
@@ -270,7 +270,7 @@ async function triggerInitialSync(): Promise<void> {
   publishState();
 
   try {
-    await globalThis.telegramSync.performInitialSync(s.client, (msg) => {
+    await globalThis.telegramSync.performInitialSync(s.client, msg => {
       console.log(`[telegram-sync] ${msg}`);
     });
 
@@ -395,7 +395,7 @@ function init(): void {
   }
 
   // Initialize client
-  initClient().catch((err) => {
+  initClient().catch(err => {
     console.error('[telegram] Init client failed:', err);
   });
 
@@ -414,7 +414,7 @@ function stop(): void {
   // Destroy TDLib client
   if (s.client) {
     try {
-      s.client.destroy().catch((e) => {
+      s.client.destroy().catch(e => {
         console.warn('[telegram] Error destroying client:', e);
       });
     } catch (e) {
@@ -439,30 +439,30 @@ function onCronTrigger(_scheduleId: string): void {
 function onSetupStart(): SetupStartResult {
   const s = globalThis.getTelegramSkillState();
 
-    // Start client initialization in background
-    if (!s.client && !s.clientConnecting) {
-      initClient().catch((err) => {
-        console.error('[telegram] Init client failed:', err);
-      });
-    }
+  // Start client initialization in background
+  if (!s.client && !s.clientConnecting) {
+    initClient().catch(err => {
+      console.error('[telegram] Init client failed:', err);
+    });
+  }
 
-    return {
-      step: {
-        id: 'phone',
-        title: 'Connect Telegram Account',
-        description: 'Enter your phone number to connect your Telegram account.',
-        fields: [
-          {
-            name: 'phoneNumber',
-            type: 'text',
-            label: 'Phone Number',
-            description: 'International format (e.g., +1234567890)',
-            required: true,
-            placeholder: '+1234567890',
-          },
-        ],
-      },
-    };
+  return {
+    step: {
+      id: 'phone',
+      title: 'Connect Telegram Account',
+      description: 'Enter your phone number to connect your Telegram account.',
+      fields: [
+        {
+          name: 'phoneNumber',
+          type: 'text',
+          label: 'Phone Number',
+          description: 'International format (e.g., +1234567890)',
+          required: true,
+          placeholder: '+1234567890',
+        },
+      ],
+    },
+  };
 }
 
 function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
@@ -478,7 +478,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     );
 
     // Start client initialization in background
-    initClient().catch((err) => {
+    initClient().catch(err => {
       console.error('[telegram] Init client failed:', err);
     });
 
@@ -540,12 +540,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       }
       return {
         status: 'error',
-        errors: [
-          {
-            field: 'phoneNumber',
-            message: 'Client not connected. Please restart setup.',
-          },
-        ],
+        errors: [{ field: 'phoneNumber', message: 'Client not connected. Please restart setup.' }],
       };
     }
 
@@ -555,7 +550,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     }
 
     // Send phone number (async - errors will be caught by update handler)
-    sendPhoneNumber(phoneNumber).catch((err) => {
+    sendPhoneNumber(phoneNumber).catch(err => {
       console.error('[telegram] Failed to send phone number:', err);
       s.clientError = err instanceof Error ? err.message : String(err);
       publishState();
@@ -595,7 +590,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     }
 
     // Submit code (async)
-    submitCode(code).catch((err) => {
+    submitCode(code).catch(err => {
       console.error('[telegram] Failed to submit code:', err);
       s.clientError = err instanceof Error ? err.message : String(err);
       publishState();
@@ -643,7 +638,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     }
 
     // Submit password (async)
-    submitPassword(password).catch((err) => {
+    submitPassword(password).catch(err => {
       console.error('[telegram] Failed to submit password:', err);
       s.clientError = err instanceof Error ? err.message : String(err);
       publishState();
@@ -704,11 +699,7 @@ function publishState(): void {
 const telegramPingTool: ToolDefinition = {
   name: 'telegram-ping',
   description: 'Check if Telegram servers are reachable and get latency information.',
-  input_schema: {
-    type: 'object',
-    properties: {},
-    required: [],
-  },
+  input_schema: { type: 'object', properties: {}, required: [] },
   execute(): string {
     const s = globalThis.getTelegramSkillState();
     const endpoints = [
@@ -744,12 +735,12 @@ const telegramPingTool: ToolDefinition = {
       }
     }
 
-    const successCount = results.filter((r) => r.success).length;
+    const successCount = results.filter(r => r.success).length;
     const avgLatency =
       successCount > 0
         ? Math.round(
             results
-              .filter((r) => r.success && r.latency_ms !== null)
+              .filter(r => r.success && r.latency_ms !== null)
               .reduce((sum, r) => sum + (r.latency_ms || 0), 0) / successCount
           )
         : null;
@@ -773,11 +764,7 @@ const telegramPingTool: ToolDefinition = {
 const telegramStatusTool: ToolDefinition = {
   name: 'telegram-status',
   description: 'Get current Telegram connection and authentication status.',
-  input_schema: {
-    type: 'object',
-    properties: {},
-    required: [],
-  },
+  input_schema: { type: 'object', properties: {}, required: [] },
   execute(): string {
     const s = globalThis.getTelegramSkillState();
     return JSON.stringify({
@@ -801,7 +788,8 @@ const telegramStatusTool: ToolDefinition = {
  */
 const telegramSyncTool: ToolDefinition = {
   name: 'telegram-sync',
-  description: 'Trigger synchronization of Telegram data (chats, messages, contacts) to local storage.',
+  description:
+    'Trigger synchronization of Telegram data (chats, messages, contacts) to local storage.',
   input_schema: {
     type: 'object',
     properties: {
@@ -842,7 +830,7 @@ const telegramSyncTool: ToolDefinition = {
     }
 
     // Trigger sync in background
-    triggerInitialSync().catch((err) => {
+    triggerInitialSync().catch(err => {
       console.error('[telegram] Sync trigger failed:', err);
     });
 

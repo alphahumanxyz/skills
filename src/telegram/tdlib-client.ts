@@ -75,9 +75,7 @@ export interface TdUser {
   id: number;
   first_name: string;
   last_name?: string;
-  usernames?: {
-    active_usernames: string[];
-  };
+  usernames?: { active_usernames: string[] };
   phone_number?: string;
   is_verified?: boolean;
   is_premium?: boolean;
@@ -108,9 +106,11 @@ export type UpdateHandler = (update: TdUpdate) => void;
  */
 function isTdLibOpsAvailable(): boolean {
   try {
-    return typeof globalThis.tdlib !== 'undefined' &&
+    return (
+      typeof globalThis.tdlib !== 'undefined' &&
       typeof globalThis.tdlib.isAvailable === 'function' &&
-      globalThis.tdlib.isAvailable();
+      globalThis.tdlib.isAvailable()
+    );
   } catch {
     return false;
   }
@@ -121,8 +121,10 @@ function isTdLibOpsAvailable(): boolean {
  */
 function isTauriInvokeAvailable(): boolean {
   try {
-    return typeof globalThis.__TAURI_INTERNALS__ !== 'undefined' &&
-      typeof globalThis.__TAURI_INTERNALS__.invoke === 'function';
+    return (
+      typeof globalThis.__TAURI_INTERNALS__ !== 'undefined' &&
+      typeof globalThis.__TAURI_INTERNALS__.invoke === 'function'
+    );
   } catch {
     return false;
   }
@@ -192,7 +194,9 @@ export class TdLibClient {
       this.clientId = await globalThis.tdlib.createClient(dataDir);
     } else if (isTauriInvokeAvailable() && globalThis.__TAURI_INTERNALS__) {
       // Android: use Tauri invoke
-      this.clientId = await globalThis.__TAURI_INTERNALS__.invoke<number>('tdlib_create_client', { dataDir });
+      this.clientId = await globalThis.__TAURI_INTERNALS__.invoke<number>('tdlib_create_client', {
+        dataDir,
+      });
     } else {
       throw new Error('TDLib is not available on this platform');
     }
@@ -250,7 +254,9 @@ export class TdLibClient {
       return await globalThis.tdlib.receive(timeoutMs);
     } else if (isTauriInvokeAvailable() && globalThis.__TAURI_INTERNALS__) {
       // Android: use Tauri invoke
-      return await globalThis.__TAURI_INTERNALS__.invoke<TdUpdate | null>('tdlib_receive', { timeoutMs });
+      return await globalThis.__TAURI_INTERNALS__.invoke<TdUpdate | null>('tdlib_receive', {
+        timeoutMs,
+      });
     }
 
     return null;
@@ -355,7 +361,7 @@ export class TdLibClient {
    * Sleep for a given number of milliseconds.
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // ============================================================================
@@ -417,20 +423,14 @@ export class TdLibClient {
    * Check authentication code.
    */
   async checkAuthenticationCode(code: string): Promise<void> {
-    await this.send({
-      '@type': 'checkAuthenticationCode',
-      code,
-    });
+    await this.send({ '@type': 'checkAuthenticationCode', code });
   }
 
   /**
    * Check authentication password (2FA).
    */
   async checkAuthenticationPassword(password: string): Promise<void> {
-    await this.send({
-      '@type': 'checkAuthenticationPassword',
-      password,
-    });
+    await this.send({ '@type': 'checkAuthenticationPassword', password });
   }
 
   /**

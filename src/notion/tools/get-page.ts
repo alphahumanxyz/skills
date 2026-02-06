@@ -1,5 +1,4 @@
 // Tool: notion-get-page
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {
@@ -18,10 +17,7 @@ export const getPageTool: ToolDefinition = {
   input_schema: {
     type: 'object',
     properties: {
-      page_id: {
-        type: 'string',
-        description: 'The page ID (UUID format, with or without dashes)',
-      },
+      page_id: { type: 'string', description: 'The page ID (UUID format, with or without dashes)' },
     },
     required: ['page_id'],
   },

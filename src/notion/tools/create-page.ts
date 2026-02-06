@@ -1,5 +1,4 @@
 // Tool: notion-create-page
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {
@@ -25,10 +24,7 @@ export const createPageTool: ToolDefinition = {
         description: 'Type of parent (default: page_id)',
       },
       title: { type: 'string', description: 'Page title' },
-      content: {
-        type: 'string',
-        description: 'Initial text content (creates a paragraph block)',
-      },
+      content: { type: 'string', description: 'Initial text content (creates a paragraph block)' },
       properties: {
         type: 'string',
         description: 'JSON string of additional properties (for database pages)',

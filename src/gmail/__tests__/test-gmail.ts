@@ -66,20 +66,14 @@ const SAMPLE_EMAIL_RESPONSE = {
         mimeType: 'text/plain',
         filename: '',
         headers: [{ name: 'Content-Type', value: 'text/plain; charset=utf-8' }],
-        body: {
-          size: 26,
-          data: btoa('This is the email body.'),
-        },
+        body: { size: 26, data: btoa('This is the email body.') },
       },
       {
         partId: '1',
         mimeType: 'text/html',
         filename: '',
         headers: [{ name: 'Content-Type', value: 'text/html; charset=utf-8' }],
-        body: {
-          size: 52,
-          data: btoa('<p>This is the <strong>email</strong> body.</p>'),
-        },
+        body: { size: 52, data: btoa('<p>This is the <strong>email</strong> body.</p>') },
       },
     ],
   },
@@ -119,10 +113,7 @@ const SAMPLE_LABELS_RESPONSE = {
       messagesUnread: 2,
       threadsTotal: 20,
       threadsUnread: 1,
-      color: {
-        textColor: '#ffffff',
-        backgroundColor: '#0d7377',
-      },
+      color: { textColor: '#ffffff', backgroundColor: '#0d7377' },
     },
   ],
 };
@@ -203,10 +194,7 @@ function setupAuthenticatedGmailTest(overrides?: any): void {
  * Helper to setup unauthenticated skill test
  */
 function setupUnauthenticatedGmailTest(): void {
-  _setup({
-    storeData: {},
-    fetchResponses: {},
-  });
+  _setup({ storeData: {}, fetchResponses: {} });
 
   init();
 }
@@ -236,7 +224,10 @@ _describe('Gmail Skill', () => {
       setupAuthenticatedGmailTest();
 
       // Check that tables exist by running a query
-      const result = db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='emails'", []);
+      const result = db.get(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='emails'",
+        []
+      );
       _assertNotNull(result);
     });
   });
@@ -336,10 +327,7 @@ _describe('Gmail Skill', () => {
     _it('should extract email bodies', () => {
       setupAuthenticatedGmailTest();
 
-      const result = _callTool('gmail-get-email', {
-        message_id: 'msg123',
-        include_body: true,
-      });
+      const result = _callTool('gmail-get-email', { message_id: 'msg123', include_body: true });
       const response = JSON.parse(result);
 
       _assertEqual(response.success, true);
@@ -488,9 +476,7 @@ _describe('Gmail Skill', () => {
     _it('should provide search tips', () => {
       setupAuthenticatedGmailTest();
 
-      const result = _callTool('gmail-search-emails', {
-        query: 'simple search',
-      });
+      const result = _callTool('gmail-search-emails', { query: 'simple search' });
       const response = JSON.parse(result);
 
       _assertEqual(response.success, true);
@@ -530,9 +516,7 @@ _describe('Gmail Skill', () => {
     _it('should require message IDs', () => {
       setupAuthenticatedGmailTest();
 
-      const result = _callTool('gmail-mark-email', {
-        action: 'mark_read',
-      });
+      const result = _callTool('gmail-mark-email', { action: 'mark_read' });
       const response = JSON.parse(result);
 
       _assertEqual(response.success, false);
@@ -564,11 +548,7 @@ _describe('Gmail Skill', () => {
       _mockFetchResponse(
         'https://oauth2.googleapis.com/token',
         200,
-        JSON.stringify({
-          access_token: 'new_access_token',
-          expires_in: 3600,
-          token_type: 'Bearer',
-        })
+        JSON.stringify({ access_token: 'new_access_token', expires_in: 3600, token_type: 'Bearer' })
       );
 
       // This should trigger token refresh
@@ -601,13 +581,7 @@ _describe('Gmail Skill', () => {
           error: {
             code: 400,
             message: 'Bad Request',
-            errors: [
-              {
-                domain: 'global',
-                reason: 'badRequest',
-                message: 'Invalid query',
-              },
-            ],
+            errors: [{ domain: 'global', reason: 'badRequest', message: 'Invalid query' }],
           },
         })
       );

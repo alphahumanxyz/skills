@@ -1,5 +1,4 @@
 // Tool: notion-append-text
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

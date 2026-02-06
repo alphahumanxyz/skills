@@ -110,16 +110,16 @@ yarn test:model <skill-id> <script-file>
 
 Skills have access to these global namespaces (defined in `types/globals.d.ts`):
 
-| Namespace  | Purpose                             |
-| ---------- | ----------------------------------- |
-| `db`       | SQLite database scoped to skill     |
-| `store`    | Persistent key-value store          |
-| `net`      | HTTP networking (synchronous)       |
-| `cron`     | Cron scheduling (6-field syntax)    |
-| `skills`   | Inter-skill communication           |
-| `platform` | OS info, env vars, notifications    |
-| `state`    | Real-time frontend state publishing |
-| `data`     | File I/O in skill's data directory  |
+| Namespace  | Purpose                                   |
+| ---------- | ----------------------------------------- |
+| `db`       | SQLite database scoped to skill           |
+| `store`    | Persistent key-value store                |
+| `net`      | HTTP networking (synchronous)             |
+| `cron`     | Cron scheduling (6-field syntax)          |
+| `skills`   | Inter-skill communication                 |
+| `platform` | OS info, env vars, notifications          |
+| `state`    | Real-time frontend state publishing       |
+| `data`     | File I/O in skill's data directory        |
 | `model`    | Local LLM inference (generate, summarize) |
 
 ### Database (`db`)
@@ -187,9 +187,9 @@ const status = model.getStatus(); // { available, loaded, loading, downloaded, e
 
 // Generate text from a prompt
 const response = model.generate('What is Bitcoin?', {
-  maxTokens: 200,    // default: 2048
-  temperature: 0.7,  // default: 0.7
-  topP: 0.9,         // default: 0.9
+  maxTokens: 200, // default: 2048
+  temperature: 0.7, // default: 0.7
+  topP: 0.9, // default: 0.9
 });
 
 // Summarize a block of text

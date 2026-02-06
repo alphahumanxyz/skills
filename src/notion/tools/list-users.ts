@@ -1,5 +1,4 @@
 // Tool: notion-list-users
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {

@@ -1,5 +1,4 @@
 // Tool: notion-update-page
-
 import type { NotionGlobals } from '../types';
 
 const n = (): NotionGlobals => {
@@ -65,7 +64,10 @@ export const updatePageTool: ToolDefinition = {
         return JSON.stringify({ error: 'No updates specified' });
       }
 
-      const page = notionFetch(`/pages/${pageId}`, { method: 'PATCH', body }) as Record<string, unknown>;
+      const page = notionFetch(`/pages/${pageId}`, { method: 'PATCH', body }) as Record<
+        string,
+        unknown
+      >;
 
       return JSON.stringify({ success: true, page: formatPageSummary(page) });
     } catch (e) {
