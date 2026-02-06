@@ -151,10 +151,7 @@ _describe('Setup flow', () => {
   _it('onSetupSubmit networks with no selection should default to first 3 EVM', () => {
     freshInit();
     (globalThis as any).onSetupStart();
-    (globalThis as any).onSetupSubmit({
-      stepId: 'networks',
-      values: { evm_networks: [] },
-    });
+    (globalThis as any).onSetupSubmit({ stepId: 'networks', values: { evm_networks: [] } });
     const s = (globalThis as any).getState();
     _assertTrue(s.config.networks.length >= 1, 'should have at least one default network');
   });
@@ -265,5 +262,4 @@ _describe('Tools', () => {
     const result = _callTool('get_balance', { address: MOCK_ADDRESS, chain_id: '1' });
     _assertNotNull(result.error);
   });
-
 });

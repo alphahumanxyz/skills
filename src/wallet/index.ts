@@ -78,8 +78,7 @@ function onSetupStart(): SetupStartResult {
   // Guard against unexpected bundling/runtime issues where DEFAULT_NETWORKS
   // might not be initialized as an array in the JS runtime.
   const networks = Array.isArray(DEFAULT_NETWORKS) ? DEFAULT_NETWORKS : [];
-  const evmOptions = networks
-    .map(n => ({ label: n.name, value: n.chain_id }));
+  const evmOptions = networks.map(n => ({ label: n.name, value: n.chain_id }));
 
   return {
     step: {

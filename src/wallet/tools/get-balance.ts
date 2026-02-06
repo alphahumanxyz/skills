@@ -47,12 +47,7 @@ export const getBalanceTool = {
     properties: {
       address: { type: 'string', description: 'Wallet address (0x...) to check' },
       chain_id: { type: 'string', description: 'Chain ID (e.g. 1 for Ethereum, 137 for Polygon)' },
-      chain_type: {
-        type: 'string',
-        enum: ['evm'],
-        description: 'Chain type',
-        default: 'evm',
-      },
+      chain_type: { type: 'string', enum: ['evm'], description: 'Chain type', default: 'evm' },
     },
     required: ['address', 'chain_id'],
   },
