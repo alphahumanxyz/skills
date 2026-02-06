@@ -18,7 +18,10 @@ function getState(): import('./skill-state').WalletSkillState {
 
 function init(): void {
   const s = getState();
-  const saved = store.get('config') as { walletAddresses?: string[]; networks?: NetworkConfig[] } | null;
+  const saved = store.get('config') as {
+    walletAddresses?: string[];
+    networks?: NetworkConfig[];
+  } | null;
   if (saved?.walletAddresses?.length) {
     s.config.walletAddresses = saved.walletAddresses;
   }
@@ -59,23 +62,19 @@ function onLoad(params: { walletAddress?: string; walletAddresses?: string[] }):
     s.config.walletAddresses = params.walletAddresses;
     store.set('config', s.config);
   }
-  state.setPartial({
-    walletCount: s.config.walletAddresses.length,
-  });
+  state.setPartial({ walletCount: s.config.walletAddresses.length });
 }
 
 function onSetupStart(): SetupStartResult {
   // Guard against unexpected bundling/runtime issues where DEFAULT_NETWORKS
   // might not be initialized as an array in the JS runtime.
   const networks = Array.isArray(DEFAULT_NETWORKS) ? DEFAULT_NETWORKS : [];
-  const evmOptions = networks.filter(n => n.chain_type === 'evm').map(n => ({
-    label: n.name,
-    value: n.chain_id,
-  }));
-  const solOptions = networks.filter(n => n.chain_type === 'sol').map(n => ({
-    label: n.name,
-    value: n.chain_id,
-  }));
+  const evmOptions = networks
+    .filter(n => n.chain_type === 'evm')
+    .map(n => ({ label: n.name, value: n.chain_id }));
+  const solOptions = networks
+    .filter(n => n.chain_type === 'sol')
+    .map(n => ({ label: n.name, value: n.chain_id }));
 
   return {
     step: {
@@ -105,7 +104,10 @@ function onSetupStart(): SetupStartResult {
   };
 }
 
-function onSetupSubmit(args: { stepId: string; values: Record<string, unknown> }): SetupSubmitResult {
+function onSetupSubmit(args: {
+  stepId: string;
+  values: Record<string, unknown>;
+}): SetupSubmitResult {
   const s = getState();
 
   if (args.stepId === 'networks') {

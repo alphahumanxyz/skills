@@ -164,10 +164,7 @@ _describe('Setup flow', () => {
 
   _it('onSetupSubmit unknown step should return error', () => {
     freshInit();
-    const result = (globalThis as any).onSetupSubmit({
-      stepId: 'unknown_step',
-      values: {},
-    });
+    const result = (globalThis as any).onSetupSubmit({ stepId: 'unknown_step', values: {} });
     _assertEqual(result.status, 'error');
     _assertTrue(Array.isArray(result.errors) && result.errors.length > 0);
   });
@@ -182,14 +179,7 @@ _describe('Setup flow', () => {
 
 _describe('Tools', () => {
   _it('list_wallets should return wallets from state', () => {
-    freshInit({
-      storeData: {
-        config: {
-          walletAddresses: [MOCK_ADDRESS],
-          networks: [],
-        },
-      },
-    });
+    freshInit({ storeData: { config: { walletAddresses: [MOCK_ADDRESS], networks: [] } } });
     const result = _callTool('list_wallets');
     _assertNotNull(result.wallets);
     _assertEqual(result.wallets.length, 1);
@@ -208,9 +198,7 @@ _describe('Tools', () => {
       storeData: {
         config: {
           walletAddresses: [],
-          networks: [
-            { chain_id: '1', name: 'Ethereum', rpc_url: ETH_RPC, chain_type: 'evm' },
-          ],
+          networks: [{ chain_id: '1', name: 'Ethereum', rpc_url: ETH_RPC, chain_type: 'evm' }],
         },
       },
     });
@@ -243,42 +231,23 @@ _describe('Tools', () => {
   });
 
   _it('get_balance should return error when network not configured', () => {
-    freshInit({
-      storeData: {
-        config: {
-          walletAddresses: [MOCK_ADDRESS],
-          networks: [],
-        },
-      },
-    });
-    const result = _callTool('get_balance', {
-      address: MOCK_ADDRESS,
-      chain_id: '1',
-    });
+    freshInit({ storeData: { config: { walletAddresses: [MOCK_ADDRESS], networks: [] } } });
+    const result = _callTool('get_balance', { address: MOCK_ADDRESS, chain_id: '1' });
     _assertNotNull(result.error);
   });
 
   _it('get_balance should return balance when RPC responds', () => {
-    const rpcBody = JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      result: '0x0de0b6b3a7640000',
-    });
+    const rpcBody = JSON.stringify({ jsonrpc: '2.0', id: 1, result: '0x0de0b6b3a7640000' });
     freshInit({
       storeData: {
         config: {
           walletAddresses: [MOCK_ADDRESS],
-          networks: [
-            { chain_id: '1', name: 'Ethereum', rpc_url: ETH_RPC, chain_type: 'evm' },
-          ],
+          networks: [{ chain_id: '1', name: 'Ethereum', rpc_url: ETH_RPC, chain_type: 'evm' }],
         },
       },
       fetchResponses: { [ETH_RPC]: { status: 200, body: rpcBody } },
     });
-    const result = _callTool('get_balance', {
-      address: MOCK_ADDRESS,
-      chain_id: '1',
-    });
+    const result = _callTool('get_balance', { address: MOCK_ADDRESS, chain_id: '1' });
     _assertNotNull(result, 'should return result');
     _assertEqual(result.address, MOCK_ADDRESS);
     _assertEqual(result.balance_wei, '0x0de0b6b3a7640000');
@@ -291,17 +260,12 @@ _describe('Tools', () => {
       storeData: {
         config: {
           walletAddresses: [MOCK_ADDRESS],
-          networks: [
-            { chain_id: '1', name: 'Ethereum', rpc_url: ETH_RPC, chain_type: 'evm' },
-          ],
+          networks: [{ chain_id: '1', name: 'Ethereum', rpc_url: ETH_RPC, chain_type: 'evm' }],
         },
       },
       fetchResponses: { [ETH_RPC]: { status: 500, body: 'Internal Server Error' } },
     });
-    const result = _callTool('get_balance', {
-      address: MOCK_ADDRESS,
-      chain_id: '1',
-    });
+    const result = _callTool('get_balance', { address: MOCK_ADDRESS, chain_id: '1' });
     _assertNotNull(result.error);
   });
 

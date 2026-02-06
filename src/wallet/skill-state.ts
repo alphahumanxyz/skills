@@ -11,13 +11,7 @@ export interface WalletSkillState {
 
 const _g = globalThis as Record<string, unknown>;
 
-const state: WalletSkillState = {
-  config: {
-    walletAddresses: [],
-    networks: [],
-  },
-  isRunning: false,
-};
+const state: WalletSkillState = { config: { walletAddresses: [], networks: [] }, isRunning: false };
 _g.__walletSkillState = state;
 
 // Assign to globalThis so bundled code can call it (esbuild can break named exports in IIFE bundle)

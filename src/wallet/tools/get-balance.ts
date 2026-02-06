@@ -26,22 +26,13 @@ function evmGetBalance(rpcUrl: string, address: string): string {
     return JSON.stringify({ error: 'Invalid RPC response', address, rpc_url: rpcUrl });
   }
   if (data.error) {
-    return JSON.stringify({
-      error: data.error.message,
-      address,
-      rpc_url: rpcUrl,
-    });
+    return JSON.stringify({ error: data.error.message, address, rpc_url: rpcUrl });
   }
   const hexBalance = data.result || '0x0';
   const wei = BigInt(hexBalance);
   const eth = Number(wei) / 1e18;
   return JSON.stringify(
-    {
-      address,
-      balance_wei: hexBalance,
-      balance_eth: eth.toFixed(18),
-      symbol: 'ETH',
-    },
+    { address, balance_wei: hexBalance, balance_eth: eth.toFixed(18), symbol: 'ETH' },
     null,
     2
   );
@@ -66,7 +57,9 @@ export const getBalanceTool = {
     required: ['address', 'chain_id'],
   },
   execute(args: Record<string, unknown>): string {
-    const s = (globalThis as any).getState() as { config: { networks: Array<{ chain_id: string; chain_type: string; rpc_url: string }> } };
+    const s = (globalThis as any).getState() as {
+      config: { networks: Array<{ chain_id: string; chain_type: string; rpc_url: string }> };
+    };
     const address = (args.address as string) || '';
     const chainId = (args.chain_id as string) || '';
     const chainType = ((args.chain_type as string) || 'evm') as 'evm' | 'sol';
@@ -75,7 +68,8 @@ export const getBalanceTool = {
     if (!chainId) return JSON.stringify({ error: 'Missing required parameter: chain_id' });
 
     const network = s.config.networks.find(
-      (n: { chain_id: string; chain_type: string }) => n.chain_id === chainId && n.chain_type === chainType
+      (n: { chain_id: string; chain_type: string }) =>
+        n.chain_id === chainId && n.chain_type === chainType
     );
     if (!network) {
       return JSON.stringify({
