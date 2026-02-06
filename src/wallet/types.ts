@@ -2,7 +2,7 @@
 
 export interface WalletAccount {
   index: number;
-  chain_type: 'evm' | 'sol';
+  chain_type: 'evm';
   address: string;
   label: string;
 }
@@ -11,7 +11,7 @@ export interface NetworkConfig {
   chain_id: string;
   name: string;
   rpc_url: string;
-  chain_type: 'evm' | 'sol';
+  chain_type: 'evm';
 }
 
 export interface WalletSkillConfig {
@@ -47,16 +47,4 @@ export const DEFAULT_NETWORKS: NetworkConfig[] = [
     chain_type: 'evm',
   },
   { chain_id: '8453', name: 'Base', rpc_url: 'https://mainnet.base.org', chain_type: 'evm' },
-  {
-    chain_id: 'mainnet-beta',
-    name: 'Solana Mainnet',
-    rpc_url: 'https://api.mainnet-beta.solana.com',
-    chain_type: 'sol',
-  },
-  {
-    chain_id: 'devnet',
-    name: 'Solana Devnet',
-    rpc_url: 'https://api.devnet.solana.com',
-    chain_type: 'sol',
-  },
 ];

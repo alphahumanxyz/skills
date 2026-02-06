@@ -34,6 +34,7 @@ function start(): void {
   const s = getState();
   s.isRunning = true;
   state.setPartial({
+    connection_status: 'connected',
     status: 'running',
     walletCount: s.config.walletAddresses.length,
     networkCount: s.config.networks.length,
@@ -43,7 +44,7 @@ function start(): void {
 function stop(): void {
   const s = getState();
   s.isRunning = false;
-  state.set('status', 'stopped');
+  state.setPartial({ connection_status: 'disconnected', status: 'stopped' });
 }
 
 /**
@@ -70,10 +71,6 @@ function onSetupStart(): SetupStartResult {
   // might not be initialized as an array in the JS runtime.
   const networks = Array.isArray(DEFAULT_NETWORKS) ? DEFAULT_NETWORKS : [];
   const evmOptions = networks
-    .filter(n => n.chain_type === 'evm')
-    .map(n => ({ label: n.name, value: n.chain_id }));
-  const solOptions = networks
-    .filter(n => n.chain_type === 'sol')
     .map(n => ({ label: n.name, value: n.chain_id }));
 
   return {
@@ -91,14 +88,6 @@ function onSetupStart(): SetupStartResult {
           required: false,
           options: evmOptions,
         },
-        {
-          name: 'sol_networks',
-          type: 'multiselect',
-          label: 'Solana Networks',
-          description: 'Select Solana networks',
-          required: false,
-          options: solOptions,
-        },
       ],
     },
   };
@@ -113,11 +102,9 @@ function onSetupSubmit(args: {
   if (args.stepId === 'networks') {
     const networks = Array.isArray(DEFAULT_NETWORKS) ? DEFAULT_NETWORKS : [];
     const evmSelected = (args.values.evm_networks as string[]) || [];
-    const solSelected = (args.values.sol_networks as string[]) || [];
-    const selected = [...evmSelected, ...solSelected];
-    s.config.networks = networks.filter(n => selected.includes(n.chain_id));
+    s.config.networks = networks.filter(n => evmSelected.includes(n.chain_id));
     if (s.config.networks.length === 0) {
-      s.config.networks = networks.filter(n => n.chain_type === 'evm').slice(0, 3);
+      s.config.networks = networks.slice(0, 3);
     }
     store.set('config', s.config);
     return { status: 'complete' };

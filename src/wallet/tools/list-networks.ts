@@ -1,7 +1,7 @@
 // Tool: list_networks — list configured blockchain networks
 export const listNetworksTool = {
   name: 'list_networks',
-  description: 'List all configured blockchain networks (EVM and Solana) with RPC endpoints.',
+  description: 'List all configured EVM blockchain networks with RPC endpoints.',
   input_schema: { type: 'object', properties: {} },
   execute(): string {
     const s = (globalThis as any).getState() as {

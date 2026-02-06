@@ -123,17 +123,14 @@ _describe('onLoad()', () => {
 // ─── Setup flow ────────────────────────────────────────────────────────
 
 _describe('Setup flow', () => {
-  _it('onSetupStart should return networks step with EVM and Solana options', () => {
+  _it('onSetupStart should return networks step with EVM options', () => {
     freshInit();
     const result = (globalThis as any).onSetupStart();
     _assertEqual(result.step.id, 'networks');
-    _assertEqual(result.step.fields.length, 2);
+    _assertEqual(result.step.fields.length, 1);
     const evmField = result.step.fields.find((f: any) => f.name === 'evm_networks');
-    const solField = result.step.fields.find((f: any) => f.name === 'sol_networks');
     _assertNotNull(evmField, 'should have evm_networks field');
-    _assertNotNull(solField, 'should have sol_networks field');
     _assertTrue(Array.isArray(evmField.options) && evmField.options.length > 0);
-    _assertTrue(Array.isArray(solField.options) && solField.options.length > 0);
   });
 
   _it('onSetupSubmit networks should save selected networks and return complete', () => {
@@ -141,7 +138,7 @@ _describe('Setup flow', () => {
     (globalThis as any).onSetupStart();
     const result = (globalThis as any).onSetupSubmit({
       stepId: 'networks',
-      values: { evm_networks: ['1', '137'], sol_networks: [] },
+      values: { evm_networks: ['1', '137'] },
     });
     _assertEqual(result.status, 'complete');
     const s = (globalThis as any).getState();
@@ -156,7 +153,7 @@ _describe('Setup flow', () => {
     (globalThis as any).onSetupStart();
     (globalThis as any).onSetupSubmit({
       stepId: 'networks',
-      values: { evm_networks: [], sol_networks: [] },
+      values: { evm_networks: [] },
     });
     const s = (globalThis as any).getState();
     _assertTrue(s.config.networks.length >= 1, 'should have at least one default network');
@@ -269,28 +266,4 @@ _describe('Tools', () => {
     _assertNotNull(result.error);
   });
 
-  _it('get_balance sol chain_type should return not implemented message', () => {
-    freshInit({
-      storeData: {
-        config: {
-          walletAddresses: [MOCK_ADDRESS],
-          networks: [
-            {
-              chain_id: 'mainnet-beta',
-              name: 'Solana',
-              rpc_url: 'https://api.mainnet-beta.solana.com',
-              chain_type: 'sol',
-            },
-          ],
-        },
-      },
-    });
-    const result = _callTool('get_balance', {
-      address: MOCK_ADDRESS,
-      chain_id: 'mainnet-beta',
-      chain_type: 'sol',
-    });
-    _assertEqual(result.chain_type, 'sol');
-    _assertNotNull(result.message);
-  });
 });
