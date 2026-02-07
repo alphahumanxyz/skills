@@ -45,6 +45,7 @@ import { queryDatabaseTool } from './tools/query-database';
 // Import tools
 import { searchTool } from './tools/search';
 import { searchLocalTool } from './tools/search-local';
+import { summarizePagesTool } from './tools/summarize-pages';
 import { syncNowTool } from './tools/sync-now';
 import { syncStatusTool } from './tools/sync-status';
 import { updateBlockTool } from './tools/update-block';
@@ -390,6 +391,8 @@ tools = [
   searchLocalTool,
   syncStatusTool,
   syncNowTool,
+  // AI tools
+  summarizePagesTool,
 ];
 
 // ---------------------------------------------------------------------------

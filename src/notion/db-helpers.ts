@@ -106,18 +106,23 @@ export function upsertPage(page: Record<string, unknown>): void {
   const lastEditedBy = page.last_edited_by as Record<string, unknown> | undefined;
 
   db.exec(
-    `INSERT OR REPLACE INTO pages (
+    `INSERT INTO pages (
       id, title, url, icon, parent_type, parent_id,
       created_by_id, last_edited_by_id,
-      created_time, last_edited_time, archived,
-      content_text, content_synced_at,
-      ai_summary, ai_summary_at, synced_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      COALESCE((SELECT content_text FROM pages WHERE id = ?), NULL),
-      COALESCE((SELECT content_synced_at FROM pages WHERE id = ?), NULL),
-      COALESCE((SELECT ai_summary FROM pages WHERE id = ?), NULL),
-      COALESCE((SELECT ai_summary_at FROM pages WHERE id = ?), NULL),
-      ?)`,
+      created_time, last_edited_time, archived, synced_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      url = excluded.url,
+      icon = excluded.icon,
+      parent_type = excluded.parent_type,
+      parent_id = excluded.parent_id,
+      created_by_id = excluded.created_by_id,
+      last_edited_by_id = excluded.last_edited_by_id,
+      created_time = excluded.created_time,
+      last_edited_time = excluded.last_edited_time,
+      archived = excluded.archived,
+      synced_at = excluded.synced_at`,
     [
       page.id as string,
       title,
@@ -130,10 +135,6 @@ export function upsertPage(page: Record<string, unknown>): void {
       page.created_time as string,
       page.last_edited_time as string,
       (page.archived as boolean) ? 1 : 0,
-      page.id as string, // for COALESCE subquery (content_text)
-      page.id as string, // for COALESCE subquery (content_synced_at)
-      page.id as string, // for COALESCE subquery (ai_summary)
-      page.id as string, // for COALESCE subquery (ai_summary_at)
       now,
     ]
   );
