@@ -60,6 +60,14 @@ export const summarizePagesTool: ToolDefinition = {
         .inferClassification as
         | ((text: string) => { category: string; sentiment: string; entities: Array<{ id: string; type: string; name?: string; role?: string }>; topics: string[] })
         | undefined;
+      const getPageStructuredEntities = (globalThis as Record<string, unknown>)
+        .getPageStructuredEntities as
+        | ((pageId: string) => Array<{ id: string; type: string; name?: string; role: string; property?: string }>)
+        | undefined;
+      const mergeEntitiesFn = (globalThis as Record<string, unknown>)
+        .mergeEntities as
+        | ((structured: unknown[], llm: unknown[]) => unknown[])
+        | undefined;
 
       if (!getPagesNeedingSummary || !updatePageAiSummary) {
         return JSON.stringify({ success: false, error: 'Database helpers not available.' });
@@ -118,11 +126,17 @@ export const summarizePagesTool: ToolDefinition = {
             summary = result;
           }
 
+          // Merge structured entities (from Notion properties) with LLM-inferred entities
+          const structuredEnts = getPageStructuredEntities?.(page.id) ?? [];
+          const mergedEntities = mergeEntitiesFn
+            ? mergeEntitiesFn(structuredEnts, classification.entities) as Array<{ id: string; type: string; name?: string; role: string }>
+            : [...structuredEnts, ...classification.entities.map(e => ({ ...e, role: e.role || 'mentioned' }))];
+
           // Store summary + classification in local DB
           updatePageAiSummary(page.id, summary, {
             category: classification.category,
             sentiment: classification.sentiment,
-            entities: classification.entities,
+            entities: mergedEntities,
             topics: classification.topics,
           });
 
@@ -133,10 +147,10 @@ export const summarizePagesTool: ToolDefinition = {
             dataSource: 'notion',
             sentiment: classification.sentiment as 'positive' | 'neutral' | 'negative' | 'mixed',
             keyPoints: classification.topics.length > 0 ? classification.topics : undefined,
-            entities: classification.entities.length > 0
-              ? classification.entities.map(e => ({
+            entities: mergedEntities.length > 0
+              ? mergedEntities.map(e => ({
                   id: e.id,
-                  type: e.type as 'person' | 'wallet' | 'channel' | 'group' | 'organization' | 'token' | 'other',
+                  type: (e.type === 'page' ? 'other' : e.type) as 'person' | 'wallet' | 'channel' | 'group' | 'organization' | 'token' | 'other',
                   name: e.name,
                   role: e.role,
                 }))

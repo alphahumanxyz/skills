@@ -434,6 +434,28 @@ function summarizeWithFallback(content: string, metaBlock: string): string | nul
   return null;
 }
 
+/**
+ * Merge structured entities (from Notion properties) with LLM-inferred entities.
+ * Structured entities take priority (they have verified IDs from the API).
+ * LLM entities are added if they don't duplicate an existing id+role pair.
+ */
+function mergeEntities(
+  structured: Array<{ id: string; type: string; name?: string; role: string; property?: string }>,
+  llmInferred: Array<{ id: string; type: string; name?: string; role?: string }>
+): Array<{ id: string; type: string; name?: string; role: string; property?: string }> {
+  const merged = [...structured];
+  const seen = new Set(structured.map(e => e.id.toLowerCase()));
+
+  for (const e of llmInferred) {
+    if (!seen.has(e.id.toLowerCase())) {
+      seen.add(e.id.toLowerCase());
+      merged.push({ id: e.id, type: e.type, name: e.name, role: e.role || 'mentioned' });
+    }
+  }
+
+  return merged;
+}
+
 function syncAiSummaries(): void {
   const s = globalThis.getNotionSkillState();
 
@@ -448,6 +470,9 @@ function syncAiSummaries(): void {
     | undefined;
   const updatePageAiSummary = (globalThis as Record<string, unknown>).updatePageAiSummary as
     | ((pageId: string, summary: string, opts?: { category?: string; sentiment?: string; entities?: unknown[]; topics?: string[] }) => void)
+    | undefined;
+  const getPageStructuredEntities = (globalThis as Record<string, unknown>).getPageStructuredEntities as
+    | ((pageId: string) => Array<{ id: string; type: string; name?: string; role: string; property?: string }>)
     | undefined;
 
   if (!getPagesNeedingSummary || !updatePageAiSummary) return;
@@ -493,11 +518,15 @@ function syncAiSummaries(): void {
         summary = result;
       }
 
+      // Merge structured entities (from Notion properties) with LLM-inferred entities
+      const structuredEnts = getPageStructuredEntities?.(page.id) ?? [];
+      const mergedEntities = mergeEntities(structuredEnts, classification.entities);
+
       // Store summary + classification in local DB
       updatePageAiSummary(page.id, summary, {
         category: classification.category,
         sentiment: classification.sentiment,
-        entities: classification.entities,
+        entities: mergedEntities,
         topics: classification.topics,
       });
 
@@ -508,10 +537,10 @@ function syncAiSummaries(): void {
         dataSource: 'notion',
         sentiment: classification.sentiment as 'positive' | 'neutral' | 'negative' | 'mixed',
         keyPoints: classification.topics.length > 0 ? classification.topics : undefined,
-        entities: classification.entities.length > 0
-          ? classification.entities.map(e => ({
+        entities: mergedEntities.length > 0
+          ? mergedEntities.map(e => ({
               id: e.id,
-              type: e.type as 'person' | 'wallet' | 'channel' | 'group' | 'organization' | 'token' | 'other',
+              type: (e.type === 'page' ? 'other' : e.type) as 'person' | 'wallet' | 'channel' | 'group' | 'organization' | 'token' | 'other',
               name: e.name,
               role: e.role,
             }))
@@ -571,4 +600,5 @@ const _g = globalThis as Record<string, unknown>;
 _g.performSync = performSync;
 _g.publishSyncState = publishSyncState;
 _g.inferClassification = inferClassification;
+_g.mergeEntities = mergeEntities;
 _g.summarizeWithFallback = summarizeWithFallback;
