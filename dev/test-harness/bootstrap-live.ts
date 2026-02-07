@@ -469,10 +469,15 @@ export async function createBridgeAPIs(
       }
       return modelBridge.summarize(text, _options as ModelSummarizeOptions | undefined);
     },
-    submitSummary: (_submission: Record<string, unknown>): void => {
-      globalThis.console.log(
-        `[model.submitSummary] "${String((_submission as Record<string, string>).summary ?? '').substring(0, 80)}"`,
-      );
+    submitSummary: (submission: Record<string, unknown>): void => {
+      const preview = String((submission as Record<string, string>).summary ?? '').substring(0, 80);
+      globalThis.console.log(`[model.submitSummary] "${preview}"`);
+      if (socket?.connected) {
+        socket.emit('summary:submit', submission);
+        globalThis.console.log('[model.submitSummary] Emitted via socket');
+      } else {
+        globalThis.console.warn('[model.submitSummary] Socket not connected — summary not sent');
+      }
     },
   };
 
