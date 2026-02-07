@@ -3,7 +3,10 @@
 // Supports pages, databases, blocks, users, comments, and local search.
 // Authentication is handled via the platform OAuth bridge.
 // Import modules to initialize state and expose functions on globalThis
-import { notionApi } from './api/index';
+// Side-effect import: triggers api module initialization.
+// Do NOT destructure — `import { notionApi }` is broken by IIFE CJS interop.
+// The api/index.ts module writes notionApi to globalThis.exports at init time.
+import './api/index';
 import './db-helpers';
 import './db-schema';
 // Import helpers
@@ -57,7 +60,10 @@ import { updatePageTool } from './tools/update-page';
 // ---------------------------------------------------------------------------
 
 const _g = globalThis as Record<string, unknown>;
-_g.notionApi = notionApi;
+// notionApi was built by api/index.ts and written to globalThis.exports.notionApi.
+// Read it from there (module import would be empty due to IIFE CJS interop).
+_g.notionApi = ((globalThis as unknown as Record<string, unknown>).exports as Record<string, unknown>)
+  ?.notionApi;
 _g.notionFetch = notionFetch;
 _g.formatApiError = formatApiError;
 _g.formatRichText = formatRichText;
