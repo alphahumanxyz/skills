@@ -51,6 +51,12 @@ export function performSync(): void {
       syncContent();
     }
 
+    // Phase 4: AI summarization of page content
+    if (s.config.contentSyncEnabled) {
+      console.log('[notion] Sync phase 4: AI summaries');
+      syncAiSummaries();
+    }
+
     // Update sync state
     const durationMs = Date.now() - startTime;
     s.syncStatus.lastSyncTime = Date.now();
@@ -67,6 +73,7 @@ export function performSync(): void {
     s.syncStatus.totalDatabases = counts.databases;
     s.syncStatus.totalUsers = counts.users;
     s.syncStatus.pagesWithContent = counts.pagesWithContent;
+    s.syncStatus.pagesWithSummary = counts.pagesWithSummary;
 
     console.log(
       `[notion] Sync complete in ${durationMs}ms — ${counts.pages} pages, ${counts.databases} databases, ${counts.users} users`
@@ -326,6 +333,82 @@ function syncContent(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4: AI summarization of synced page content
+// ---------------------------------------------------------------------------
+
+function syncAiSummaries(): void {
+  const s = globalThis.getNotionSkillState();
+
+  // Check if the local model is available
+  if (!model.isAvailable()) {
+    console.log('[notion] AI model not available — skipping summaries');
+    return;
+  }
+
+  const getPagesNeedingSummary = (globalThis as Record<string, unknown>).getPagesNeedingSummary as
+    | ((limit: number) => Array<{ id: string; title: string; content_text: string; url: string | null; last_edited_time: string; created_time: string }>)
+    | undefined;
+  const updatePageAiSummary = (globalThis as Record<string, unknown>).updatePageAiSummary as
+    | ((pageId: string, summary: string) => void)
+    | undefined;
+
+  if (!getPagesNeedingSummary || !updatePageAiSummary) return;
+
+  const batchSize = s.config.maxPagesPerContentSync;
+  const pages = getPagesNeedingSummary(batchSize);
+
+  if (pages.length === 0) {
+    console.log('[notion] No pages need AI summarization');
+    return;
+  }
+
+  let summarized = 0;
+  let failed = 0;
+
+  for (const page of pages) {
+    try {
+      // Truncate very long content to avoid overwhelming the model
+      const content = page.content_text.length > 8000
+        ? page.content_text.substring(0, 8000) + '\n...(truncated)'
+        : page.content_text;
+
+      const prompt = `Summarize this Notion page titled "${page.title}" concisely. Focus on the key points and main purpose of the page.\n\n${content}`;
+      const summary = model.summarize(prompt, { maxTokens: 300 });
+
+      if (summary && summary.trim()) {
+        // Store summary in local DB
+        updatePageAiSummary(page.id, summary.trim());
+
+        // Submit to server with metadata
+        model.submitSummary({
+          summary: summary.trim(),
+          category: 'research',
+          dataSource: 'notion',
+          sentiment: 'neutral',
+          metadata: {
+            pageId: page.id,
+            pageTitle: page.title,
+            pageUrl: page.url,
+            lastEditedTime: page.last_edited_time,
+            createdTime: page.created_time,
+            contentLength: page.content_text.length,
+          },
+        });
+
+        summarized++;
+      }
+    } catch (e) {
+      console.error(`[notion] Failed to summarize page ${page.id} ("${page.title}"): ${e}`);
+      failed++;
+    }
+  }
+
+  console.log(
+    `[notion] AI summaries: ${summarized} pages summarized${failed > 0 ? `, ${failed} failed` : ''}`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // State publishing helper
 // ---------------------------------------------------------------------------
 
@@ -346,6 +429,7 @@ function publishSyncState(): void {
     totalDatabases: s.syncStatus.totalDatabases,
     totalUsers: s.syncStatus.totalUsers,
     pagesWithContent: s.syncStatus.pagesWithContent,
+    pagesWithSummary: s.syncStatus.pagesWithSummary,
     lastSyncError: s.syncStatus.lastSyncError,
     lastSyncDurationMs: s.syncStatus.lastSyncDurationMs,
   });

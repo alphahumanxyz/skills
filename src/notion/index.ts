@@ -79,9 +79,7 @@ function init(): void {
 
   // Initialize database schema
   const initSchema = (globalThis as { initializeNotionSchema?: () => void }).initializeNotionSchema;
-  if (initSchema) {
-    initSchema();
-  }
+  if (initSchema) initSchema();
 
   // Load persisted config from store
   const saved = store.get('config') as Partial<NotionSkillConfig> | null;
@@ -110,6 +108,7 @@ function init(): void {
         databases: number;
         users: number;
         pagesWithContent: number;
+        pagesWithSummary: number;
       };
     }
   ).getEntityCounts;
@@ -119,6 +118,7 @@ function init(): void {
     s.syncStatus.totalDatabases = counts.databases;
     s.syncStatus.totalUsers = counts.users;
     s.syncStatus.pagesWithContent = counts.pagesWithContent;
+    s.syncStatus.pagesWithSummary = counts.pagesWithSummary;
   }
 
   const cred = oauth.getCredential();
@@ -349,6 +349,7 @@ function publishState(): void {
     totalDatabases: s.syncStatus.totalDatabases,
     totalUsers: s.syncStatus.totalUsers,
     pagesWithContent: s.syncStatus.pagesWithContent,
+    pagesWithSummary: s.syncStatus.pagesWithSummary,
     lastSyncError: s.syncStatus.lastSyncError,
   });
 }

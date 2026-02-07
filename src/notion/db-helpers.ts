@@ -20,6 +20,8 @@ export interface LocalPage {
   archived: number;
   content_text: string | null;
   content_synced_at: number | null;
+  ai_summary: string | null;
+  ai_summary_at: number | null;
   synced_at: number;
 }
 
@@ -108,10 +110,13 @@ export function upsertPage(page: Record<string, unknown>): void {
       id, title, url, icon, parent_type, parent_id,
       created_by_id, last_edited_by_id,
       created_time, last_edited_time, archived,
-      content_text, content_synced_at, synced_at
+      content_text, content_synced_at,
+      ai_summary, ai_summary_at, synced_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
       COALESCE((SELECT content_text FROM pages WHERE id = ?), NULL),
       COALESCE((SELECT content_synced_at FROM pages WHERE id = ?), NULL),
+      COALESCE((SELECT ai_summary FROM pages WHERE id = ?), NULL),
+      COALESCE((SELECT ai_summary_at FROM pages WHERE id = ?), NULL),
       ?)`,
     [
       page.id as string,
@@ -125,8 +130,10 @@ export function upsertPage(page: Record<string, unknown>): void {
       page.created_time as string,
       page.last_edited_time as string,
       (page.archived as boolean) ? 1 : 0,
-      page.id as string, // for COALESCE subquery
-      page.id as string, // for COALESCE subquery
+      page.id as string, // for COALESCE subquery (content_text)
+      page.id as string, // for COALESCE subquery (content_synced_at)
+      page.id as string, // for COALESCE subquery (ai_summary)
+      page.id as string, // for COALESCE subquery (ai_summary_at)
       now,
     ]
   );
@@ -203,6 +210,36 @@ export function getPagesNeedingContent(limit: number, updatedAfterIso?: string):
   params.push(limit);
 
   return db.all(sql, params) as unknown as LocalPage[];
+}
+
+/**
+ * Update a page's AI-generated summary
+ */
+export function updatePageAiSummary(pageId: string, summary: string): void {
+  db.exec('UPDATE pages SET ai_summary = ?, ai_summary_at = ? WHERE id = ?', [
+    summary,
+    Date.now(),
+    pageId,
+  ]);
+}
+
+/**
+ * Get pages that need AI summarization.
+ * Returns pages where content_text exists but either:
+ *   - ai_summary is NULL (never summarized), OR
+ *   - content was re-synced after the last summary (content_synced_at > ai_summary_at)
+ */
+export function getPagesNeedingSummary(limit: number): LocalPage[] {
+  return db.all(
+    `SELECT * FROM pages
+     WHERE archived = 0
+       AND content_text IS NOT NULL
+       AND content_text != ''
+       AND (ai_summary IS NULL OR ai_summary_at < content_synced_at)
+     ORDER BY last_edited_time DESC
+     LIMIT ?`,
+    [limit]
+  ) as unknown as LocalPage[];
 }
 
 // ---------------------------------------------------------------------------
@@ -355,6 +392,7 @@ export function getEntityCounts(): {
   databases: number;
   users: number;
   pagesWithContent: number;
+  pagesWithSummary: number;
 } {
   const pages = db.get('SELECT COUNT(*) as cnt FROM pages', []) as { cnt: number } | null;
   const databases = db.get('SELECT COUNT(*) as cnt FROM databases', []) as { cnt: number } | null;
@@ -363,12 +401,17 @@ export function getEntityCounts(): {
     'SELECT COUNT(*) as cnt FROM pages WHERE content_text IS NOT NULL',
     []
   ) as { cnt: number } | null;
+  const pagesWithSummary = db.get(
+    'SELECT COUNT(*) as cnt FROM pages WHERE ai_summary IS NOT NULL',
+    []
+  ) as { cnt: number } | null;
 
   return {
     pages: pages?.cnt || 0,
     databases: databases?.cnt || 0,
     users: users?.cnt || 0,
     pagesWithContent: pagesWithContent?.cnt || 0,
+    pagesWithSummary: pagesWithSummary?.cnt || 0,
   };
 }
 
@@ -387,6 +430,8 @@ _g.getLocalPages = getLocalPages;
 _g.getLocalDatabases = getLocalDatabases;
 _g.getLocalUsers = getLocalUsers;
 _g.getPagesNeedingContent = getPagesNeedingContent;
+_g.updatePageAiSummary = updatePageAiSummary;
+_g.getPagesNeedingSummary = getPagesNeedingSummary;
 _g.getNotionSyncState = getNotionSyncState;
 _g.setNotionSyncState = setNotionSyncState;
 _g.getEntityCounts = getEntityCounts;

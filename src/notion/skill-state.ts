@@ -18,6 +18,7 @@ export interface NotionSyncStatus {
   totalDatabases: number;
   totalUsers: number;
   pagesWithContent: number;
+  pagesWithSummary: number;
   lastSyncError: string | null;
   lastSyncDurationMs: number;
 }
@@ -55,6 +56,7 @@ function initNotionSkillState(): NotionSkillState {
       totalDatabases: 0,
       totalUsers: 0,
       pagesWithContent: 0,
+      pagesWithSummary: 0,
       lastSyncError: null,
       lastSyncDurationMs: 0,
     },
