@@ -26,6 +26,7 @@ export interface LocalPage {
   ai_sentiment: string | null;
   ai_entities: string | null;
   ai_topics: string | null;
+  page_entities: string | null;
   synced_at: number;
 }
 
@@ -82,6 +83,68 @@ function extractParent(parent: unknown): { type: string; id: string | null } {
 // ---------------------------------------------------------------------------
 
 /**
+ * Extract structured entities from Notion page properties and top-level fields.
+ * Captures: created_by, last_edited_by, people properties (assignees),
+ * relation properties (linked pages), created_by/last_edited_by property types.
+ */
+function extractPageEntities(page: Record<string, unknown>): Array<{ id: string; type: string; name?: string; role: string; property?: string }> {
+  const entities: Array<{ id: string; type: string; name?: string; role: string; property?: string }> = [];
+  const seen = new Set<string>();
+
+  const add = (id: string, type: string, name: string | undefined, role: string, property?: string) => {
+    const key = `${id}:${role}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    entities.push({ id, type, name: name || undefined, role, property });
+  };
+
+  // Top-level created_by / last_edited_by
+  const createdBy = page.created_by as Record<string, unknown> | undefined;
+  if (createdBy?.id) {
+    add(createdBy.id as string, 'person', createdBy.name as string | undefined, 'creator');
+  }
+  const lastEditedBy = page.last_edited_by as Record<string, unknown> | undefined;
+  if (lastEditedBy?.id) {
+    add(lastEditedBy.id as string, 'person', lastEditedBy.name as string | undefined, 'last_editor');
+  }
+
+  // Scan properties for person, relation, created_by, last_edited_by types
+  const props = page.properties as Record<string, unknown> | undefined;
+  if (props) {
+    for (const [propName, propVal] of Object.entries(props)) {
+      const prop = propVal as Record<string, unknown>;
+      const propType = prop.type as string;
+
+      if (propType === 'people' && Array.isArray(prop.people)) {
+        for (const person of prop.people as Array<Record<string, unknown>>) {
+          if (person.id) {
+            add(person.id as string, 'person', person.name as string | undefined, 'assignee', propName);
+          }
+        }
+      } else if (propType === 'relation' && Array.isArray(prop.relation)) {
+        for (const rel of prop.relation as Array<Record<string, unknown>>) {
+          if (rel.id) {
+            add(rel.id as string, 'page', undefined, 'linked', propName);
+          }
+        }
+      } else if (propType === 'created_by' && prop.created_by) {
+        const cb = prop.created_by as Record<string, unknown>;
+        if (cb.id) {
+          add(cb.id as string, 'person', cb.name as string | undefined, 'creator', propName);
+        }
+      } else if (propType === 'last_edited_by' && prop.last_edited_by) {
+        const leb = prop.last_edited_by as Record<string, unknown>;
+        if (leb.id) {
+          add(leb.id as string, 'person', leb.name as string | undefined, 'last_editor', propName);
+        }
+      }
+    }
+  }
+
+  return entities;
+}
+
+/**
  * Insert or update a page from a Notion API page object
  */
 export function upsertPage(page: Record<string, unknown>): void {
@@ -109,12 +172,16 @@ export function upsertPage(page: Record<string, unknown>): void {
   const createdBy = page.created_by as Record<string, unknown> | undefined;
   const lastEditedBy = page.last_edited_by as Record<string, unknown> | undefined;
 
+  // Extract structured entities from properties (people, relations, etc.)
+  const pageEntities = extractPageEntities(page);
+  const pageEntitiesJson = pageEntities.length > 0 ? JSON.stringify(pageEntities) : null;
+
   db.exec(
     `INSERT INTO pages (
       id, title, url, icon, parent_type, parent_id,
       created_by_id, last_edited_by_id,
-      created_time, last_edited_time, archived, synced_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      created_time, last_edited_time, archived, page_entities, synced_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
       url = excluded.url,
@@ -126,6 +193,7 @@ export function upsertPage(page: Record<string, unknown>): void {
       created_time = excluded.created_time,
       last_edited_time = excluded.last_edited_time,
       archived = excluded.archived,
+      page_entities = excluded.page_entities,
       synced_at = excluded.synced_at`,
     [
       page.id as string,
@@ -139,6 +207,7 @@ export function upsertPage(page: Record<string, unknown>): void {
       page.created_time as string,
       page.last_edited_time as string,
       (page.archived as boolean) ? 1 : 0,
+      pageEntitiesJson,
       now,
     ]
   );
@@ -246,6 +315,49 @@ export function updatePageAiSummary(
       pageId,
     ]
   );
+}
+
+/**
+ * Get structured entities for a page, with user names resolved from the users table.
+ * Returns the stored page_entities with names filled in from local user records.
+ */
+export function getPageStructuredEntities(
+  pageId: string
+): Array<{ id: string; type: string; name?: string; role: string; property?: string }> {
+  const page = db.get('SELECT page_entities, created_by_id, last_edited_by_id FROM pages WHERE id = ?', [pageId]) as {
+    page_entities: string | null;
+    created_by_id: string | null;
+    last_edited_by_id: string | null;
+  } | null;
+  if (!page) return [];
+
+  let entities: Array<{ id: string; type: string; name?: string; role: string; property?: string }> = [];
+  if (page.page_entities) {
+    try {
+      entities = JSON.parse(page.page_entities);
+    } catch {
+      entities = [];
+    }
+  }
+
+  // If no entities from properties, at least add created_by / last_edited_by
+  const seen = new Set(entities.map(e => `${e.id}:${e.role}`));
+  if (page.created_by_id && !seen.has(`${page.created_by_id}:creator`)) {
+    entities.push({ id: page.created_by_id, type: 'person', role: 'creator' });
+  }
+  if (page.last_edited_by_id && !seen.has(`${page.last_edited_by_id}:last_editor`)) {
+    entities.push({ id: page.last_edited_by_id, type: 'person', role: 'last_editor' });
+  }
+
+  // Resolve names from users table
+  for (const entity of entities) {
+    if (entity.type === 'person' && !entity.name) {
+      const user = db.get('SELECT name FROM users WHERE id = ?', [entity.id]) as { name: string } | null;
+      if (user) entity.name = user.name;
+    }
+  }
+
+  return entities;
 }
 
 /**
@@ -456,6 +568,7 @@ _g.getLocalUsers = getLocalUsers;
 _g.getPagesNeedingContent = getPagesNeedingContent;
 _g.updatePageAiSummary = updatePageAiSummary;
 _g.getPagesNeedingSummary = getPagesNeedingSummary;
+_g.getPageStructuredEntities = getPageStructuredEntities;
 _g.getNotionSyncState = getNotionSyncState;
 _g.setNotionSyncState = setNotionSyncState;
 _g.getEntityCounts = getEntityCounts;
