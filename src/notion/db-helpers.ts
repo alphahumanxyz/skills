@@ -179,17 +179,33 @@ export function getLocalPages(
 }
 
 /**
- * Get pages that need content syncing (content not yet fetched, or stale)
+ * Get pages that need content syncing (content not yet fetched, or stale).
+ * Uses last_edited_time: only returns pages where we never synced content, or
+ * the page was edited after we last synced (last_edited_time > content_synced_at).
+ * @param limit - Max number of pages to return
+ * @param updatedAfterIso - Optional ISO string cutoff; only return pages with last_edited_time >= this (e.g. 30 days ago)
  */
-export function getPagesNeedingContent(limit: number): LocalPage[] {
-  return db.all(
-    `SELECT * FROM pages
+export function getPagesNeedingContent(
+  limit: number,
+  updatedAfterIso?: string
+): LocalPage[] {
+  // last_edited_time is ISO string; content_synced_at is ms. Compare: need sync if
+  // content_synced_at IS NULL or last_edited_time (as ms) > content_synced_at
+  const lastEditedMsExpr = `(strftime('%s', substr(last_edited_time, 1, 10) || ' ' || substr(last_edited_time, 12, 8)) * 1000)`;
+  let sql = `SELECT * FROM pages
      WHERE archived = 0
-       AND (content_synced_at IS NULL OR content_synced_at < synced_at)
-     ORDER BY last_edited_time DESC
-     LIMIT ?`,
-    [limit]
-  ) as unknown as LocalPage[];
+       AND (content_synced_at IS NULL OR content_synced_at < ${lastEditedMsExpr})`;
+  const params: unknown[] = [];
+
+  if (updatedAfterIso) {
+    sql += ' AND last_edited_time >= ?';
+    params.push(updatedAfterIso);
+  }
+
+  sql += ' ORDER BY last_edited_time DESC LIMIT ?';
+  params.push(limit);
+
+  return db.all(sql, params) as unknown as LocalPage[];
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +255,13 @@ export function upsertDatabase(database: Record<string, unknown>): void {
       now,
     ]
   );
+}
+
+/**
+ * Get a single database by ID
+ */
+export function getDatabaseById(databaseId: string): LocalDatabase | null {
+  return db.get('SELECT * FROM databases WHERE id = ?', [databaseId]) as LocalDatabase | null;
 }
 
 /**
@@ -362,6 +385,7 @@ _g.upsertDatabase = upsertDatabase;
 _g.upsertUser = upsertUser;
 _g.updatePageContent = updatePageContent;
 _g.getPageById = getPageById;
+_g.getDatabaseById = getDatabaseById;
 _g.getLocalPages = getLocalPages;
 _g.getLocalDatabases = getLocalDatabases;
 _g.getLocalUsers = getLocalUsers;

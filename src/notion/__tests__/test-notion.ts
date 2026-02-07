@@ -56,6 +56,8 @@ const MOCK_DATABASE = {
       select: { options: [{ name: 'Todo' }, { name: 'Done' }] },
     },
   },
+  // Notion API 2025-09-03: database container includes data_sources
+  data_sources: [{ id: 'ds-123', name: 'Test Data Source' }],
 };
 
 const MOCK_BLOCK = {
@@ -628,6 +630,10 @@ _describe('Database tools', () => {
         status: 200,
         body: JSON.stringify(MOCK_DATABASE),
       },
+      'https://api.notion.com/v1/data_sources/ds-123': {
+        status: 200,
+        body: JSON.stringify(MOCK_DATABASE),
+      },
     });
     const result = _callTool('notion-get-database', { database_id: 'db-123' });
     _assertNotNull(result.id);
@@ -637,7 +643,11 @@ _describe('Database tools', () => {
 
   _it('notion-query-database should return rows', () => {
     configuredInitWithToken({
-      'https://api.notion.com/v1/databases/db-123/query': {
+      'https://api.notion.com/v1/databases/db-123': {
+        status: 200,
+        body: JSON.stringify(MOCK_DATABASE),
+      },
+      'https://api.notion.com/v1/data_sources/ds-123/query': {
         status: 200,
         body: JSON.stringify({ results: [MOCK_PAGE], has_more: false }),
       },

@@ -34,7 +34,8 @@ export const searchTool: ToolDefinition = {
 
       const body: Record<string, unknown> = { page_size: pageSize };
       if (query) body.query = query;
-      if (filter) body.filter = { property: 'object', value: filter };
+      // Notion API 2025-09-03: "database" filter uses value "data_source"
+      if (filter) body.filter = { property: 'object', value: filter === 'database' ? 'data_source' : filter };
 
       const result = notionFetch('/search', { method: 'POST', body }) as {
         results: Record<string, unknown>[];
@@ -44,7 +45,8 @@ export const searchTool: ToolDefinition = {
       const formatted = result.results.map(item => {
         if (item.object === 'page') {
           return { object: 'page', ...formatPageSummary(item) };
-        } else if (item.object === 'database') {
+        }
+        if (item.object === 'database' || item.object === 'data_source') {
           return { object: 'database', ...formatDatabaseSummary(item) };
         }
         return { object: item.object, id: item.id };

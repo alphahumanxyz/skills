@@ -25,16 +25,29 @@ export const getDatabaseTool: ToolDefinition = {
         return JSON.stringify({ error: 'database_id is required' });
       }
 
-      const dbResult = notionFetch(`/databases/${databaseId}`) as Record<string, unknown>;
+      // Notion API 2025-09-03: schema lives on data_source, not database container
+      const dbContainer = notionFetch(`/databases/${databaseId}`) as Record<string, unknown> & {
+        data_sources?: Array<{ id: string; name?: string }>;
+      };
+      const dataSources = dbContainer.data_sources;
+      if (!dataSources || dataSources.length === 0) {
+        return JSON.stringify({
+          error: 'Database has no data sources. Share the database with your integration.',
+        });
+      }
+      const dataSourceId = dataSources[0].id;
 
-      const props = dbResult.properties as Record<string, unknown>;
+      const dsResult = notionFetch(`/data_sources/${dataSourceId}`) as Record<string, unknown>;
+      const props = dsResult.properties as Record<string, unknown>;
       const schema: Record<string, unknown> = {};
-      for (const [name, prop] of Object.entries(props)) {
-        const propData = prop as Record<string, unknown>;
-        schema[name] = { type: propData.type, id: propData.id };
+      if (props) {
+        for (const [name, prop] of Object.entries(props)) {
+          const propData = prop as Record<string, unknown>;
+          schema[name] = { type: propData.type, id: propData.id };
+        }
       }
 
-      return JSON.stringify({ ...formatDatabaseSummary(dbResult), schema });
+      return JSON.stringify({ ...formatDatabaseSummary(dsResult), schema });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }

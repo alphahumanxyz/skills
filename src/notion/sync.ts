@@ -119,7 +119,10 @@ function syncUsers(): void {
 
 // ---------------------------------------------------------------------------
 // Phase 2: Sync pages and databases via search (incremental)
+// Restricts to items updated in the last 30 days to limit data volume.
 // ---------------------------------------------------------------------------
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 function syncSearchItems(): void {
   const { notionFetch, getNotionSyncState, setNotionSyncState } = n();
@@ -129,19 +132,27 @@ function syncSearchItems(): void {
   const upsertDatabase = (globalThis as Record<string, unknown>).upsertDatabase as
     | ((database: Record<string, unknown>) => void)
     | undefined;
+  const getPageById = (globalThis as Record<string, unknown>).getPageById as
+    | ((id: string) => { last_edited_time: string } | null)
+    | undefined;
+  const getDatabaseById = (globalThis as Record<string, unknown>).getDatabaseById as
+    | ((id: string) => { last_edited_time: string } | null)
+    | undefined;
 
   if (!upsertPage || !upsertDatabase) return;
 
   const lastSyncTimeStr = getNotionSyncState('last_sync_time');
   const lastSyncTime = lastSyncTimeStr ? parseInt(lastSyncTimeStr, 10) : 0;
   const isFirstSync = lastSyncTime === 0;
+  const cutoffMs = Date.now() - THIRTY_DAYS_MS;
 
   let startCursor: string | undefined;
   let hasMore = true;
   let pageCount = 0;
   let dbCount = 0;
+  let pageSkipped = 0;
+  let dbSkipped = 0;
   let totalFetched = 0;
-  const maxFirstSync = 500;
   let reachedOldItems = false;
 
   while (hasMore && !reachedOldItems) {
@@ -161,6 +172,12 @@ function syncSearchItems(): void {
       const lastEdited = item.last_edited_time as string;
       const editedMs = new Date(lastEdited).getTime();
 
+      // Restrict to items updated in the last 30 days
+      if (editedMs < cutoffMs) {
+        reachedOldItems = true;
+        break;
+      }
+
       // Incremental: stop when we reach items older than last sync
       if (!isFirstSync && editedMs <= lastSyncTime) {
         reachedOldItems = true;
@@ -168,20 +185,24 @@ function syncSearchItems(): void {
       }
 
       if (item.object === 'page') {
-        upsertPage(item);
-        pageCount++;
-      } else if (item.object === 'database') {
-        upsertDatabase(item);
-        dbCount++;
+        const existing = getPageById?.(item.id as string);
+        if (existing && existing.last_edited_time === lastEdited) {
+          pageSkipped++;
+        } else {
+          upsertPage(item);
+          pageCount++;
+        }
+      } else if (item.object === 'database' || item.object === 'data_source') {
+        const existing = getDatabaseById?.(item.id as string);
+        if (existing && existing.last_edited_time === lastEdited) {
+          dbSkipped++;
+        } else {
+          upsertDatabase(item);
+          dbCount++;
+        }
       }
 
       totalFetched++;
-    }
-
-    // For first sync, cap at maxFirstSync to avoid blocking
-    if (isFirstSync && totalFetched >= maxFirstSync) {
-      console.log(`[notion] First sync capped at ${maxFirstSync} items`);
-      break;
     }
 
     hasMore = result.has_more;
@@ -191,7 +212,13 @@ function syncSearchItems(): void {
   // Record that sync happened (even if first sync was partial)
   setNotionSyncState('last_search_sync', Date.now().toString());
 
-  console.log(`[notion] Synced ${pageCount} pages, ${dbCount} databases`);
+  const skipMsg =
+    pageSkipped > 0 || dbSkipped > 0
+      ? ` (${pageSkipped} pages, ${dbSkipped} dbs unchanged)`
+      : '';
+  console.log(
+    `[notion] Synced ${pageCount} pages, ${dbCount} databases (last 30 days)${skipMsg}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -202,7 +229,7 @@ function syncContent(): void {
   const s = globalThis.getNotionSkillState();
   const { fetchBlockTreeText } = n();
   const getPagesNeedingContent = (globalThis as Record<string, unknown>).getPagesNeedingContent as
-    | ((limit: number) => Array<{ id: string; title: string }>)
+    | ((limit: number, updatedAfterIso?: string) => Array<{ id: string; title: string }>)
     | undefined;
   const updatePageContent = (globalThis as Record<string, unknown>).updatePageContent as
     | ((pageId: string, text: string) => void)
@@ -211,7 +238,8 @@ function syncContent(): void {
   if (!getPagesNeedingContent || !updatePageContent) return;
 
   const batchSize = s.config.maxPagesPerContentSync;
-  const pages = getPagesNeedingContent(batchSize);
+  const cutoffIso = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
+  const pages = getPagesNeedingContent(batchSize, cutoffIso);
   let synced = 0;
   let failed = 0;
 

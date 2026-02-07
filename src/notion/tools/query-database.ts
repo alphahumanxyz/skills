@@ -55,10 +55,23 @@ export const queryDatabaseTool: ToolDefinition = {
         }
       }
 
-      const result = notionFetch(`/databases/${databaseId}/query`, { method: 'POST', body }) as {
-        results: Record<string, unknown>[];
-        has_more: boolean;
+      // Notion API 2025-09-03: query uses data_sources, not databases
+      // Resolve database_id (container) to first data_source_id
+      const dbContainer = notionFetch(`/databases/${databaseId}`) as {
+        data_sources?: Array<{ id: string; name?: string }>;
       };
+      const dataSources = dbContainer.data_sources;
+      if (!dataSources || dataSources.length === 0) {
+        return JSON.stringify({
+          error: 'Database has no data sources. Share the database with your integration.',
+        });
+      }
+      const dataSourceId = dataSources[0].id;
+
+      const result = notionFetch(`/data_sources/${dataSourceId}/query`, {
+        method: 'POST',
+        body,
+      }) as { results: Record<string, unknown>[]; has_more: boolean };
 
       const rows = result.results.map(page => ({
         ...formatPageSummary(page),

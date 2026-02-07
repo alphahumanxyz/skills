@@ -48,7 +48,23 @@ export const createPageTool: ToolDefinition = {
         return JSON.stringify({ error: 'title is required' });
       }
 
-      const body: Record<string, unknown> = { parent: { [parentType]: parentId } };
+      let parentPayload: Record<string, unknown>;
+      if (parentType === 'database_id') {
+        // Notion API 2025-09-03: page parent is data_source_id, not database_id
+        const dbContainer = notionFetch(`/databases/${parentId}`) as {
+          data_sources?: Array<{ id: string }>;
+        };
+        const dataSources = dbContainer?.data_sources;
+        if (!dataSources || dataSources.length === 0) {
+          return JSON.stringify({
+            error: 'Database has no data sources. Share the database with your integration.',
+          });
+        }
+        parentPayload = { data_source_id: dataSources[0].id };
+      } else {
+        parentPayload = { [parentType]: parentId };
+      }
+      const body: Record<string, unknown> = { parent: parentPayload };
 
       if (parentType === 'database_id') {
         let props: Record<string, unknown> = { Name: { title: buildRichText(title) } };

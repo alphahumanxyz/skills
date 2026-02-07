@@ -23,9 +23,10 @@ export const listAllDatabasesTool: ToolDefinition = {
       const { notionFetch, formatDatabaseSummary } = n();
       const pageSize = Math.min((args.page_size as number) || 20, 100);
 
+      // Notion API 2025-09-03: filter value is "data_source" (not "database")
       const result = notionFetch('/search', {
         method: 'POST',
-        body: { filter: { property: 'object', value: 'database' }, page_size: pageSize },
+        body: { filter: { property: 'object', value: 'data_source' }, page_size: pageSize },
       }) as { results: Record<string, unknown>[]; has_more: boolean };
 
       const databases = result.results.map(formatDatabaseSummary);
