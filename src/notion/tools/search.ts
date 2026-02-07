@@ -35,7 +35,8 @@ export const searchTool: ToolDefinition = {
       const body: Record<string, unknown> = { page_size: pageSize };
       if (query) body.query = query;
       // Notion API 2025-09-03: "database" filter uses value "data_source"
-      if (filter) body.filter = { property: 'object', value: filter === 'database' ? 'data_source' : filter };
+      if (filter)
+        body.filter = { property: 'object', value: filter === 'database' ? 'data_source' : filter };
 
       const result = notionFetch('/search', { method: 'POST', body }) as {
         results: Record<string, unknown>[];
