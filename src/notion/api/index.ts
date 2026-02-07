@@ -11,7 +11,6 @@
 //
 // The NotionApi interface is defined explicitly so TypeScript consumers
 // get proper return types (the runtime object is cast to this interface).
-
 import type {
   AppendBlockChildrenResponse,
   CreateCommentResponse,

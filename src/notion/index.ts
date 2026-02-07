@@ -62,8 +62,9 @@ import { updatePageTool } from './tools/update-page';
 const _g = globalThis as Record<string, unknown>;
 // notionApi was built by api/index.ts and written to globalThis.exports.notionApi.
 // Read it from there (module import would be empty due to IIFE CJS interop).
-_g.notionApi = ((globalThis as unknown as Record<string, unknown>).exports as Record<string, unknown>)
-  ?.notionApi;
+_g.notionApi = (
+  (globalThis as unknown as Record<string, unknown>).exports as Record<string, unknown>
+)?.notionApi;
 _g.notionFetch = notionFetch;
 _g.formatApiError = formatApiError;
 _g.formatRichText = formatRichText;
