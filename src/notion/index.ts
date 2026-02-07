@@ -145,10 +145,15 @@ function start(): void {
   cron.register('notion-sync', cronExpr);
   console.log(`[notion] Scheduled sync every ${s.config.syncIntervalMinutes} minutes`);
 
-  // Perform initial sync
+  // Perform initial sync (skip if sync was attempted in the last 10 mins)
+  const TEN_MINS_MS = 10 * 60 * 1000;
+  const lastSync = s.syncStatus.lastSyncTime;
+  const recentlySynced = lastSync > 0 && Date.now() - lastSync < TEN_MINS_MS;
   const doSync = (globalThis as { performSync?: () => void }).performSync;
-  if (doSync) {
+  if (doSync && !recentlySynced) {
     doSync();
+  } else if (recentlySynced) {
+    console.log('[notion] Skipping initial sync — last sync was within 10 minutes');
   }
 
   console.log('[notion] Started');

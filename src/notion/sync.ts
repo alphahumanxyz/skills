@@ -209,16 +209,81 @@ function syncSearchItems(): void {
     startCursor = result.next_cursor as string | undefined;
   }
 
+  // Explicitly fetch data_sources (API 2025-09-03: unfiltered search may not return them)
+  const dsResult = syncDataSources(
+    notionFetch,
+    upsertDatabase,
+    getDatabaseById,
+    cutoffMs,
+    lastSyncTime,
+    isFirstSync
+  );
+  dbCount += dsResult.count;
+  dbSkipped += dsResult.skipped;
+
   // Record that sync happened (even if first sync was partial)
   setNotionSyncState('last_search_sync', Date.now().toString());
 
   const skipMsg =
-    pageSkipped > 0 || dbSkipped > 0
-      ? ` (${pageSkipped} pages, ${dbSkipped} dbs unchanged)`
-      : '';
-  console.log(
-    `[notion] Synced ${pageCount} pages, ${dbCount} databases (last 30 days)${skipMsg}`
-  );
+    pageSkipped > 0 || dbSkipped > 0 ? ` (${pageSkipped} pages, ${dbSkipped} dbs unchanged)` : '';
+  console.log(`[notion] Synced ${pageCount} pages, ${dbCount} databases (last 30 days)${skipMsg}`);
+}
+
+function syncDataSources(
+  notionFetch: (endpoint: string, opts?: { method?: string; body?: unknown }) => unknown,
+  upsertDatabase: (db: Record<string, unknown>) => void,
+  getDatabaseById: ((id: string) => { last_edited_time: string } | null) | undefined,
+  cutoffMs: number,
+  lastSyncTime: number,
+  isFirstSync: boolean
+): { count: number; skipped: number } {
+  let startCursor: string | undefined;
+  let hasMore = true;
+  let count = 0;
+  let skipped = 0;
+  let reachedOldItems = false;
+
+  while (hasMore && !reachedOldItems) {
+    const body: Record<string, unknown> = {
+      page_size: 100,
+      sort: { direction: 'descending', timestamp: 'last_edited_time' },
+      filter: { property: 'object', value: 'data_source' },
+    };
+    if (startCursor) body.start_cursor = startCursor;
+
+    const result = notionFetch('/search', { method: 'POST', body }) as {
+      results: Record<string, unknown>[];
+      has_more: boolean;
+      next_cursor?: string;
+    };
+
+    for (const item of result.results) {
+      const lastEdited = item.last_edited_time as string;
+      const editedMs = new Date(lastEdited).getTime();
+
+      if (editedMs < cutoffMs) {
+        reachedOldItems = true;
+        break;
+      }
+      if (!isFirstSync && editedMs <= lastSyncTime) {
+        reachedOldItems = true;
+        break;
+      }
+
+      const existing = getDatabaseById?.(item.id as string);
+      if (existing && existing.last_edited_time === lastEdited) {
+        skipped++;
+      } else {
+        upsertDatabase(item);
+        count++;
+      }
+    }
+
+    hasMore = result.has_more;
+    startCursor = result.next_cursor as string | undefined;
+  }
+
+  return { count, skipped };
 }
 
 // ---------------------------------------------------------------------------

@@ -185,10 +185,7 @@ export function getLocalPages(
  * @param limit - Max number of pages to return
  * @param updatedAfterIso - Optional ISO string cutoff; only return pages with last_edited_time >= this (e.g. 30 days ago)
  */
-export function getPagesNeedingContent(
-  limit: number,
-  updatedAfterIso?: string
-): LocalPage[] {
+export function getPagesNeedingContent(limit: number, updatedAfterIso?: string): LocalPage[] {
   // last_edited_time is ISO string; content_synced_at is ms. Compare: need sync if
   // content_synced_at IS NULL or last_edited_time (as ms) > content_synced_at
   const lastEditedMsExpr = `(strftime('%s', substr(last_edited_time, 1, 10) || ' ' || substr(last_edited_time, 12, 8)) * 1000)`;
