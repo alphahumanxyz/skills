@@ -35,10 +35,9 @@ export const searchTool: ToolDefinition = {
       const body: Record<string, unknown> = { page_size: pageSize };
       if (query) body.query = query;
 
-      // Notion API version compat: older versions use "database", newer use "data_source".
       // For page filter or no filter, just make one call. For database filter, try both.
       const filterValues =
-        filter === 'database' ? ['database', 'data_source'] : filter ? [filter] : [];
+        filter === 'data_source' ? ['data_source'] : filter ? [filter] : [];
 
       let result: { results: Record<string, unknown>[]; has_more: boolean } | undefined;
 
