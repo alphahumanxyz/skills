@@ -1,13 +1,5 @@
 // Tool: notion-get-user
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const getUserTool: ToolDefinition = {
   name: 'notion-get-user',
@@ -19,15 +11,15 @@ export const getUserTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatUserSummary } = n();
+      const { formatUserSummary } = n();
       const userId = (args.user_id as string) || '';
       if (!userId) {
         return JSON.stringify({ error: 'user_id is required' });
       }
 
-      const user = notionFetch(`/users/${userId}`) as Record<string, unknown>;
+      const user = getApi().getUser(userId);
 
-      return JSON.stringify(formatUserSummary(user));
+      return JSON.stringify(formatUserSummary(user as Record<string, unknown>));
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }

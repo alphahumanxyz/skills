@@ -1,13 +1,5 @@
 // Tool: notion-delete-page
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const deletePageTool: ToolDefinition = {
   name: 'notion-delete-page',
@@ -19,21 +11,18 @@ export const deletePageTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatPageSummary } = n();
+      const { formatPageSummary } = n();
       const pageId = (args.page_id as string) || '';
       if (!pageId) {
         return JSON.stringify({ error: 'page_id is required' });
       }
 
-      const page = notionFetch(`/pages/${pageId}`, {
-        method: 'PATCH',
-        body: { archived: true },
-      }) as Record<string, unknown>;
+      const page = getApi().archivePage(pageId);
 
       return JSON.stringify({
         success: true,
         message: 'Page archived',
-        page: formatPageSummary(page),
+        page: formatPageSummary(page as Record<string, unknown>),
       });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });

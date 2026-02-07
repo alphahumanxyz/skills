@@ -1,13 +1,5 @@
 // Tool: notion-delete-block
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const deleteBlockTool: ToolDefinition = {
   name: 'notion-delete-block',
@@ -19,13 +11,12 @@ export const deleteBlockTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch } = n();
       const blockId = (args.block_id as string) || '';
       if (!blockId) {
         return JSON.stringify({ error: 'block_id is required' });
       }
 
-      notionFetch(`/blocks/${blockId}`, { method: 'DELETE' });
+      getApi().deleteBlock(blockId);
 
       return JSON.stringify({ success: true, message: 'Block deleted', block_id: blockId });
     } catch (e) {

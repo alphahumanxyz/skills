@@ -1,13 +1,5 @@
 // Tool: notion-search
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const searchTool: ToolDefinition = {
   name: 'notion-search',
@@ -27,7 +19,7 @@ export const searchTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatPageSummary, formatDatabaseSummary } = n();
+      const { formatPageSummary, formatDatabaseSummary } = n();
       const query = ((args.query as string) || '').trim();
       const filter = args.filter as string | undefined;
       const pageSize = Math.min((args.page_size as number) || 20, 100);
@@ -37,19 +29,17 @@ export const searchTool: ToolDefinition = {
       if (filter)
         body.filter = { property: 'object', value: filter === 'database' ? 'data_source' : filter };
 
-      const result = notionFetch('/search', { method: 'POST', body }) as {
-        results: Record<string, unknown>[];
-        has_more: boolean;
-      };
+      const result = getApi().search(body);
 
-      const formatted = result.results.map(item => {
-        if (item.object === 'page') {
-          return { object: 'page', ...formatPageSummary(item) };
+      const formatted = result.results.map((item: Record<string, unknown>) => {
+        const obj = item;
+        if (obj.object === 'page') {
+          return { object: 'page', ...formatPageSummary(obj) };
         }
-        if (item.object === 'database' || item.object === 'data_source') {
-          return { object: 'data_source', ...formatDatabaseSummary(item) };
+        if (obj.object === 'database' || obj.object === 'data_source') {
+          return { object: 'data_source', ...formatDatabaseSummary(obj) };
         }
-        return { object: item.object, id: item.id };
+        return { object: obj.object, id: obj.id };
       });
 
       return JSON.stringify({

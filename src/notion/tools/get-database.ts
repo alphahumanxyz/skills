@@ -1,13 +1,5 @@
 // Tool: notion-get-database
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const getDatabaseTool: ToolDefinition = {
   name: 'notion-get-database',
@@ -19,26 +11,18 @@ export const getDatabaseTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatDatabaseSummary } = n();
+      const { formatDatabaseSummary } = n();
+      const api = getApi();
       const databaseId = (args.database_id as string) || '';
       if (!databaseId) {
         return JSON.stringify({ error: 'database_id is required' });
       }
 
-      // Resolve database container to data_source for schema
-      const dbContainer = notionFetch(`/databases/${databaseId}`) as Record<string, unknown> & {
-        data_sources?: Array<{ id: string; name?: string }>;
-      };
-      const dataSources = dbContainer.data_sources;
-      if (!dataSources || dataSources.length === 0) {
-        return JSON.stringify({
-          error: 'Database has no data sources. Share the database with your integration.',
-        });
-      }
-      const dataSourceId = dataSources[0].id;
+      const dataSourceId = api.resolveDataSourceId(databaseId);
+      const dsResult = api.getDataSource(dataSourceId);
 
-      const dsResult = notionFetch(`/data_sources/${dataSourceId}`) as Record<string, unknown>;
-      const props = dsResult.properties as Record<string, unknown>;
+      const dsRec = dsResult as Record<string, unknown>;
+      const props = dsRec.properties as Record<string, unknown>;
       const schema: Record<string, unknown> = {};
       if (props) {
         for (const [name, prop] of Object.entries(props)) {
@@ -47,7 +31,7 @@ export const getDatabaseTool: ToolDefinition = {
         }
       }
 
-      return JSON.stringify({ ...formatDatabaseSummary(dsResult), schema });
+      return JSON.stringify({ ...formatDatabaseSummary(dsRec), schema });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }

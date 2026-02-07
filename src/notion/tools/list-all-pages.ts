@@ -1,13 +1,5 @@
 // Tool: notion-list-all-pages
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const listAllPagesTool: ToolDefinition = {
   name: 'notion-list-all-pages',
@@ -23,15 +15,15 @@ export const listAllPagesTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatPageSummary } = n();
+      const { formatPageSummary } = n();
       const pageSize = Math.min((args.page_size as number) || 20, 100);
 
-      const result = notionFetch('/search', {
-        method: 'POST',
-        body: { filter: { property: 'object', value: 'page' }, page_size: pageSize },
-      }) as { results: Record<string, unknown>[]; has_more: boolean };
+      const result = getApi().search({
+        filter: { property: 'object', value: 'page' },
+        page_size: pageSize,
+      });
 
-      const pages = result.results.map(formatPageSummary);
+      const pages = result.results.map((item: Record<string, unknown>) => formatPageSummary(item));
 
       return JSON.stringify({ count: pages.length, has_more: result.has_more, pages });
     } catch (e) {

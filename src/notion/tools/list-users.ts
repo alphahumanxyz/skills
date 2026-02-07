@@ -1,13 +1,5 @@
 // Tool: notion-list-users
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const listUsersTool: ToolDefinition = {
   name: 'notion-list-users',
@@ -20,15 +12,12 @@ export const listUsersTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatUserSummary } = n();
+      const { formatUserSummary } = n();
       const pageSize = Math.min((args.page_size as number) || 20, 100);
 
-      const result = notionFetch(`/users?page_size=${pageSize}`) as {
-        results: Record<string, unknown>[];
-        has_more: boolean;
-      };
+      const result = getApi().listUsers(pageSize);
 
-      const users = result.results.map(formatUserSummary);
+      const users = result.results.map((u: Record<string, unknown>) => formatUserSummary(u));
 
       return JSON.stringify({ count: users.length, has_more: result.has_more, users });
     } catch (e) {

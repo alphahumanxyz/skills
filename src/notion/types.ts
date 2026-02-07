@@ -1,4 +1,5 @@
 // Shared type for Notion helper functions exposed on globalThis
+import type { NotionApi } from './api/index';
 
 export interface NotionGlobals {
   notionFetch(endpoint: string, options?: { method?: string; body?: unknown }): unknown;
@@ -37,4 +38,14 @@ export function n(): NotionGlobals {
     return g.exports as unknown as NotionGlobals;
   }
   return globalThis as unknown as NotionGlobals;
+}
+
+// Access the typed Notion API layer at runtime.
+// Same dual-location resolution as n().
+export function getApi(): NotionApi {
+  const g = globalThis as unknown as Record<string, unknown>;
+  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
+    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
+  }
+  return (g as Record<string, unknown>).notionApi as NotionApi;
 }

@@ -37,19 +37,19 @@ export function performSync(): void {
   publishSyncState();
 
   try {
-    // // Phase 1: Sync users
-    // console.log('[notion] Sync phase 1: users');
-    // syncUsers();
+    // Phase 1: Sync users
+    console.log('[notion] Sync phase 1: users');
+    syncUsers();
 
-    // // Phase 2: Sync pages and databases via search
-    // console.log('[notion] Sync phase 2: pages & databases');
-    // syncSearchItems();
+    // Phase 2: Sync pages and databases via search
+    console.log('[notion] Sync phase 2: pages & databases');
+    syncSearchItems();
 
-    // // Phase 3: Sync page content (block text)
-    // if (s.config.contentSyncEnabled) {
-    //   console.log('[notion] Sync phase 3: page content');
-    //   syncContent();
-    // }
+    // Phase 3: Sync page content (block text)
+    if (s.config.contentSyncEnabled) {
+      console.log('[notion] Sync phase 3: page content');
+      syncContent();
+    }
 
     // Phase 4: AI summarization of page content
     if (s.config.contentSyncEnabled) {
@@ -168,11 +168,15 @@ function syncSearchItems(): void {
     };
     if (startCursor) body.start_cursor = startCursor;
 
+    console.log('syncSearchItems body', body);
+
     const result = notionFetch('/search', { method: 'POST', body }) as {
       results: Record<string, unknown>[];
       has_more: boolean;
       next_cursor?: string;
     };
+
+    console.log('syncSearchItems result', result);
 
     for (const item of result.results) {
       const lastEdited = item.last_edited_time as string;
@@ -255,11 +259,14 @@ function syncDataSources(
     };
     if (startCursor) body.start_cursor = startCursor;
 
+    console.log('syncDataSources body', body);
     const result = notionFetch('/search', { method: 'POST', body }) as {
       results: Record<string, unknown>[];
       has_more: boolean;
       next_cursor?: string;
     };
+
+    console.log('syncDataSources result', result);
 
     for (const item of result.results) {
       const lastEdited = item.last_edited_time as string;

@@ -1,13 +1,5 @@
 // Tool: notion-update-block
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const updateBlockTool: ToolDefinition = {
   name: 'notion-update-block',
@@ -31,7 +23,7 @@ export const updateBlockTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatBlockSummary } = n();
+      const { formatBlockSummary } = n();
       const blockId = (args.block_id as string) || '';
       const contentJson = args.content as string | undefined;
       const archived = args.archived as string | undefined;
@@ -59,12 +51,12 @@ export const updateBlockTool: ToolDefinition = {
         return JSON.stringify({ error: 'No updates specified' });
       }
 
-      const block = notionFetch(`/blocks/${blockId}`, { method: 'PATCH', body }) as Record<
-        string,
-        unknown
-      >;
+      const block = getApi().updateBlock(blockId, body);
 
-      return JSON.stringify({ success: true, block: formatBlockSummary(block) });
+      return JSON.stringify({
+        success: true,
+        block: formatBlockSummary(block as Record<string, unknown>),
+      });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }

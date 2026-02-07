@@ -1,13 +1,5 @@
 // Tool: notion-update-database
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const updateDatabaseTool: ToolDefinition = {
   name: 'notion-update-database',
@@ -23,7 +15,7 @@ export const updateDatabaseTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatDatabaseSummary, buildRichText } = n();
+      const { formatDatabaseSummary, buildRichText } = n();
       const databaseId = (args.database_id as string) || '';
       const title = args.title as string | undefined;
       const propsJson = args.properties as string | undefined;
@@ -50,12 +42,12 @@ export const updateDatabaseTool: ToolDefinition = {
         return JSON.stringify({ error: 'No updates specified' });
       }
 
-      const dbResult = notionFetch(`/databases/${databaseId}`, { method: 'PATCH', body }) as Record<
-        string,
-        unknown
-      >;
+      const dbResult = getApi().updateDatabase(databaseId, body);
 
-      return JSON.stringify({ success: true, database: formatDatabaseSummary(dbResult) });
+      return JSON.stringify({
+        success: true,
+        database: formatDatabaseSummary(dbResult as Record<string, unknown>),
+      });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }

@@ -1,13 +1,5 @@
 // Tool: notion-query-database
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const queryDatabaseTool: ToolDefinition = {
   name: 'notion-query-database',
@@ -27,7 +19,7 @@ export const queryDatabaseTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatPageSummary } = n();
+      const { formatPageSummary } = n();
       const databaseId = (args.database_id as string) || '';
       const filterJson = args.filter as string | undefined;
       const sortsJson = args.sorts as string | undefined;
@@ -55,27 +47,11 @@ export const queryDatabaseTool: ToolDefinition = {
         }
       }
 
-      // Resolve database container to data_source_id for query
-      const dbContainer = notionFetch(`/databases/${databaseId}`) as {
-        data_sources?: Array<{ id: string; name?: string }>;
-      };
-      const dataSources = dbContainer.data_sources;
-      if (!dataSources || dataSources.length === 0) {
-        return JSON.stringify({
-          error: 'Database has no data sources. Share the database with your integration.',
-        });
-      }
-      const dataSourceId = dataSources[0].id;
+      const result = getApi().queryDataSource(databaseId, body);
 
-      const result = notionFetch(`/data_sources/${dataSourceId}/query`, {
-        method: 'POST',
-        body,
-      }) as { results: Record<string, unknown>[]; has_more: boolean };
-
-      const rows = result.results.map(page => ({
-        ...formatPageSummary(page),
-        properties: page.properties,
-      }));
+      const rows = result.results.map((page: Record<string, unknown>) => {
+        return { ...formatPageSummary(page), properties: page.properties };
+      });
 
       return JSON.stringify({ count: rows.length, has_more: result.has_more, rows });
     } catch (e) {

@@ -3,6 +3,7 @@
 // Supports pages, databases, blocks, users, comments, and local search.
 // Authentication is handled via the platform OAuth bridge.
 // Import modules to initialize state and expose functions on globalThis
+import { notionApi } from './api/index';
 import './db-helpers';
 import './db-schema';
 // Import helpers
@@ -56,6 +57,7 @@ import { updatePageTool } from './tools/update-page';
 // ---------------------------------------------------------------------------
 
 const _g = globalThis as Record<string, unknown>;
+_g.notionApi = notionApi;
 _g.notionFetch = notionFetch;
 _g.formatApiError = formatApiError;
 _g.formatRichText = formatRichText;

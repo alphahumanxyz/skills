@@ -1,13 +1,5 @@
 // Tool: notion-create-database
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const createDatabaseTool: ToolDefinition = {
   name: 'notion-create-database',
@@ -30,7 +22,7 @@ export const createDatabaseTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatDatabaseSummary, buildRichText } = n();
+      const { formatDatabaseSummary, buildRichText } = n();
       const parentId = (args.parent_page_id as string) || '';
       const title = (args.title as string) || '';
       const propsJson = args.properties as string | undefined;
@@ -54,12 +46,12 @@ export const createDatabaseTool: ToolDefinition = {
 
       const body = { parent: { page_id: parentId }, title: buildRichText(title), properties };
 
-      const dbResult = notionFetch('/databases', { method: 'POST', body }) as Record<
-        string,
-        unknown
-      >;
+      const dbResult = getApi().createDatabase(body);
 
-      return JSON.stringify({ success: true, database: formatDatabaseSummary(dbResult) });
+      return JSON.stringify({
+        success: true,
+        database: formatDatabaseSummary(dbResult as Record<string, unknown>),
+      });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }

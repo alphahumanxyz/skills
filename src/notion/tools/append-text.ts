@@ -1,13 +1,5 @@
 // Tool: notion-append-text
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const appendTextTool: ToolDefinition = {
   name: 'notion-append-text',
@@ -23,7 +15,7 @@ export const appendTextTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatBlockSummary, buildParagraphBlock } = n();
+      const { formatBlockSummary, buildParagraphBlock } = n();
       const blockId = (args.block_id as string) || '';
       const text = (args.text as string) || '';
 
@@ -37,15 +29,12 @@ export const appendTextTool: ToolDefinition = {
       const paragraphs = text.split('\n').filter(p => p.trim());
       const children = paragraphs.map(buildParagraphBlock);
 
-      const result = notionFetch(`/blocks/${blockId}/children`, {
-        method: 'PATCH',
-        body: { children },
-      }) as { results: Record<string, unknown>[] };
+      const result = getApi().appendBlockChildren(blockId, children);
 
       return JSON.stringify({
         success: true,
         blocks_added: result.results.length,
-        blocks: result.results.map(formatBlockSummary),
+        blocks: result.results.map((b: Record<string, unknown>) => formatBlockSummary(b)),
       });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });

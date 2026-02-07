@@ -1,13 +1,5 @@
 // Tool: notion-get-block-children
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const getBlockChildrenTool: ToolDefinition = {
   name: 'notion-get-block-children',
@@ -22,7 +14,7 @@ export const getBlockChildrenTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatBlockSummary } = n();
+      const { formatBlockSummary } = n();
       const blockId = (args.block_id as string) || '';
       const pageSize = Math.min((args.page_size as number) || 50, 100);
 
@@ -30,16 +22,13 @@ export const getBlockChildrenTool: ToolDefinition = {
         return JSON.stringify({ error: 'block_id is required' });
       }
 
-      const result = notionFetch(`/blocks/${blockId}/children?page_size=${pageSize}`) as {
-        results: Record<string, unknown>[];
-        has_more: boolean;
-      };
+      const result = getApi().getBlockChildren(blockId, pageSize);
 
       return JSON.stringify({
         parent_id: blockId,
         count: result.results.length,
         has_more: result.has_more,
-        children: result.results.map(formatBlockSummary),
+        children: result.results.map((b: Record<string, unknown>) => formatBlockSummary(b)),
       });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });

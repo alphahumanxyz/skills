@@ -1,13 +1,5 @@
 // Tool: notion-create-comment
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const createCommentTool: ToolDefinition = {
   name: 'notion-create-comment',
@@ -28,7 +20,7 @@ export const createCommentTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatRichText, buildRichText } = n();
+      const { formatRichText, buildRichText } = n();
       const pageId = args.page_id as string | undefined;
       const discussionId = args.discussion_id as string | undefined;
       const text = (args.text as string) || '';
@@ -48,15 +40,16 @@ export const createCommentTool: ToolDefinition = {
         body.parent = { page_id: pageId };
       }
 
-      const comment = notionFetch('/comments', { method: 'POST', body }) as Record<string, unknown>;
+      const comment = getApi().createComment(body);
+      const commentRec = comment as Record<string, unknown>;
 
       return JSON.stringify({
         success: true,
         comment: {
-          id: comment.id,
-          discussion_id: comment.discussion_id,
-          created_time: comment.created_time,
-          text: formatRichText(comment.rich_text as unknown[]),
+          id: commentRec.id,
+          discussion_id: commentRec.discussion_id,
+          created_time: commentRec.created_time,
+          text: formatRichText(commentRec.rich_text as unknown[]),
         },
       });
     } catch (e) {

@@ -1,13 +1,5 @@
 // Tool: notion-create-page
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from '../types';
 
 export const createPageTool: ToolDefinition = {
   name: 'notion-create-page',
@@ -34,7 +26,8 @@ export const createPageTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { notionFetch, formatPageSummary, buildRichText, buildParagraphBlock } = n();
+      const { formatPageSummary, buildRichText, buildParagraphBlock } = n();
+      const api = getApi();
       const parentId = (args.parent_id as string) || '';
       const parentType = (args.parent_type as string) || 'page_id';
       const title = (args.title as string) || '';
@@ -50,17 +43,8 @@ export const createPageTool: ToolDefinition = {
 
       let parentPayload: Record<string, unknown>;
       if (parentType === 'database_id') {
-        // Resolve database container to data_source_id for page parent
-        const dbContainer = notionFetch(`/databases/${parentId}`) as {
-          data_sources?: Array<{ id: string }>;
-        };
-        const dataSources = dbContainer?.data_sources;
-        if (!dataSources || dataSources.length === 0) {
-          return JSON.stringify({
-            error: 'Database has no data sources. Share the database with your integration.',
-          });
-        }
-        parentPayload = { data_source_id: dataSources[0].id };
+        const dataSourceId = api.resolveDataSourceId(parentId);
+        parentPayload = { data_source_id: dataSourceId };
       } else {
         parentPayload = { [parentType]: parentId };
       }
@@ -85,9 +69,9 @@ export const createPageTool: ToolDefinition = {
         body.children = [buildParagraphBlock(content)];
       }
 
-      const page = notionFetch('/pages', { method: 'POST', body }) as Record<string, unknown>;
+      const page = api.createPage(body);
 
-      return JSON.stringify({ success: true, page: formatPageSummary(page) });
+      return JSON.stringify({ success: true, page: formatPageSummary(page as Record<string, unknown>) });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }
