@@ -1,5 +1,22 @@
 // Tool: notion-append-blocks
-import { getApi, n } from '../types';
+import type { NotionGlobals } from '../types';
+import type { NotionApi } from '../api/index';
+
+// Resolve from globalThis at runtime (esbuild IIFE breaks module imports)
+const n = (): NotionGlobals => {
+  const g = globalThis as unknown as Record<string, unknown>;
+  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
+    return g.exports as unknown as NotionGlobals;
+  }
+  return globalThis as unknown as NotionGlobals;
+};
+const getApi = (): NotionApi => {
+  const g = globalThis as unknown as Record<string, unknown>;
+  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
+    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
+  }
+  return (g as Record<string, unknown>).notionApi as NotionApi;
+};
 
 export const appendBlocksTool: ToolDefinition = {
   name: 'notion-append-blocks',
