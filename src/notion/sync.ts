@@ -2,16 +2,7 @@
 // Periodically downloads pages, databases, users, and page content from Notion
 // into local SQLite for fast local querying.
 import './skill-state';
-import type { NotionGlobals } from './types';
-
-// Access helpers at runtime via the same n() pattern used by tools
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import { getApi, n } from './types';
 
 // ---------------------------------------------------------------------------
 // Main sync orchestrator
@@ -59,16 +50,23 @@ export function performSync(): void {
 
     // Update sync state
     const durationMs = Date.now() - startTime;
-    s.syncStatus.lastSyncTime = Date.now();
-    s.syncStatus.nextSyncTime = Date.now() + s.config.syncIntervalMinutes * 60 * 1000;
+    const nowMs = Date.now();
+    s.syncStatus.nextSyncTime = nowMs + s.config.syncIntervalMinutes * 60 * 1000;
     s.syncStatus.lastSyncDurationMs = durationMs;
 
     // Persist sync time in database
     const { setNotionSyncState, getEntityCounts } = n();
-    setNotionSyncState('last_sync_time', s.syncStatus.lastSyncTime.toString());
+
+    // Only advance lastSyncTime if we actually have items in the DB.
+    // This prevents the incremental sync from skipping everything on the
+    // next run if the first sync stored 0 items (e.g. due to errors).
+    const counts = getEntityCounts();
+    if (counts.pages > 0 || counts.databases > 0) {
+      s.syncStatus.lastSyncTime = nowMs;
+      setNotionSyncState('last_sync_time', s.syncStatus.lastSyncTime.toString());
+    }
 
     // Update counts
-    const counts = getEntityCounts();
     s.syncStatus.totalPages = counts.pages;
     s.syncStatus.totalDatabases = counts.databases;
     s.syncStatus.totalUsers = counts.users;
@@ -94,31 +92,32 @@ export function performSync(): void {
 // ---------------------------------------------------------------------------
 
 function syncUsers(): void {
-  const { notionFetch } = n();
   const upsertUser = (globalThis as Record<string, unknown>).upsertUser as
     | ((user: Record<string, unknown>) => void)
     | undefined;
-  if (!upsertUser) return;
+  if (!upsertUser) {
+    console.warn('[notion] upsertUser not available on globalThis — skipping user sync');
+    return;
+  }
 
   let startCursor: string | undefined;
   let hasMore = true;
   let count = 0;
 
   while (hasMore) {
-    const endpoint = `/users?page_size=100${startCursor ? `&start_cursor=${startCursor}` : ''}`;
-    const result = notionFetch(endpoint) as {
-      results: Record<string, unknown>[];
-      has_more: boolean;
-      next_cursor?: string;
-    };
+    const result = getApi().listUsers(100, startCursor);
 
     for (const user of result.results) {
-      upsertUser(user);
-      count++;
+      try {
+        upsertUser(user as Record<string, unknown>);
+        count++;
+      } catch (e) {
+        console.error(`[notion] Failed to upsert user ${(user as Record<string, unknown>).id}: ${e}`);
+      }
     }
 
     hasMore = result.has_more;
-    startCursor = result.next_cursor as string | undefined;
+    startCursor = (result.next_cursor as string | undefined) || undefined;
   }
 
   console.log(`[notion] Synced ${count} users`);
@@ -132,7 +131,8 @@ function syncUsers(): void {
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 function syncSearchItems(): void {
-  const { notionFetch, getNotionSyncState, setNotionSyncState } = n();
+  const { getNotionSyncState, setNotionSyncState } = n();
+  const api = getApi();
   const upsertPage = (globalThis as Record<string, unknown>).upsertPage as
     | ((page: Record<string, unknown>) => void)
     | undefined;
@@ -146,7 +146,10 @@ function syncSearchItems(): void {
     | ((id: string) => { last_edited_time: string } | null)
     | undefined;
 
-  if (!upsertPage || !upsertDatabase) return;
+  if (!upsertPage || !upsertDatabase) {
+    console.warn('[notion] upsertPage/upsertDatabase not available on globalThis — skipping search sync');
+    return;
+  }
 
   const lastSyncTimeStr = getNotionSyncState('last_sync_time');
   const lastSyncTime = lastSyncTimeStr ? parseInt(lastSyncTimeStr, 10) : 0;
@@ -159,6 +162,7 @@ function syncSearchItems(): void {
   let dbCount = 0;
   let pageSkipped = 0;
   let dbSkipped = 0;
+  let errorCount = 0;
   let reachedOldItems = false;
 
   while (hasMore && !reachedOldItems) {
@@ -168,18 +172,13 @@ function syncSearchItems(): void {
     };
     if (startCursor) body.start_cursor = startCursor;
 
-    console.log('syncSearchItems body', body);
-
-    const result = notionFetch('/search', { method: 'POST', body }) as {
-      results: Record<string, unknown>[];
-      has_more: boolean;
-      next_cursor?: string;
-    };
-
-    console.log('syncSearchItems result', result);
+    const result = api.search(body);
 
     for (const item of result.results) {
-      const lastEdited = item.last_edited_time as string;
+      const rec = item as Record<string, unknown>;
+      const lastEdited = rec.last_edited_time as string;
+      if (!lastEdited) continue; // Skip partial objects without timestamps
+
       const editedMs = new Date(lastEdited).getTime();
 
       // Restrict to items updated in the last 30 days
@@ -194,82 +193,86 @@ function syncSearchItems(): void {
         break;
       }
 
-      if (item.object === 'page') {
-        const existing = getPageById?.(item.id as string);
+      const objectType = rec.object as string;
+
+      if (objectType === 'page') {
+        const existing = getPageById?.(rec.id as string);
         if (existing && existing.last_edited_time === lastEdited) {
           pageSkipped++;
         } else {
-          upsertPage(item);
-          pageCount++;
+          try {
+            upsertPage(rec);
+            pageCount++;
+          } catch (e) {
+            console.error(`[notion] Failed to upsert page ${rec.id}: ${e}`);
+            errorCount++;
+          }
         }
-      } else if (item.object === 'data_source') {
-        const existing = getDatabaseById?.(item.id as string);
+      } else if (objectType === 'data_source' || objectType === 'database') {
+        const existing = getDatabaseById?.(rec.id as string);
         if (existing && existing.last_edited_time === lastEdited) {
           dbSkipped++;
         } else {
-          upsertDatabase(item);
-          dbCount++;
+          try {
+            upsertDatabase(rec);
+            dbCount++;
+          } catch (e) {
+            console.error(`[notion] Failed to upsert database ${rec.id}: ${e}`);
+            errorCount++;
+          }
         }
+      } else {
+        console.log(`[notion] Unknown object type in search results: ${objectType}`);
       }
     }
 
     hasMore = result.has_more;
-    startCursor = result.next_cursor as string | undefined;
+    startCursor = (result.next_cursor as string | undefined) || undefined;
   }
 
   // Explicitly fetch data_sources (API 2025-09-03: unfiltered search may not return them)
-  const dsResult = syncDataSources(
-    notionFetch,
-    upsertDatabase,
-    getDatabaseById,
-    cutoffMs,
-    lastSyncTime,
-    isFirstSync
-  );
+  const dsResult = syncDataSources(upsertDatabase, getDatabaseById, cutoffMs, lastSyncTime, isFirstSync);
   dbCount += dsResult.count;
   dbSkipped += dsResult.skipped;
+  errorCount += dsResult.errors;
 
   // Record that sync happened (even if first sync was partial)
   setNotionSyncState('last_search_sync', Date.now().toString());
 
   const skipMsg =
     pageSkipped > 0 || dbSkipped > 0 ? ` (${pageSkipped} pages, ${dbSkipped} dbs unchanged)` : '';
-  console.log(`[notion] Synced ${pageCount} pages, ${dbCount} databases (last 30 days)${skipMsg}`);
+  const errorMsg = errorCount > 0 ? `, ${errorCount} errors` : '';
+  console.log(`[notion] Synced ${pageCount} pages, ${dbCount} databases (last 30 days)${skipMsg}${errorMsg}`);
 }
 
 function syncDataSources(
-  notionFetch: (endpoint: string, opts?: { method?: string; body?: unknown }) => unknown,
   upsertDatabase: (db: Record<string, unknown>) => void,
   getDatabaseById: ((id: string) => { last_edited_time: string } | null) | undefined,
   cutoffMs: number,
   lastSyncTime: number,
   isFirstSync: boolean
-): { count: number; skipped: number } {
+): { count: number; skipped: number; errors: number } {
+  const api = getApi();
   let startCursor: string | undefined;
   let hasMore = true;
   let count = 0;
   let skipped = 0;
+  let errors = 0;
   let reachedOldItems = false;
 
   while (hasMore && !reachedOldItems) {
-    const body: Record<string, unknown> = {
+    const result = api.search({
       page_size: 100,
       sort: { direction: 'descending', timestamp: 'last_edited_time' },
       filter: { property: 'object', value: 'data_source' },
-    };
-    if (startCursor) body.start_cursor = startCursor;
-
-    console.log('syncDataSources body', body);
-    const result = notionFetch('/search', { method: 'POST', body }) as {
-      results: Record<string, unknown>[];
-      has_more: boolean;
-      next_cursor?: string;
-    };
-
-    console.log('syncDataSources result', result);
+      ...(startCursor ? { start_cursor: startCursor } : {}),
+    });
 
     for (const item of result.results) {
-      const lastEdited = item.last_edited_time as string;
+      const rec = item as Record<string, unknown>;
+      const lastEdited = rec.last_edited_time as string;
+      if (!lastEdited) continue;
+
       const editedMs = new Date(lastEdited).getTime();
 
       if (editedMs < cutoffMs) {
@@ -281,20 +284,25 @@ function syncDataSources(
         break;
       }
 
-      const existing = getDatabaseById?.(item.id as string);
+      const existing = getDatabaseById?.(rec.id as string);
       if (existing && existing.last_edited_time === lastEdited) {
         skipped++;
       } else {
-        upsertDatabase(item);
-        count++;
+        try {
+          upsertDatabase(rec);
+          count++;
+        } catch (e) {
+          console.error(`[notion] Failed to upsert data_source ${rec.id}: ${e}`);
+          errors++;
+        }
       }
     }
 
     hasMore = result.has_more;
-    startCursor = result.next_cursor as string | undefined;
+    startCursor = (result.next_cursor as string | undefined) || undefined;
   }
 
-  return { count, skipped };
+  return { count, skipped, errors };
 }
 
 // ---------------------------------------------------------------------------

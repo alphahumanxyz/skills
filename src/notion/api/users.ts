@@ -10,6 +10,8 @@ export function getUser(userId: string): GetUserResponse {
   return apiFetch<GetUserResponse>(`/users/${userId}`);
 }
 
-export function listUsers(pageSize: number = 20): ListUsersResponse {
-  return apiFetch<ListUsersResponse>(`/users?page_size=${pageSize}`);
+export function listUsers(pageSize: number = 20, startCursor?: string): ListUsersResponse {
+  let endpoint = `/users?page_size=${pageSize}`;
+  if (startCursor) endpoint += `&start_cursor=${startCursor}`;
+  return apiFetch<ListUsersResponse>(endpoint);
 }
