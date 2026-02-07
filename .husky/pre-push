@@ -27,7 +27,7 @@ LINT_EXIT=0
 
 # Run TypeScript compile check (capture exit code without breaking script)
 set +e
-yarn compile
+yarn typecheck
 COMPILE_EXIT=$?
 set -e
 
