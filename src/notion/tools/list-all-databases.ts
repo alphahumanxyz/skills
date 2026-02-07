@@ -23,15 +23,22 @@ export const listAllDatabasesTool: ToolDefinition = {
       const { notionFetch, formatDatabaseSummary } = n();
       const pageSize = Math.min((args.page_size as number) || 20, 100);
 
-      // Notion API 2025-09-03: filter value is "data_source" (not "database")
-      const result = notionFetch('/search', {
-        method: 'POST',
-        body: { filter: { property: 'object', value: 'data_source' }, page_size: pageSize },
-      }) as { results: Record<string, unknown>[]; has_more: boolean };
+      // Notion API version compat: older versions use "database", newer use "data_source".
+      // Try "database" first; fall back to "data_source" if empty.
+      const filterValues = ['database', 'data_source'];
+      for (const filterValue of filterValues) {
+        const result = notionFetch('/search', {
+          method: 'POST',
+          body: { filter: { property: 'object', value: filterValue }, page_size: pageSize },
+        }) as { results: Record<string, unknown>[]; has_more: boolean };
 
-      const databases = result.results.map(formatDatabaseSummary);
+        if (result.results.length > 0) {
+          const databases = result.results.map(formatDatabaseSummary);
+          return JSON.stringify({ count: databases.length, has_more: result.has_more, databases });
+        }
+      }
 
-      return JSON.stringify({ count: databases.length, has_more: result.has_more, databases });
+      return JSON.stringify({ count: 0, has_more: false, databases: [] });
     } catch (e) {
       return JSON.stringify({ error: n().formatApiError(e) });
     }

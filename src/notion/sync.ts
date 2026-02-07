@@ -236,6 +236,10 @@ function syncSearchItems(): void {
   console.log(`[notion] Synced ${pageCount} pages, ${dbCount} databases (last 30 days)${skipMsg}`);
 }
 
+// Notion API version compat: older versions use "database", newer (2025-09-03+) use "data_source".
+// Try "database" first; if zero results, retry with "data_source".
+const DB_FILTER_VALUES = ['database', 'data_source'] as const;
+
 function syncDataSources(
   notionFetch: (endpoint: string, opts?: { method?: string; body?: unknown }) => unknown,
   upsertDatabase: (db: Record<string, unknown>) => void,
@@ -243,6 +247,25 @@ function syncDataSources(
   cutoffMs: number,
   lastSyncTime: number,
   isFirstSync: boolean
+): { count: number; skipped: number } {
+  for (const filterValue of DB_FILTER_VALUES) {
+    const result = syncDataSourcesWithFilter(
+      notionFetch, upsertDatabase, getDatabaseById, cutoffMs, lastSyncTime, isFirstSync, filterValue
+    );
+    // If we got any results (upserted or skipped), this filter value works — use it
+    if (result.count > 0 || result.skipped > 0) return result;
+  }
+  return { count: 0, skipped: 0 };
+}
+
+function syncDataSourcesWithFilter(
+  notionFetch: (endpoint: string, opts?: { method?: string; body?: unknown }) => unknown,
+  upsertDatabase: (db: Record<string, unknown>) => void,
+  getDatabaseById: ((id: string) => { last_edited_time: string } | null) | undefined,
+  cutoffMs: number,
+  lastSyncTime: number,
+  isFirstSync: boolean,
+  filterValue: string
 ): { count: number; skipped: number } {
   let startCursor: string | undefined;
   let hasMore = true;
@@ -254,7 +277,7 @@ function syncDataSources(
     const body: Record<string, unknown> = {
       page_size: 100,
       sort: { direction: 'descending', timestamp: 'last_edited_time' },
-      filter: { property: 'object', value: 'data_source' },
+      filter: { property: 'object', value: filterValue },
     };
     if (startCursor) body.start_cursor = startCursor;
 

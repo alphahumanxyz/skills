@@ -34,16 +34,27 @@ export const searchTool: ToolDefinition = {
 
       const body: Record<string, unknown> = { page_size: pageSize };
       if (query) body.query = query;
-      // Notion API 2025-09-03: "database" filter uses value "data_source"
-      if (filter)
-        body.filter = { property: 'object', value: filter === 'database' ? 'data_source' : filter };
 
-      const result = notionFetch('/search', { method: 'POST', body }) as {
-        results: Record<string, unknown>[];
-        has_more: boolean;
-      };
+      // Notion API version compat: older versions use "database", newer use "data_source".
+      // For page filter or no filter, just make one call. For database filter, try both.
+      const filterValues =
+        filter === 'database' ? ['database', 'data_source'] : filter ? [filter] : [];
 
-      const formatted = result.results.map(item => {
+      let result: { results: Record<string, unknown>[]; has_more: boolean } | undefined;
+
+      if (filterValues.length === 0) {
+        // No filter — single call
+        result = notionFetch('/search', { method: 'POST', body }) as typeof result;
+      } else {
+        // Try each filter value until we get results
+        for (const fv of filterValues) {
+          body.filter = { property: 'object', value: fv };
+          result = notionFetch('/search', { method: 'POST', body }) as typeof result;
+          if (result!.results.length > 0) break;
+        }
+      }
+
+      const formatted = (result?.results || []).map(item => {
         if (item.object === 'page') {
           return { object: 'page', ...formatPageSummary(item) };
         }
@@ -55,7 +66,7 @@ export const searchTool: ToolDefinition = {
 
       return JSON.stringify({
         count: formatted.length,
-        has_more: result.has_more,
+        has_more: result?.has_more || false,
         results: formatted,
       });
     } catch (e) {
