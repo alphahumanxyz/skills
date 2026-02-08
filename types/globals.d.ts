@@ -19,18 +19,6 @@ declare const db: {
   kvSet(key: string, value: unknown): void;
 };
 
-/** Persistent key-value store scoped to this skill. */
-declare const store: {
-  /** Get a value by key. Returns the parsed value or `null`. */
-  get(key: string): unknown;
-  /** Set a value by key (JSON-serializable). */
-  set(key: string, value: unknown): void;
-  /** Delete a key. */
-  delete(key: string): void;
-  /** List all keys. */
-  keys(): string[];
-};
-
 /** HTTP networking. */
 declare const net: {
   /** Synchronous HTTP fetch. Returns the parsed response. */
@@ -65,14 +53,18 @@ declare const platform: {
   notify(title: string, body?: string): void;
 };
 
-/** Skill state published to the frontend in real time. */
+/** Persistent key-value state, also published to the frontend in real time. */
 declare const state: {
-  /** Get a single state value by key. */
+  /** Get a single value by key. Returns the parsed value or `null`. */
   get(key: string): unknown;
-  /** Set a single state value by key. */
+  /** Set a single value by key (JSON-serializable). Persists and publishes to frontend. */
   set(key: string, value: unknown): void;
-  /** Merge a partial object into the current state. */
+  /** Merge a partial object into the current state. Persists and publishes to frontend. */
   setPartial(partial: Record<string, unknown>): void;
+  /** Delete a key. */
+  delete(key: string): void;
+  /** List all keys. */
+  keys(): string[];
 };
 
 /** File I/O in the skill's isolated data directory. */

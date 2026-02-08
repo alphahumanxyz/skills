@@ -93,7 +93,7 @@ function handleUpdate(update: TdUpdate): void {
     if (s.authState === 'ready') {
       s.config.isAuthenticated = true;
       s.config.pendingCode = false;
-      store.set('config', s.config);
+      state.set('config', s.config);
       console.log('[telegram] User authenticated successfully');
       loadMe();
 
@@ -319,7 +319,7 @@ async function sendPhoneNumber(phoneNumber: string): Promise<void> {
   console.log('[telegram] Sending phone number for auth...');
   s.config.phoneNumber = phoneNumber;
   s.config.pendingCode = true;
-  store.set('config', s.config);
+  state.set('config', s.config);
 
   await s.client.setAuthenticationPhoneNumber(phoneNumber);
   console.log('[telegram] Phone number sent, waiting for code...');
@@ -373,7 +373,7 @@ function init(): void {
 
   // Load config from store
   const s = globalThis.getTelegramSkillState();
-  const saved = store.get('config') as Partial<typeof s.config> | null;
+  const saved = state.get('config') as Partial<typeof s.config> | null;
   if (saved) {
     s.config.phoneNumber = saved.phoneNumber || '';
     s.config.isAuthenticated = saved.isAuthenticated || false;
@@ -422,7 +422,7 @@ function stop(): void {
   }
 
   // Save config
-  store.set('config', s.config);
+  state.set('config', s.config);
   state.set('status', 'stopped');
 }
 
@@ -676,7 +676,7 @@ function onSetupCancel(): void {
   console.log('[telegram] Setup cancelled');
   const s = globalThis.getTelegramSkillState();
   s.config.pendingCode = false;
-  store.set('config', s.config);
+  state.set('config', s.config);
 }
 
 function publishState(): void {

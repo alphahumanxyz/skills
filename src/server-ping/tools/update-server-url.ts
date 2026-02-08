@@ -18,7 +18,7 @@ export const updateServerUrlTool: ToolDefinition = {
     const s = (globalThis as any).getSkillState();
     const oldUrl = s.config.serverUrl;
     s.config.serverUrl = url;
-    store.set('config', s.config);
+    state.set('config', s.config);
 
     console.log(`[server-ping] Server URL changed: ${oldUrl} -> ${url}`);
     // publishState is exposed on globalThis by the main skill module

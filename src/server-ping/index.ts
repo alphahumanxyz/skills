@@ -11,7 +11,7 @@ import type { SkillConfig } from './types';
 
 // server-ping/index.ts
 // Comprehensive demo skill showcasing all V8 runtime capabilities:
-//   Setup flow, DB (SQLite), Store (KV), State (frontend pub), Data (file I/O),
+//   Setup flow, DB (SQLite), State (persistent KV + frontend pub), Data (file I/O),
 //   Net (HTTP), setInterval (scheduling), Platform (OS/notify), Skills (interop),
 //   Options, Tools, and Session lifecycle.
 
@@ -42,7 +42,7 @@ function init(): void {
   );
 
   // Load persisted config from store
-  const saved = store.get('config') as Partial<SkillConfig> | null;
+  const saved = state.get('config') as Partial<SkillConfig> | null;
   if (saved) {
     s.config.serverUrl = saved.serverUrl ?? s.config.serverUrl;
     s.config.pingIntervalSec = saved.pingIntervalSec ?? s.config.pingIntervalSec;
@@ -62,7 +62,7 @@ function init(): void {
   }
 
   // Load counters from store
-  const counters = store.get('counters') as { pingCount?: number; failCount?: number } | null;
+  const counters = state.get('counters') as { pingCount?: number; failCount?: number } | null;
   if (counters) {
     s.pingCount = counters.pingCount ?? 0;
     s.failCount = counters.failCount ?? 0;
@@ -112,7 +112,7 @@ function stop(): void {
   }
 
   // Persist counters
-  store.set('counters', { pingCount: s.pingCount, failCount: s.failCount });
+  state.set('counters', { pingCount: s.pingCount, failCount: s.failCount });
 
   state.set('status', 'stopped');
 }
@@ -220,7 +220,7 @@ function onSetupSubmit(args: {
     s.config.notifyOnRecover = (values.notifyOnRecover as boolean) ?? true;
 
     // Persist full config to store
-    store.set('config', s.config);
+    state.set('config', s.config);
 
     // Write a human-readable config file to data dir
     data.write('config.json', JSON.stringify(s.config, null, 2));
@@ -309,7 +309,7 @@ function onSetOption(args: { name: string; value: unknown }): void {
   }
 
   // Persist updated config
-  store.set('config', s.config);
+  state.set('config', s.config);
   publishState();
   console.log(`[server-ping] Option '${name}' set to ${value}`);
 }
@@ -399,7 +399,7 @@ function doPing(): void {
 
   // Persist counters periodically (every 10 pings)
   if (s.pingCount % 10 === 0) {
-    store.set('counters', { pingCount: s.pingCount, failCount: s.failCount });
+    state.set('counters', { pingCount: s.pingCount, failCount: s.failCount });
   }
 
   // Publish state to frontend

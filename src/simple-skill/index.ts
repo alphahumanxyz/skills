@@ -1,4 +1,4 @@
-// Simple test skill - no external modules, TypeScript with bridge APIs (store, state, tools).
+// Simple test skill - no external modules, TypeScript with bridge APIs (state, tools).
 
 interface SimpleSkillConfig {
   greeting: string;
@@ -9,7 +9,7 @@ const CONFIG: SimpleSkillConfig = { greeting: 'Hello', count: 0 };
 
 function init(): void {
   console.log('[simple-skill] Initializing');
-  const saved = store.get('config') as Partial<SimpleSkillConfig> | null;
+  const saved = state.get('config') as Partial<SimpleSkillConfig> | null;
   if (saved) {
     CONFIG.greeting = saved.greeting ?? CONFIG.greeting;
     CONFIG.count = saved.count ?? CONFIG.count;
@@ -24,7 +24,7 @@ function start(): void {
 
 function stop(): void {
   console.log('[simple-skill] Stopping');
-  store.set('config', CONFIG);
+  state.set('config', CONFIG);
   state.set('status', 'stopped');
 }
 
@@ -49,7 +49,7 @@ function onSetupSubmit(args: {
 
   if (stepId === 'greeting') {
     CONFIG.greeting = (values.greeting as string) || 'Hello';
-    store.set('config', CONFIG);
+    state.set('config', CONFIG);
     return { status: 'complete' };
   }
 

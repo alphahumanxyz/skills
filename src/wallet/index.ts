@@ -18,7 +18,7 @@ function getState(): import('./skill-state').WalletSkillState {
 
 function init(): void {
   const s = getState();
-  const saved = store.get('config') as {
+  const saved = state.get('config') as {
     walletAddresses?: string[];
     networks?: NetworkConfig[];
   } | null;
@@ -64,12 +64,12 @@ function onLoad(params: { walletAddress?: string; walletAddresses?: string[] }):
   if (params.walletAddress) {
     if (!s.config.walletAddresses.includes(params.walletAddress)) {
       s.config.walletAddresses = [params.walletAddress];
-      store.set('config', s.config);
+      state.set('config', s.config);
     }
   }
   if (params.walletAddresses?.length) {
     s.config.walletAddresses = params.walletAddresses;
-    store.set('config', s.config);
+    state.set('config', s.config);
   }
   state.setPartial({ walletCount: s.config.walletAddresses.length });
 }
@@ -113,7 +113,7 @@ function onSetupSubmit(args: {
     if (s.config.networks.length === 0) {
       s.config.networks = networks.slice(0, 3);
     }
-    store.set('config', s.config);
+    state.set('config', s.config);
     return { status: 'complete' };
   }
 

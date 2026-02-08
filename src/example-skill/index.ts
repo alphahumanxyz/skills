@@ -151,7 +151,7 @@ function init(): void {
   );
 
   // Load persisted configuration from store
-  const saved = store.get('config') as Partial<ExampleConfig> | null;
+  const saved = state.get('config') as Partial<ExampleConfig> | null;
   if (saved) {
     s.config = { ...DEFAULT_CONFIG, ...saved };
   }
@@ -189,7 +189,7 @@ function stop(): void {
   cron.unregister('refresh');
 
   // Persist configuration
-  store.set('config', s.config);
+  state.set('config', s.config);
 
   // Persist a data file with last-known state
   data.write(
@@ -375,7 +375,7 @@ function onSetupSubmit(args: {
     s.config.refreshInterval = parseInt(String(args.values.refreshInterval || '30'), 10);
 
     // Persist the complete configuration
-    store.set('config', s.config);
+    state.set('config', s.config);
 
     return { status: 'complete' };
   }
@@ -392,7 +392,7 @@ function onSetupCancel(): void {
 // ─── Disconnect ─────────────────────────────────────────────────────
 function onDisconnect(): void {
   // Clean up credentials when user disconnects the skill
-  store.delete('config');
+  state.delete('config');
   const s = getState();
   s.config = { ...DEFAULT_CONFIG };
 }
@@ -449,7 +449,7 @@ function onSetOption(args: { name: string; value: unknown }): void {
     s.config.verbose = args.value === true || args.value === 'true';
   }
 
-  store.set('config', s.config);
+  state.set('config', s.config);
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────

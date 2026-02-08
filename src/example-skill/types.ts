@@ -1,4 +1,4 @@
-/** Configuration persisted via store.set("config", ...) */
+/** Configuration persisted via state.set("config", ...) */
 export interface ExampleConfig {
   /** URL to fetch data from */
   serverUrl: string;
