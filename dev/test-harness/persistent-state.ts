@@ -25,7 +25,6 @@ export function createPersistentState(filePath: string): PersistentState {
   if (existsSync(filePath)) {
     try {
       data = JSON.parse(readFileSync(filePath, 'utf-8'));
-      console.trace('loaded data', data, filePath);
     } catch {
       data = {};
     }
@@ -37,7 +36,6 @@ export function createPersistentState(filePath: string): PersistentState {
 
   return {
     get(key: string): unknown {
-      console.trace('get', key, data[key], data);
       return data[key];
     },
 
@@ -47,7 +45,6 @@ export function createPersistentState(filePath: string): PersistentState {
     },
 
     setPartial(partial: Record<string, unknown>): void {
-      console.trace('setPartial', partial);
       Object.assign(data, partial);
       flush();
     },
