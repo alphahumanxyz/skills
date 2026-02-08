@@ -135,7 +135,7 @@ function discoverSkills(): Array<{ id: string; manifest: Manifest }> {
 function runInContext(G: G, code: string): void {
   // Use vm.createContext for QuickJS-like sandboxing.
   // All properties on G become globals in the sandbox context.
-  // The skill code accesses bridge APIs (store, db, net, oauth, etc.)
+  // The skill code accesses bridge APIs (state, db, net, oauth, etc.)
   // directly as globals, matching QuickJS runtime behavior.
   const context = vm.createContext(G);
   vm.runInContext(code, context, { filename: 'skill.js', timeout: 30000 });
@@ -554,8 +554,7 @@ ${c.bold}Commands:${c.reset}
   ${c.cyan}oauth${c.reset}                       Run OAuth flow (redirect + paste credential ID)
   ${c.cyan}options${c.reset}                     List runtime options
   ${c.cyan}option <name> <value>${c.reset}       Set a runtime option
-  ${c.cyan}state${c.reset}                       Show published state
-  ${c.cyan}store${c.reset}                       Show store contents
+  ${c.cyan}state${c.reset}                       Show state contents
   ${c.cyan}db <sql>${c.reset}                    Run SQL query
   ${c.cyan}env <key> <value>${c.reset}           Set environment variable
   ${c.cyan}backend [path]${c.reset}              Show backend info or GET a path
@@ -764,8 +763,13 @@ function cmdSetOption(G: G, rest: string): void {
 }
 
 function cmdState(G: G): void {
-  // Try to read all state via the __getAll debug method
-  const stateApi = G.state as { __getAll?: () => Record<string, unknown> } | undefined;
+  const stateApi = G.state as {
+    __getAll?: () => Record<string, unknown>;
+    keys?: () => string[];
+    get?: (key: string) => unknown;
+  } | undefined;
+
+  // Prefer __getAll debug method (reads directly from file)
   if (stateApi?.__getAll) {
     const data = stateApi.__getAll();
     if (Object.keys(data).length === 0) {
@@ -773,33 +777,21 @@ function cmdState(G: G): void {
     } else {
       console.log(prettyJson(data));
     }
+  } else if (stateApi?.keys && stateApi?.get) {
+    // Fallback: enumerate via keys/get
+    const keys = stateApi.keys();
+    if (keys.length === 0) {
+      console.log(`${c.dim}(state is empty)${c.reset}`);
+      return;
+    }
+    const data: Record<string, unknown> = {};
+    for (const key of keys) {
+      data[key] = stateApi.get(key);
+    }
+    console.log(prettyJson(data));
   } else {
     console.log(`${c.dim}(state inspection not available)${c.reset}`);
   }
-}
-
-function cmdStore(G: G): void {
-  const storeApi = G.store as {
-    keys?: () => string[];
-    get?: (key: string) => unknown;
-  } | undefined;
-
-  if (!storeApi?.keys || !storeApi?.get) {
-    console.log(`${c.yellow}Store API not available${c.reset}`);
-    return;
-  }
-
-  const keys = storeApi.keys();
-  if (keys.length === 0) {
-    console.log(`${c.dim}Store is empty${c.reset}`);
-    return;
-  }
-
-  const data: Record<string, unknown> = {};
-  for (const key of keys) {
-    data[key] = storeApi.get(key);
-  }
-  console.log(prettyJson(data));
 }
 
 function cmdDb(G: G, sql: string): void {
@@ -1052,8 +1044,8 @@ async function main(): Promise<void> {
 
   // Restore OAuth credential on the bridge from persisted config (survives REPL restarts)
   if (ctx.manifest.setup?.oauth) {
-    const storeApi = ctx.G.store as { get?: (key: string) => unknown } | undefined;
-    const savedConfig = storeApi?.get?.('config') as { credentialId?: string } | null;
+    const stateApi = ctx.G.state as { get?: (key: string) => unknown } | undefined;
+    const savedConfig = stateApi?.get?.('config') as { credentialId?: string } | null;
     const credId = savedConfig?.credentialId;
     if (credId && isValidIntegrationId(credId)) {
       const oauthApi = ctx.G.oauth as { __setCredential?: (cred: unknown) => void } | undefined;
@@ -1092,8 +1084,8 @@ async function main(): Promise<void> {
 
   // Auto-detect setup needed
   if (ctx.manifest.setup?.required) {
-    const storeApi = ctx.G.store as { get?: (key: string) => unknown } | undefined;
-    const config = storeApi?.get?.('config');
+    const stateApi = ctx.G.state as { get?: (key: string) => unknown } | undefined;
+    const config = stateApi?.get?.('config');
     if (!config) {
       if (ctx.manifest.setup.oauth) {
         // OAuth-based setup
@@ -1189,10 +1181,6 @@ async function main(): Promise<void> {
           cmdState(ctx.G);
           break;
 
-        case 'store':
-          cmdStore(ctx.G);
-          break;
-
         case 'db':
           cmdDb(ctx.G, rest);
           break;
@@ -1234,8 +1222,8 @@ async function main(): Promise<void> {
 
             // Restore OAuth credential on the bridge
             if (ctx.manifest.setup?.oauth) {
-              const storeApi = ctx.G.store as { get?: (key: string) => unknown } | undefined;
-              const savedConfig = storeApi?.get?.('config') as { credentialId?: string } | null;
+              const stateApi = ctx.G.state as { get?: (key: string) => unknown } | undefined;
+              const savedConfig = stateApi?.get?.('config') as { credentialId?: string } | null;
               if (savedConfig?.credentialId) {
                 const oauthApi = ctx.G.oauth as { __setCredential?: (cred: unknown) => void } | undefined;
                 oauthApi?.__setCredential?.({

@@ -13,7 +13,7 @@ if (!skillState) {
   console.log("  Initial pingCount:", skillState.pingCount);
 }
 
-// Configure the skill via store (simulating setup)
+// Configure the skill via state (simulating setup)
 state.set("config", {
   serverUrl: "https://httpbin.org/get",
   pingIntervalSec: 10,

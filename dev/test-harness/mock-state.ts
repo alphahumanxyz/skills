@@ -6,16 +6,13 @@
  */
 
 export interface MockState {
-  /** Persistent KV backing data (state.get/set reads/writes here) */
-  store: Record<string, unknown>;
-
   /** SQLite database mock */
   db: {
     tables: Record<string, DbTable>;
     kv: Record<string, unknown>;
   };
 
-  /** Published state (state.set/setPartial) */
+  /** Persistent key-value state (state.get/set/setPartial/delete/keys) */
   state: Record<string, unknown>;
 
   /** Registered cron schedules */
@@ -147,7 +144,6 @@ let mockState: MockState = createFreshState();
 
 function createFreshState(): MockState {
   return {
-    store: {},
     db: {
       tables: {},
       kv: {},
@@ -204,7 +200,7 @@ export function initMockState(options?: {
   resetMockState();
 
   if (options?.stateData) {
-    mockState.store = { ...options.stateData };
+    mockState.state = { ...options.stateData };
   }
   if (options?.fetchResponses) {
     mockState.fetchResponses = { ...options.fetchResponses };

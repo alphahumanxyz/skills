@@ -59,8 +59,7 @@ On startup, the REPL will:
 | `oauth` | Run the OAuth authorization flow |
 | `options` | List runtime-configurable options |
 | `option <name> <value>` | Change a runtime option |
-| `state` | Inspect the skill's published state |
-| `store` | Inspect the key-value store |
+| `state` | Inspect the skill's state |
 | `db <sql>` | Run a SQL query against the skill's database |
 | `env <key> <value>` | Set an environment variable for the session |
 | `backend [path]` | Show backend info, or GET a backend endpoint |
@@ -106,13 +105,10 @@ server-ping> call do-ping {"url": "https://httpbin.org/get"}
   { "ok": true, "status": 200, "latency": 342 }
 
 server-ping> state
-  { "status": "healthy", "lastPing": "2026-02-06T12:00:00Z", "uptime": 99.9 }
+  { "status": "healthy", "lastPing": "2026-02-06T12:00:00Z", "uptime": 99.9, "config": { "serverUrl": "https://httpbin.org", "interval": 30 } }
 
 server-ping> cron health-check
   onCronTrigger("health-check") completed
-
-server-ping> store
-  { "config": { "serverUrl": "https://httpbin.org", "interval": 30 } }
 
 server-ping> exit
   Shutting down...
@@ -232,8 +228,7 @@ The REPL and live script runner store data in `data/<skill-id>/` at the skills r
 data/
   <skill-id>/
     skill.db        # SQLite database (better-sqlite3)
-    kv.json         # Persistent key-value store (state.get/set/delete/keys)
-    state.json      # Published frontend state (state.set/setPartial)
+    state.json      # Persistent key-value state (state.get/set/setPartial/delete/keys)
     files/          # Filesystem I/O (data.read/write)
 ```
 

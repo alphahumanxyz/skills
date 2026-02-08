@@ -20,7 +20,6 @@ import { ModelBridge, type ModelGenerateOptions, type ModelSummarizeOptions } fr
 import { createPersistentData } from './persistent-data';
 import { createPersistentDb, type PersistentDb } from './persistent-db';
 import { createPersistentState } from './persistent-state';
-import { createPersistentStore } from './persistent-store';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..', '..');
@@ -363,19 +362,15 @@ export async function createBridgeAPIs(
     },
   };
 
-  // State — persistent store + frontend-publishing state
-  const pStore = createPersistentStore(join(dataDir, 'kv.json'));
+  // State — unified persistent key-value store + frontend-publishing state
   const stateFilePath = join(dataDir, 'state.json');
   const pState = createPersistentState(stateFilePath);
   const stateApi = {
-    get: (key: string): unknown => pStore.get(key),
-    set: (key: string, value: unknown): void => { pStore.set(key, value); pState.set(key, value); },
-    setPartial: (partial: Record<string, unknown>): void => {
-      for (const [k, v] of Object.entries(partial)) { pStore.set(k, v); }
-      pState.setPartial(partial);
-    },
-    delete: (key: string): void => pStore.delete(key),
-    keys: (): string[] => pStore.keys(),
+    get: (key: string): unknown => pState.get(key),
+    set: (key: string, value: unknown): void => { pState.set(key, value); },
+    setPartial: (partial: Record<string, unknown>): void => { pState.setPartial(partial); },
+    delete: (key: string): void => pState.delete(key),
+    keys: (): string[] => pState.keys(),
     /** Read all state entries (for REPL/debugging only, not part of bridge contract) */
     __getAll: (): Record<string, unknown> => {
       try {

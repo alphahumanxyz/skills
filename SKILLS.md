@@ -606,8 +606,7 @@ All runners (REPL, script runner, live runner) use persistent file-backed storag
 data/
   <skill-id>/
     skill.db          # SQLite database
-    store.json        # Key-value store
-    state.json        # Published state
+    state.json        # KV Store
     files/            # data.read/write files
 ```
 
@@ -665,7 +664,7 @@ skills/                          # Repo root
 │   ├── example-skill/           # Kitchen-sink example
 │   └── simple-skill/            # Minimal test skill
 ├── skills/                      # Compiled JavaScript output (gitignored)
-├── data/                        # REPL/runner persistent data (skill.db, store.json, etc.)
+├── data/                        # REPL/runner persistent data (skill.db, kv.json, etc.)
 ├── types/
 │   └── globals.d.ts             # Ambient type declarations for bridge APIs
 ├── dev/

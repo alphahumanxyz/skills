@@ -66,7 +66,7 @@ ${colors.yellow}Arguments:${colors.reset}
 
 ${colors.yellow}Options:${colors.reset}
   --wait=<ms>   Wait specified milliseconds before cleanup (for async connections)
-  --clean       Wipe the skill's data directory before running (removes db, store, state, files)
+  --clean       Wipe the skill's data directory before running (removes db, state, files)
 
 ${colors.yellow}Examples:${colors.reset}
   npx tsx dev/test-harness/runner-node.ts server-ping scripts/examples/test-ping-flow.js

@@ -12,6 +12,8 @@ export interface PersistentState {
   get(key: string): unknown;
   set(key: string, value: unknown): void;
   setPartial(partial: Record<string, unknown>): void;
+  delete(key: string): void;
+  keys(): string[];
 }
 
 export function createPersistentState(filePath: string): PersistentState {
@@ -45,6 +47,15 @@ export function createPersistentState(filePath: string): PersistentState {
     setPartial(partial: Record<string, unknown>): void {
       Object.assign(data, partial);
       flush();
+    },
+
+    delete(key: string): void {
+      delete data[key];
+      flush();
+    },
+
+    keys(): string[] {
+      return Object.keys(data);
     },
   };
 }

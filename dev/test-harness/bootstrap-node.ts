@@ -11,7 +11,6 @@ import { getMockState, type FetchOptions } from './mock-state';
 import { createPersistentData } from './persistent-data';
 import { createPersistentDb, type PersistentDb } from './persistent-db';
 import { createPersistentState } from './persistent-state';
-import { type PersistentStore, createPersistentStore } from './persistent-store';
 
 export interface BridgeOptions {
   /** When set, db/store/state/data use file-backed storage in this directory */
@@ -125,28 +124,23 @@ export async function createBridgeAPIs(options?: BridgeOptions): Promise<Record<
   // State API - persistent key-value store + frontend state publishing
   let stateApi;
   if (dataDir) {
-    const pStore: PersistentStore = createPersistentStore(join(dataDir, 'kv.json'));
     const pState = createPersistentState(join(dataDir, 'state.json'));
     stateApi = {
-      get: (key: string): unknown => pStore.get(key),
-      set: (key: string, value: unknown): void => { pStore.set(key, value); pState.set(key, value); },
-      setPartial: (partial: Record<string, unknown>): void => {
-        for (const [k, v] of Object.entries(partial)) { pStore.set(k, v); }
-        pState.setPartial(partial);
-      },
-      delete: (key: string): void => pStore.delete(key),
-      keys: (): string[] => pStore.keys(),
+      get: (key: string): unknown => pState.get(key),
+      set: (key: string, value: unknown): void => { pState.set(key, value); },
+      setPartial: (partial: Record<string, unknown>): void => { pState.setPartial(partial); },
+      delete: (key: string): void => pState.delete(key),
+      keys: (): string[] => pState.keys(),
     };
   } else {
     stateApi = {
-      get: (key: string): unknown => state.store[key] ?? null,
-      set: (key: string, value: unknown): void => { state.store[key] = value; state.state[key] = value; },
+      get: (key: string): unknown => state.state[key] ?? null,
+      set: (key: string, value: unknown): void => { state.state[key] = value; },
       setPartial: (partial: Record<string, unknown>): void => {
-        for (const [k, v] of Object.entries(partial)) { state.store[k] = v; }
         Object.assign(state.state, partial);
       },
-      delete: (key: string): void => { delete state.store[key]; },
-      keys: (): string[] => Object.keys(state.store),
+      delete: (key: string): void => { delete state.state[key]; },
+      keys: (): string[] => Object.keys(state.state),
     };
   }
 

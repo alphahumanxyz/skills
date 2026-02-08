@@ -67,7 +67,6 @@ ${colors.yellow}Note:${colors.reset}
 }
 
 interface MockState {
-  store: Record<string, unknown>;
   state: Record<string, unknown>;
   dataFiles: Record<string, string>;
   cronSchedules: Record<string, string>;
@@ -81,18 +80,8 @@ interface MockState {
  * Create bridge APIs with REAL network support
  */
 function createLiveBridgeAPIs(state: MockState): Record<string, unknown> {
-  const store = {
-    get: (key: string): unknown => state.store[key] ?? null,
-    set: (key: string, value: unknown): void => {
-      state.store[key] = value;
-    },
-    delete: (key: string): void => {
-      delete state.store[key];
-    },
-    keys: (): string[] => Object.keys(state.store),
-  };
-
   const dbTables: Record<string, Array<Record<string, unknown>>> = {};
+  const dbKv: Record<string, unknown> = {};
   const db = {
     exec: (sql: string, _params?: unknown[]): void => {
       const createMatch = sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/i);
@@ -105,9 +94,9 @@ function createLiveBridgeAPIs(state: MockState): Record<string, unknown> {
     },
     get: (_sql: string, _params?: unknown[]): Record<string, unknown> | null => null,
     all: (_sql: string, _params?: unknown[]): Array<Record<string, unknown>> => [],
-    kvGet: (key: string): unknown => state.store[`kv:${key}`] ?? null,
+    kvGet: (key: string): unknown => dbKv[key] ?? null,
     kvSet: (key: string, value: unknown): void => {
-      state.store[`kv:${key}`] = value;
+      dbKv[key] = value;
     },
   };
 
@@ -121,13 +110,17 @@ function createLiveBridgeAPIs(state: MockState): Record<string, unknown> {
   };
 
   const stateApi = {
-    get: (key: string): unknown => state.state[key],
+    get: (key: string): unknown => state.state[key] ?? null,
     set: (key: string, value: unknown): void => {
       state.state[key] = value;
     },
     setPartial: (partial: Record<string, unknown>): void => {
       Object.assign(state.state, partial);
     },
+    delete: (key: string): void => {
+      delete state.state[key];
+    },
+    keys: (): string[] => Object.keys(state.state),
   };
 
   const data = {
@@ -148,7 +141,6 @@ function createLiveBridgeAPIs(state: MockState): Record<string, unknown> {
   };
 
   return {
-    store,
     db,
     platform,
     state: stateApi,
