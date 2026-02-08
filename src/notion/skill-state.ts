@@ -16,6 +16,7 @@ export interface NotionSyncStatus {
   nextSyncTime: number;
   totalPages: number;
   totalDatabases: number;
+  totalDatabaseRows: number;
   totalUsers: number;
   pagesWithContent: number;
   pagesWithSummary: number;
@@ -56,6 +57,7 @@ function initNotionSkillState(): NotionSkillState {
       nextSyncTime: 0,
       totalPages: 0,
       totalDatabases: 0,
+      totalDatabaseRows: 0,
       totalUsers: 0,
       pagesWithContent: 0,
       pagesWithSummary: 0,

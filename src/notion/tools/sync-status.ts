@@ -27,6 +27,7 @@ export const syncStatusTool: ToolDefinition = {
         totals: {
           pages: s.syncStatus.totalPages,
           databases: s.syncStatus.totalDatabases,
+          database_rows: s.syncStatus.totalDatabaseRows,
           users: s.syncStatus.totalUsers,
           pages_with_content: s.syncStatus.pagesWithContent,
           pages_with_summary: s.syncStatus.pagesWithSummary,

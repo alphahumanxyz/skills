@@ -24,6 +24,22 @@ export interface LocalPage {
   synced_at: number;
 }
 
+export interface LocalDatabaseRow {
+  id: string;
+  database_id: string;
+  title: string;
+  url: string | null;
+  icon: string | null;
+  properties_json: string | null;
+  properties_text: string | null;
+  created_by_id: string | null;
+  last_edited_by_id: string | null;
+  created_time: string;
+  last_edited_time: string;
+  archived: number;
+  synced_at: number;
+}
+
 export interface LocalDatabase {
   id: string;
   title: string;
@@ -550,6 +566,223 @@ export function getLocalDatabases(
 }
 
 // ---------------------------------------------------------------------------
+// Database row operations
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract a flat text representation of all property values from a Notion page/row.
+ * This is used for full-text search over database rows.
+ */
+function extractPropertiesText(properties: Record<string, unknown>): string {
+  const parts: string[] = [];
+
+  for (const [, propVal] of Object.entries(properties)) {
+    const prop = propVal as Record<string, unknown>;
+    const propType = prop.type as string;
+
+    switch (propType) {
+      case 'title':
+      case 'rich_text': {
+        const texts = prop[propType] as Array<Record<string, unknown>> | undefined;
+        if (Array.isArray(texts)) {
+          const t = texts.map(rt => (rt.plain_text as string) || '').join('');
+          if (t) parts.push(t);
+        }
+        break;
+      }
+      case 'number': {
+        const num = prop.number;
+        if (num != null) parts.push(String(num));
+        break;
+      }
+      case 'select': {
+        const sel = prop.select as Record<string, unknown> | null;
+        if (sel?.name) parts.push(sel.name as string);
+        break;
+      }
+      case 'multi_select': {
+        const ms = prop.multi_select as Array<Record<string, unknown>> | undefined;
+        if (Array.isArray(ms)) {
+          for (const item of ms) {
+            if (item.name) parts.push(item.name as string);
+          }
+        }
+        break;
+      }
+      case 'status': {
+        const st = prop.status as Record<string, unknown> | null;
+        if (st?.name) parts.push(st.name as string);
+        break;
+      }
+      case 'date': {
+        const dt = prop.date as Record<string, unknown> | null;
+        if (dt?.start) parts.push(dt.start as string);
+        if (dt?.end) parts.push(dt.end as string);
+        break;
+      }
+      case 'email': {
+        const email = prop.email as string | null;
+        if (email) parts.push(email);
+        break;
+      }
+      case 'phone_number': {
+        const phone = prop.phone_number as string | null;
+        if (phone) parts.push(phone);
+        break;
+      }
+      case 'url': {
+        const url = prop.url as string | null;
+        if (url) parts.push(url);
+        break;
+      }
+      case 'checkbox': {
+        parts.push(prop.checkbox ? 'true' : 'false');
+        break;
+      }
+      case 'people': {
+        const people = prop.people as Array<Record<string, unknown>> | undefined;
+        if (Array.isArray(people)) {
+          for (const person of people) {
+            if (person.name) parts.push(person.name as string);
+          }
+        }
+        break;
+      }
+      case 'formula': {
+        const formula = prop.formula as Record<string, unknown> | null;
+        if (formula) {
+          const fType = formula.type as string;
+          const val = formula[fType];
+          if (val != null) parts.push(String(val));
+        }
+        break;
+      }
+      case 'rollup': {
+        const rollup = prop.rollup as Record<string, unknown> | null;
+        if (rollup) {
+          const rType = rollup.type as string;
+          const val = rollup[rType];
+          if (val != null && !Array.isArray(val)) parts.push(String(val));
+        }
+        break;
+      }
+      // Skip: relation, created_by, last_edited_by, created_time, last_edited_time, files
+      // These are either captured elsewhere or not useful as text
+    }
+  }
+
+  return parts.join(' ');
+}
+
+/**
+ * Insert or update a database row from a Notion API page object returned by queryDataSource.
+ */
+export function upsertDatabaseRow(row: Record<string, unknown>, databaseId: string): void {
+  const now = Date.now();
+
+  // Extract title from properties
+  let title = row.id as string;
+  const props = row.properties as Record<string, unknown> | undefined;
+  if (props) {
+    for (const key of Object.keys(props)) {
+      const prop = props[key] as Record<string, unknown>;
+      if (prop.type === 'title' && Array.isArray(prop.title)) {
+        const texts = prop.title as Array<Record<string, unknown>>;
+        const t = texts.map(rt => (rt.plain_text as string) || '').join('');
+        if (t) {
+          title = t;
+          break;
+        }
+      }
+    }
+  }
+
+  const iconStr = extractIcon(row.icon);
+  const createdBy = row.created_by as Record<string, unknown> | undefined;
+  const lastEditedBy = row.last_edited_by as Record<string, unknown> | undefined;
+
+  // Store full properties as JSON and extract text for search
+  const propertiesJson = props ? JSON.stringify(props) : null;
+  const propertiesText = props ? extractPropertiesText(props) : null;
+
+  db.exec(
+    `INSERT INTO database_rows (
+      id, database_id, title, url, icon, properties_json, properties_text,
+      created_by_id, last_edited_by_id,
+      created_time, last_edited_time, archived, synced_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      database_id = excluded.database_id,
+      title = excluded.title,
+      url = excluded.url,
+      icon = excluded.icon,
+      properties_json = excluded.properties_json,
+      properties_text = excluded.properties_text,
+      created_by_id = excluded.created_by_id,
+      last_edited_by_id = excluded.last_edited_by_id,
+      created_time = excluded.created_time,
+      last_edited_time = excluded.last_edited_time,
+      archived = excluded.archived,
+      synced_at = excluded.synced_at`,
+    [
+      row.id as string,
+      databaseId,
+      title,
+      (row.url as string) || null,
+      iconStr,
+      propertiesJson,
+      propertiesText,
+      (createdBy?.id as string) || null,
+      (lastEditedBy?.id as string) || null,
+      row.created_time as string,
+      row.last_edited_time as string,
+      (row.archived as boolean) ? 1 : 0,
+      now,
+    ]
+  );
+}
+
+/**
+ * Get a single database row by ID
+ */
+export function getDatabaseRowById(rowId: string): LocalDatabaseRow | null {
+  return db.get('SELECT * FROM database_rows WHERE id = ?', [rowId]) as LocalDatabaseRow | null;
+}
+
+/**
+ * Query local database rows with optional search and filtering
+ */
+export function getLocalDatabaseRows(
+  options: { databaseId?: string; query?: string; limit?: number; includeArchived?: boolean } = {}
+): LocalDatabaseRow[] {
+  let sql = 'SELECT * FROM database_rows WHERE 1=1';
+  const params: unknown[] = [];
+
+  if (!options.includeArchived) {
+    sql += ' AND archived = 0';
+  }
+
+  if (options.databaseId) {
+    sql += ' AND database_id = ?';
+    params.push(options.databaseId);
+  }
+
+  if (options.query) {
+    sql += ' AND (title LIKE ? OR properties_text LIKE ?)';
+    const term = `%${options.query}%`;
+    params.push(term, term);
+  }
+
+  sql += ' ORDER BY last_edited_time DESC';
+
+  const limit = options.limit || 50;
+  sql += ' LIMIT ?';
+  params.push(limit);
+
+  return db.all(sql, params) as unknown as LocalDatabaseRow[];
+}
+
+// ---------------------------------------------------------------------------
 // User operations
 // ---------------------------------------------------------------------------
 
@@ -592,6 +825,7 @@ export function getLocalUsers(): LocalUser[] {
 export function getEntityCounts(): {
   pages: number;
   databases: number;
+  databaseRows: number;
   users: number;
   pagesWithContent: number;
   pagesWithSummary: number;
@@ -600,6 +834,9 @@ export function getEntityCounts(): {
 } {
   const pages = db.get('SELECT COUNT(*) as cnt FROM pages', []) as { cnt: number } | null;
   const databases = db.get('SELECT COUNT(*) as cnt FROM databases', []) as { cnt: number } | null;
+  const databaseRows = db.get('SELECT COUNT(*) as cnt FROM database_rows', []) as {
+    cnt: number;
+  } | null;
   const users = db.get('SELECT COUNT(*) as cnt FROM users', []) as { cnt: number } | null;
   const pagesWithContent = db.get(
     'SELECT COUNT(*) as cnt FROM pages WHERE content_text IS NOT NULL',
@@ -619,6 +856,7 @@ export function getEntityCounts(): {
   return {
     pages: pages?.cnt || 0,
     databases: databases?.cnt || 0,
+    databaseRows: databaseRows?.cnt || 0,
     users: users?.cnt || 0,
     pagesWithContent: pagesWithContent?.cnt || 0,
     pagesWithSummary: pagesWithSummary?.cnt || 0,
@@ -634,6 +872,9 @@ export function getEntityCounts(): {
 const _g = globalThis as Record<string, unknown>;
 _g.upsertPage = upsertPage;
 _g.upsertDatabase = upsertDatabase;
+_g.upsertDatabaseRow = upsertDatabaseRow;
+_g.getDatabaseRowById = getDatabaseRowById;
+_g.getLocalDatabaseRows = getLocalDatabaseRows;
 _g.upsertUser = upsertUser;
 _g.updatePageContent = updatePageContent;
 _g.getPageById = getPageById;

@@ -16,11 +16,13 @@ export interface NotionGlobals {
   fetchBlockTreeText(blockId: string, maxDepth?: number): string;
   getLocalPages(options?: { query?: string; limit?: number; includeArchived?: boolean }): unknown[];
   getLocalDatabases(options?: { query?: string; limit?: number }): unknown[];
+  getLocalDatabaseRows(options?: { databaseId?: string; query?: string; limit?: number; includeArchived?: boolean }): unknown[];
   getLocalUsers(): unknown[];
   getPageById(pageId: string): unknown | null;
   getEntityCounts(): {
     pages: number;
     databases: number;
+    databaseRows: number;
     users: number;
     pagesWithContent: number;
     pagesWithSummary: number;

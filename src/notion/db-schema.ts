@@ -60,6 +60,27 @@ export function initializeNotionSchema(): void {
     []
   );
 
+  // Database rows table: stores rows/entries within databases with their properties
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS database_rows (
+      id TEXT PRIMARY KEY,
+      database_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      url TEXT,
+      icon TEXT,
+      properties_json TEXT,
+      properties_text TEXT,
+      created_by_id TEXT,
+      last_edited_by_id TEXT,
+      created_time TEXT NOT NULL,
+      last_edited_time TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0,
+      synced_at INTEGER NOT NULL,
+      FOREIGN KEY (database_id) REFERENCES databases(id)
+    )`,
+    []
+  );
+
   // Summaries table: stores AI-generated summaries with sync tracking
   db.exec(
     `CREATE TABLE IF NOT EXISTS summaries (
@@ -94,6 +115,14 @@ export function initializeNotionSchema(): void {
   db.exec('CREATE INDEX IF NOT EXISTS idx_pages_archived ON pages(archived)', []);
   db.exec(
     'CREATE INDEX IF NOT EXISTS idx_databases_last_edited ON databases(last_edited_time DESC)',
+    []
+  );
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_db_rows_database_id ON database_rows(database_id)',
+    []
+  );
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_db_rows_last_edited ON database_rows(last_edited_time DESC)',
     []
   );
   db.exec('CREATE INDEX IF NOT EXISTS idx_summaries_synced ON summaries(synced)', []);

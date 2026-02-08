@@ -111,6 +111,7 @@ function init(): void {
       getEntityCounts?: () => {
         pages: number;
         databases: number;
+        databaseRows: number;
         users: number;
         pagesWithContent: number;
         pagesWithSummary: number;
@@ -121,6 +122,7 @@ function init(): void {
     const counts = getEntityCounts();
     s.syncStatus.totalPages = counts.pages;
     s.syncStatus.totalDatabases = counts.databases;
+    s.syncStatus.totalDatabaseRows = counts.databaseRows;
     s.syncStatus.totalUsers = counts.users;
     s.syncStatus.pagesWithContent = counts.pagesWithContent;
     s.syncStatus.pagesWithSummary = counts.pagesWithSummary;
@@ -347,6 +349,7 @@ function publishState(): void {
       : null,
     totalPages: s.syncStatus.totalPages,
     totalDatabases: s.syncStatus.totalDatabases,
+    totalDatabaseRows: s.syncStatus.totalDatabaseRows,
     totalUsers: s.syncStatus.totalUsers,
     pagesWithContent: s.syncStatus.pagesWithContent,
     pagesWithSummary: s.syncStatus.pagesWithSummary,

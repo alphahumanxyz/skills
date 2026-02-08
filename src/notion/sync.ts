@@ -57,6 +57,10 @@ export function performSync(): void {
     console.log('[notion] Sync phase 2: pages & databases');
     syncSearchItems();
 
+    // Phase 2.5: Sync database rows
+    console.log('[notion] Sync phase 2.5: database rows');
+    syncDatabaseRows();
+
     // Phase 3: Sync page content (block text)
     if (s.config.contentSyncEnabled) {
       console.log('[notion] Sync phase 3: page content');
@@ -100,8 +104,10 @@ export function performSync(): void {
     s.syncStatus.summariesTotal = counts.summariesTotal;
     s.syncStatus.summariesPending = counts.summariesPending;
 
+    s.syncStatus.totalDatabaseRows = counts.databaseRows;
+
     console.log(
-      `[notion] Sync complete in ${durationMs}ms — ${counts.pages} pages, ${counts.databases} databases, ${counts.users} users`
+      `[notion] Sync complete in ${durationMs}ms — ${counts.pages} pages, ${counts.databases} databases, ${counts.databaseRows} db rows, ${counts.users} users`
     );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -340,6 +346,128 @@ function syncDataSources(
   }
 
   return { count, skipped, errors };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2.5: Sync database rows
+// For each synced database, query its rows and store them locally.
+// ---------------------------------------------------------------------------
+
+/** Max rows to sync per database per sync cycle */
+const MAX_ROWS_PER_DATABASE = 200;
+
+function syncDatabaseRows(): void {
+  const api = getApi();
+  const { getLocalDatabases } = n();
+
+  const upsertDatabaseRow = (globalThis as Record<string, unknown>).upsertDatabaseRow as
+    | ((row: Record<string, unknown>, databaseId: string) => void)
+    | undefined;
+  const getDatabaseRowById = (globalThis as Record<string, unknown>).getDatabaseRowById as
+    | ((id: string) => { last_edited_time: string } | null)
+    | undefined;
+
+  if (!upsertDatabaseRow) {
+    console.warn(
+      '[notion] upsertDatabaseRow not available on globalThis — skipping database row sync'
+    );
+    return;
+  }
+
+  // Get all locally synced databases
+  const databases = getLocalDatabases({ limit: 100 }) as Array<{
+    id: string;
+    title: string;
+  }>;
+
+  if (databases.length === 0) {
+    console.log('[notion] No databases to sync rows for');
+    return;
+  }
+
+  let totalRowCount = 0;
+  let totalSkipped = 0;
+  let totalErrors = 0;
+  let dbsSynced = 0;
+
+  for (const database of databases) {
+    try {
+      let startCursor: string | undefined;
+      let hasMore = true;
+      let rowCount = 0;
+      let skipped = 0;
+      let fetched = 0;
+
+      while (hasMore && fetched < MAX_ROWS_PER_DATABASE) {
+        const body: Record<string, unknown> = {
+          page_size: 100,
+          sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
+        };
+        if (startCursor) body.start_cursor = startCursor;
+
+        let result: {
+          results: Record<string, unknown>[];
+          has_more: boolean;
+          next_cursor?: string;
+        };
+        try {
+          result = api.queryDataSource(database.id, body) as typeof result;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          // Skip databases we can't query (permissions, deleted, etc.)
+          if (msg.includes('404') || msg.includes('403') || msg.includes('no data sources')) {
+            console.warn(`[notion] Cannot query database "${database.title}" (${database.id}): ${msg}`);
+            break;
+          }
+          throw e;
+        }
+
+        for (const row of result.results) {
+          const rec = row as Record<string, unknown>;
+          const lastEdited = rec.last_edited_time as string;
+
+          // Skip if unchanged
+          const existing = getDatabaseRowById?.(rec.id as string);
+          if (existing && existing.last_edited_time === lastEdited) {
+            skipped++;
+            fetched++;
+            continue;
+          }
+
+          try {
+            upsertDatabaseRow(rec, database.id);
+            rowCount++;
+          } catch (e) {
+            console.error(`[notion] Failed to upsert row ${rec.id} in database ${database.id}: ${e}`);
+            totalErrors++;
+          }
+          fetched++;
+        }
+
+        hasMore = result.has_more;
+        startCursor = result.next_cursor as string | undefined;
+      }
+
+      totalRowCount += rowCount;
+      totalSkipped += skipped;
+      if (rowCount > 0 || skipped > 0) dbsSynced++;
+
+      if (rowCount > 0) {
+        console.log(
+          `[notion] Database "${database.title}": ${rowCount} rows synced${skipped > 0 ? `, ${skipped} unchanged` : ''}`
+        );
+      }
+    } catch (e) {
+      console.error(`[notion] Failed to sync rows for database "${database.title}" (${database.id}): ${e}`);
+      totalErrors++;
+    }
+  }
+
+  const skipMsg = totalSkipped > 0 ? ` (${totalSkipped} unchanged)` : '';
+  const errorMsg = totalErrors > 0 ? `, ${totalErrors} errors` : '';
+  console.log(
+    `[notion] Database row sync: ${totalRowCount} rows across ${dbsSynced} databases${skipMsg}${errorMsg}`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -769,6 +897,7 @@ function publishSyncState(): void {
       : null,
     totalPages: s.syncStatus.totalPages,
     totalDatabases: s.syncStatus.totalDatabases,
+    totalDatabaseRows: s.syncStatus.totalDatabaseRows,
     totalUsers: s.syncStatus.totalUsers,
     pagesWithContent: s.syncStatus.pagesWithContent,
     pagesWithSummary: s.syncStatus.pagesWithSummary,
@@ -783,6 +912,7 @@ function publishSyncState(): void {
 const _g = globalThis as Record<string, unknown>;
 _g.performSync = performSync;
 _g.publishSyncState = publishSyncState;
+_g.syncDatabaseRows = syncDatabaseRows;
 _g.inferClassification = inferClassification;
 _g.mergeEntities = mergeEntities;
 _g.summarizeWithFallback = summarizeWithFallback;

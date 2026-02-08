@@ -13,7 +13,7 @@ const n = (): NotionGlobals => {
 export const searchLocalTool: ToolDefinition = {
   name: 'notion-search-local',
   description:
-    'Search locally synced Notion pages and databases by title or content. ' +
+    'Search locally synced Notion pages, databases, and database rows by title or content. ' +
     'Much faster than API search — queries the local SQLite cache. ' +
     'Data is updated every 20 minutes via background sync.',
   input_schema: {
@@ -21,12 +21,16 @@ export const searchLocalTool: ToolDefinition = {
     properties: {
       query: {
         type: 'string',
-        description: 'Search query to match against page titles and content text',
+        description: 'Search query to match against titles, content text, and row properties',
       },
       type: {
         type: 'string',
-        enum: ['page', 'database', 'all'],
+        enum: ['page', 'database', 'database_row', 'all'],
         description: 'Filter by type (default: all)',
+      },
+      database_id: {
+        type: 'string',
+        description: 'When type is "database_row", filter rows to this specific database ID',
       },
       limit: { type: 'number', description: 'Maximum results to return (default: 20, max: 100)' },
       include_content: {
@@ -42,7 +46,7 @@ export const searchLocalTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { getLocalPages, getLocalDatabases } = n();
+      const { getLocalPages, getLocalDatabases, getLocalDatabaseRows } = n();
 
       const query = (args.query as string) || '';
       if (!query) {
@@ -53,6 +57,7 @@ export const searchLocalTool: ToolDefinition = {
       const limit = Math.min((args.limit as number) || 20, 100);
       const includeContent = (args.include_content as boolean) || false;
       const includeArchived = (args.include_archived as boolean) || false;
+      const databaseId = args.database_id as string | undefined;
 
       const results: unknown[] = [];
 
@@ -119,6 +124,51 @@ export const searchLocalTool: ToolDefinition = {
             property_count: database.property_count,
             last_edited_time: database.last_edited_time,
           });
+        }
+      }
+
+      // Search database rows
+      if (type === 'database_row' || type === 'all') {
+        const rows = getLocalDatabaseRows({ query, limit, includeArchived, databaseId }) as Array<{
+          id: string;
+          database_id: string;
+          title: string;
+          url: string | null;
+          icon: string | null;
+          properties_json: string | null;
+          properties_text: string | null;
+          last_edited_time: string;
+          archived: number;
+        }>;
+
+        for (const row of rows) {
+          const entry: Record<string, unknown> = {
+            object: 'database_row',
+            id: row.id,
+            database_id: row.database_id,
+            title: row.title,
+            url: row.url,
+            icon: row.icon,
+            last_edited_time: row.last_edited_time,
+          };
+
+          if (row.archived) entry.archived = true;
+
+          if (includeContent && row.properties_json) {
+            try {
+              entry.properties = JSON.parse(row.properties_json);
+            } catch {
+              entry.properties_text = row.properties_text;
+            }
+          } else if (row.properties_text) {
+            // Provide a snippet of the flattened properties text
+            entry.snippet = row.properties_text.substring(0, 200);
+            if (row.properties_text.length > 200) {
+              entry.snippet += '...';
+            }
+          }
+
+          results.push(entry);
         }
       }
 
