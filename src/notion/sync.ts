@@ -170,9 +170,7 @@ function syncUsers(): void {
         email: (person?.email as string) || null,
         avatarUrl: (u.avatar_url as string) || null,
         // Bot-specific fields
-        botOwnerType: bot
-          ? ((bot.owner as Record<string, unknown>)?.type as string) || null
-          : null,
+        botOwnerType: bot ? ((bot.owner as Record<string, unknown>)?.type as string) || null : null,
         botWorkspaceId: bot
           ? ((bot.owner as Record<string, unknown>)?.workspace as boolean)
             ? 'workspace'
