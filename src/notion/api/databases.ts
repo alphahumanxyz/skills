@@ -45,12 +45,21 @@ export function getDataSource(dataSourceId: string): GetDataSourceResponse {
 
 /**
  * Query a database. Resolves the data_source_id internally.
+ * If the given ID is already a data_source ID (e.g. from search results),
+ * it queries directly instead of trying to resolve via /databases/.
  */
 export function queryDataSource(
   databaseId: string,
   body?: Record<string, unknown>
 ): QueryDataSourceResponse {
-  const dataSourceId = resolveDataSourceId(databaseId);
+  let dataSourceId: string;
+  try {
+    dataSourceId = resolveDataSourceId(databaseId);
+  } catch {
+    // The ID may already be a data_source ID (search returns data_source objects
+    // whose IDs are stored directly). Use it as-is.
+    dataSourceId = databaseId;
+  }
   return apiFetch<QueryDataSourceResponse>(`/data_sources/${dataSourceId}/query`, {
     method: 'POST',
     body: body || {},

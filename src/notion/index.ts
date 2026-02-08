@@ -101,9 +101,13 @@ function init(): void {
       saved.maxPagesPerContentSync || s.config.maxPagesPerContentSync;
   }
 
-  // Load sync state from store
-  const lastSync = state.get('last_sync_time') as number | null;
-  if (lastSync) s.syncStatus.lastSyncTime = lastSync;
+  // Load sync state from store (lastSyncTime may be an ISO string from
+  // setPartial or a number from legacy last_sync_time; parse tolerantly)
+  const lastSync = state.get('lastSyncTime') as string | number | null;
+  if (lastSync) {
+    s.syncStatus.lastSyncTime =
+      typeof lastSync === 'number' ? lastSync : new Date(lastSync).getTime();
+  }
 
   // Load entity counts
   const getEntityCounts = (
@@ -176,9 +180,6 @@ function stop(): void {
 
   // Persist config
   state.set('config', s.config);
-
-  // Persist sync state
-  state.set('last_sync_time', s.syncStatus.lastSyncTime);
 
   state.set('status', 'stopped');
   console.log('[notion] Stopped');

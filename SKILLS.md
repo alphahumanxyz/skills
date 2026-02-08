@@ -6,7 +6,7 @@ A plugin system for the [AlphaHuman](https://github.com/bnbpad/alphahuman) platf
 
 - **Near real-time capabilities via cron scheduling.** Skills register cron schedules with 6-field syntax (including seconds) for background monitoring, periodic health checks, and automated tasks. Schedules can run as frequently as every second.
 
-- **Powerful persistence through SQLite and key-value stores.** Each skill has an isolated SQLite database and a persistent key-value store. Query with SQL, store structured data, and maintain state across restarts — all without round-trips through the LLM.
+- **Powerful persistence through SQLite and key-value state.** Each skill has an isolated SQLite database and a persistent key-value state API. Query with SQL, store structured data, and maintain state across restarts — all without round-trips through the LLM.
 
 - **Cost efficient by keeping logic in code.** Tool handlers, data transformations, API calls, and business logic are written in TypeScript, compiled to JavaScript, and run in a sandboxed QuickJS runtime. The AI only sees tool definitions and results. This keeps prompts small and avoids spending tokens on logic that code handles better.
 
@@ -146,10 +146,10 @@ const CONFIG: SkillConfig = { apiKey: '', refreshInterval: 60 };
 
 function init(): void {
   // Called when skill is loaded
-  // Initialize database tables, load config from store
+  // Initialize database tables, load config from state
   db.exec('CREATE TABLE IF NOT EXISTS logs (...)', []);
 
-  const saved = store.get('config') as Partial<SkillConfig> | null;
+  const saved = state.get('config') as Partial<SkillConfig> | null;
   if (saved) {
     CONFIG.apiKey = saved.apiKey ?? CONFIG.apiKey;
   }
@@ -166,7 +166,7 @@ function stop(): void {
   // Called on shutdown
   // Unregister cron schedules, persist state
   cron.unregister('refresh');
-  store.set('config', CONFIG);
+  state.set('config', CONFIG);
 }
 
 function onCronTrigger(scheduleId: string): void {
@@ -209,7 +209,7 @@ function onSetupSubmit(args: {
       return { status: 'error', errors: [{ field: 'apiKey', message: 'Required' }] };
     }
     CONFIG.apiKey = apiKey;
-    store.set('config', CONFIG);
+    state.set('config', CONFIG);
     return { status: 'complete' };
   }
   return { status: 'error', errors: [] };
@@ -221,7 +221,7 @@ function onSetupCancel(): void {
 
 function onDisconnect(): void {
   // Called when user disconnects the skill
-  store.delete('config');
+  state.delete('config');
 }
 
 // ---------------------------------------------------------------------------
@@ -250,7 +250,7 @@ function onSetOption(args: { name: string; value: unknown }): void {
     CONFIG.refreshInterval = parseInt(args.value as string);
     cron.unregister('refresh');
     cron.register('refresh', `*/${CONFIG.refreshInterval} * * * * *`);
-    store.set('config', CONFIG);
+    state.set('config', CONFIG);
   }
 }
 
@@ -285,13 +285,14 @@ db.kvSet('key', { any: 'value' });
 const value = db.kvGet('key');
 ```
 
-### `store` — Persistent Key-Value Store
+### `state` — Persistent Key-Value State
 
 ```typescript
-store.set('config', { apiKey: 'xxx' });
-const config = store.get('config');
-store.delete('config');
-const keys = store.keys();
+state.set('config', { apiKey: 'xxx' });     // Persists AND publishes to frontend
+const config = state.get('config');          // Read from persistent store
+state.setPartial({ lastPing: Date.now() });  // Bulk set (persists + publishes each key)
+state.delete('config');                       // Remove from persistent store
+const keys = state.keys();                    // List all persisted keys
 ```
 
 ### `net` — HTTP Networking
@@ -410,7 +411,7 @@ function onSetupSubmit(args: { stepId: string; values: Record<string, unknown> }
   }
   if (args.stepId === "step2") {
     // Final step
-    store.set("config", finalConfig);
+    state.set("config", finalConfig);
     return { status: "complete" };
   }
 }
@@ -464,8 +465,7 @@ Once loaded, the REPL calls `init()` and `start()` automatically. If the skill r
 | `setup`                            | Run (or re-run) the setup wizard                             |
 | `options`                          | List runtime options via `onListOptions()`                   |
 | `option <name> <value>`            | Set a runtime option via `onSetOption()`                     |
-| `state`                            | Show published state (pretty-printed)                        |
-| `store`                            | Show persistent store contents                               |
+| `state`                            | Show state contents (pretty-printed)                         |
 | `db <sql>`                         | Run SQL (SELECT uses `db.all()`, others use `db.exec()`)     |
 | `mock fetch <url> <status> <body>` | Mock an HTTP response for `net.fetch`                        |
 | `env <key> <value>`                | Set environment variable for `platform.env()`                |
@@ -664,7 +664,7 @@ skills/                          # Repo root
 │   ├── example-skill/           # Kitchen-sink example
 │   └── simple-skill/            # Minimal test skill
 ├── skills/                      # Compiled JavaScript output (gitignored)
-├── data/                        # REPL/runner persistent data (skill.db, kv.json, etc.)
+├── data/                        # REPL/runner persistent data (skill.db, state.json, etc.)
 ├── types/
 │   └── globals.d.ts             # Ambient type declarations for bridge APIs
 ├── dev/

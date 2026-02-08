@@ -92,7 +92,6 @@ export function performSync(): void {
     const counts = getEntityCounts();
     if (counts.pages > 0 || counts.databases > 0) {
       s.syncStatus.lastSyncTime = nowMs;
-      state.set('last_sync_time', s.syncStatus.lastSyncTime);
     }
 
     // Update counts
@@ -187,7 +186,8 @@ function syncSearchItems(): void {
     return;
   }
 
-  const lastSyncTime = (state.get('last_sync_time') as number | null) || 0;
+  const s = globalThis.getNotionSkillState();
+  const lastSyncTime = s.syncStatus.lastSyncTime;
   const isFirstSync = lastSyncTime === 0;
   const cutoffMs = Date.now() - THIRTY_DAYS_MS;
 
@@ -415,7 +415,7 @@ function syncDatabaseRows(): void {
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           // Skip databases we can't query (permissions, deleted, etc.)
-          if (msg.includes('404') || msg.includes('403') || msg.includes('no data sources')) {
+          if (msg.includes('404') || msg.includes('403') || msg.includes('no data sources') || msg.includes('Could not find')) {
             console.warn(`[notion] Cannot query database "${database.title}" (${database.id}): ${msg}`);
             break;
           }

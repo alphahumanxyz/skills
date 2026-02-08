@@ -13,13 +13,13 @@ import { createPersistentDb, type PersistentDb } from './persistent-db';
 import { createPersistentState } from './persistent-state';
 
 export interface BridgeOptions {
-  /** When set, db/store/state/data use file-backed storage in this directory */
+  /** When set, db/state/data use file-backed storage in this directory */
   dataDir?: string;
 }
 
 /**
  * Create all bridge API globals and inject them into the provided context.
- * When options.dataDir is set, db/store/state/data use persistent file-backed storage.
+ * When options.dataDir is set, db/state/data use persistent file-backed storage.
  */
 export async function createBridgeAPIs(options?: BridgeOptions): Promise<Record<string, unknown>> {
   const state = getMockState();
@@ -121,7 +121,7 @@ export async function createBridgeAPIs(options?: BridgeOptions): Promise<Record<
     },
   };
 
-  // State API - persistent key-value store + frontend state publishing
+  // State API - unified persistent key-value state
   let stateApi;
   if (dataDir) {
     const pState = createPersistentState(join(dataDir, 'state.json'));

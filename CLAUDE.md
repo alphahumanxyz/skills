@@ -373,7 +373,7 @@ setupSkillTest(options?: {
 });
 
 callTool(name: string, args?: Record<string, unknown>): unknown;
-getMockState(): { store, state, fetchCalls, notifications, cronSchedules, ... };
+getMockState(): { state, fetchCalls, notifications, cronSchedules, ... };
 mockFetchResponse(url: string, status: number, body: string): void;
 mockFetchError(url: string, message?: string): void;
 ```

@@ -30,7 +30,7 @@ const DEFAULT_MODEL_PATH = join(ROOT_DIR, '.models', 'gemma-3n-E2B-it-Q4_K_M.ggu
 // ---------------------------------------------------------------------------
 
 export interface LiveBridgeOptions {
-  /** Directory for persistent file-backed storage (db, store, state, files) */
+  /** Directory for persistent file-backed storage (db, state, files) */
   dataDir: string;
   /** Path to GGUF model file. Defaults to .models/gemma-3n-E2B-it-Q4_K_M.gguf */
   modelPath?: string;
@@ -202,7 +202,7 @@ function realFetch(
 /**
  * Create all bridge API globals backed by real implementations.
  * - net.fetch: real HTTP via curl (synchronous)
- * - db/store/state/data: persistent file-backed storage in dataDir
+ * - db/state/data: persistent file-backed storage in dataDir
  * - platform.os/env: real values from the host process
  */
 export async function createBridgeAPIs(
@@ -362,7 +362,7 @@ export async function createBridgeAPIs(
     },
   };
 
-  // State — unified persistent key-value store + frontend-publishing state
+  // State — unified persistent key-value state
   const stateFilePath = join(dataDir, 'state.json');
   const pState = createPersistentState(stateFilePath);
   const stateApi = {
