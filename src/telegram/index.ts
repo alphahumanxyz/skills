@@ -546,22 +546,22 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
       };
     }
 
-    // Check if client is ready
+    // Check if client is ready — retry initialization if needed
     if (!s.client) {
-      if (s.clientConnecting) {
-        return {
-          status: 'error',
-          errors: [
-            {
-              field: 'phoneNumber',
-              message: 'Still connecting to Telegram. Please wait a moment and try again.',
-            },
-          ],
-        };
+      if (!s.clientConnecting) {
+        // Client not connecting — kick off initialization again
+        initClient().catch(err => {
+          console.error('[telegram] Re-init client failed:', err);
+        });
       }
       return {
         status: 'error',
-        errors: [{ field: 'phoneNumber', message: 'Client not connected. Please restart setup.' }],
+        errors: [
+          {
+            field: 'phoneNumber',
+            message: 'Connecting to Telegram... Please wait a moment and try again.',
+          },
+        ],
       };
     }
 
@@ -681,10 +681,35 @@ function onSetupCancel(): void {
 
 function publishState(): void {
   const s = globalThis.getTelegramSkillState();
+  const isConnected = s.client !== null && s.client.initialized;
+  const isConnecting = s.clientConnecting;
+  const isAuthenticated = s.config.isAuthenticated;
+
+  // Map to SkillHostConnectionState fields expected by the frontend
+  const connection_status: string = s.clientError
+    ? 'error'
+    : isConnecting
+      ? 'connecting'
+      : isConnected
+        ? 'connected'
+        : 'disconnected';
+
+  const auth_status: string = s.clientError
+    ? 'error'
+    : isAuthenticated
+      ? 'authenticated'
+      : s.authState === 'waitCode' || s.authState === 'waitPassword'
+        ? 'authenticating'
+        : 'not_authenticated';
+
   state.setPartial({
-    connected: s.client !== null && s.client.initialized,
-    connecting: s.clientConnecting,
-    authenticated: s.config.isAuthenticated,
+    // Standard SkillHostConnectionState fields
+    connection_status,
+    auth_status,
+    connection_error: s.clientError || null,
+    auth_error: null,
+    is_initialized: isConnected,
+    // Skill-specific fields
     authState: s.authState,
     pendingCode: s.config.pendingCode,
     phoneNumber: s.config.phoneNumber ? s.config.phoneNumber.slice(0, 4) + '****' : null,
