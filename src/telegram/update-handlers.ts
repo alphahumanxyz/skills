@@ -112,11 +112,7 @@ function handleUpdateNewChat(update: TdUpdate): void {
     entities: {
       chat: { type: entityType, id: String(data.chat.id), properties: { title: data.chat.title } },
     },
-    data: {
-      chat_id: String(data.chat.id),
-      title: data.chat.title,
-      chat_type: entityType,
-    },
+    data: { chat_id: String(data.chat.id), title: data.chat.title, chat_type: entityType },
   });
 }
 
@@ -271,9 +267,7 @@ function handleUpdateMessageContent(update: TdUpdate): void {
     type: 'telegram.message.edited',
     source: 'telegram',
     timestamp: Date.now(),
-    entities: {
-      chat: { type: 'telegram.group', id: String(data.chat_id) },
-    },
+    entities: { chat: { type: 'telegram.group', id: String(data.chat_id) } },
     data: {
       text: extractText(data.new_content),
       content_type: data.new_content['@type'] ?? 'unknown',
@@ -309,9 +303,7 @@ function handleUpdateDeleteMessages(update: TdUpdate): void {
       type: 'telegram.message.deleted',
       source: 'telegram',
       timestamp: Date.now(),
-      entities: {
-        chat: { type: 'telegram.group', id: String(data.chat_id) },
-      },
+      entities: { chat: { type: 'telegram.group', id: String(data.chat_id) } },
       data: {
         chat_id: String(data.chat_id),
         message_ids: data.message_ids.map(String),
@@ -349,13 +341,8 @@ function handleUpdateUserStatus(update: TdUpdate): void {
     type: 'telegram.user.status_changed',
     source: 'telegram',
     timestamp: Date.now(),
-    entities: {
-      user: { type: 'telegram.contact', id: String(data.user_id) },
-    },
-    data: {
-      user_id: String(data.user_id),
-      status_type: data.status['@type'],
-    },
+    entities: { user: { type: 'telegram.contact', id: String(data.user_id) } },
+    data: { user_id: String(data.user_id), status_type: data.status['@type'] },
   });
 }
 

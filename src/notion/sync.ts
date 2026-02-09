@@ -608,10 +608,7 @@ function syncSummariesToServer(): void {
 
       const resp = net.fetch(`${backendUrl}/api/summaries`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify(submission),
         timeout: 10000,
       });
