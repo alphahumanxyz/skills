@@ -1,22 +1,6 @@
 // Tool: notion-list-all-pages
-import type { NotionApi } from '../api/index';
-import type { NotionGlobals } from '../types';
-
-// Resolve from globalThis at runtime (esbuild IIFE breaks module imports)
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
-const getApi = (): NotionApi => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
-    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
-  }
-  return (g as Record<string, unknown>).notionApi as NotionApi;
-};
+import { notionApi } from '../api/index';
+import { formatApiError, formatPageSummary } from '../helpers';
 
 export const listAllPagesTool: ToolDefinition = {
   name: 'list-all-pages',
@@ -32,10 +16,9 @@ export const listAllPagesTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { formatPageSummary } = n();
       const pageSize = Math.min((args.page_size as number) || 20, 100);
 
-      const result = getApi().search({
+      const result = notionApi.search({
         filter: { property: 'object', value: 'page' },
         page_size: pageSize,
       });
@@ -44,7 +27,7 @@ export const listAllPagesTool: ToolDefinition = {
 
       return JSON.stringify({ count: pages.length, has_more: result.has_more, pages });
     } catch (e) {
-      return JSON.stringify({ error: n().formatApiError(e) });
+      return JSON.stringify({ error: formatApiError(e) });
     }
   },
 };

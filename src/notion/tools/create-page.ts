@@ -1,22 +1,11 @@
 // Tool: notion-create-page
-import type { NotionApi } from '../api/index';
-import type { NotionGlobals } from '../types';
-
-// Resolve from globalThis at runtime (esbuild IIFE breaks module imports)
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
-const getApi = (): NotionApi => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
-    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
-  }
-  return (g as Record<string, unknown>).notionApi as NotionApi;
-};
+import { notionApi } from '../api/index';
+import {
+  buildParagraphBlock,
+  buildRichText,
+  formatApiError,
+  formatPageSummary,
+} from '../helpers';
 
 export const createPageTool: ToolDefinition = {
   name: 'create-page',
@@ -43,8 +32,6 @@ export const createPageTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { formatPageSummary, buildRichText, buildParagraphBlock } = n();
-      const api = getApi();
       const parentId = (args.parent_id as string) || '';
       const parentType = (args.parent_type as string) || 'page_id';
       const title = (args.title as string) || '';
@@ -60,7 +47,7 @@ export const createPageTool: ToolDefinition = {
 
       let parentPayload: Record<string, unknown>;
       if (parentType === 'database_id') {
-        const dataSourceId = api.resolveDataSourceId(parentId);
+        const dataSourceId = notionApi.resolveDataSourceId(parentId);
         parentPayload = { data_source_id: dataSourceId };
       } else {
         parentPayload = { [parentType]: parentId };
@@ -86,14 +73,14 @@ export const createPageTool: ToolDefinition = {
         body.children = [buildParagraphBlock(content)];
       }
 
-      const page = api.createPage(body);
+      const page = notionApi.createPage(body);
 
       return JSON.stringify({
         success: true,
         page: formatPageSummary(page as Record<string, unknown>),
       });
     } catch (e) {
-      return JSON.stringify({ error: n().formatApiError(e) });
+      return JSON.stringify({ error: formatApiError(e) });
     }
   },
 };

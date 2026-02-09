@@ -1,22 +1,6 @@
 // Tool: notion-query-database
-import type { NotionApi } from '../api/index';
-import type { NotionGlobals } from '../types';
-
-// Resolve from globalThis at runtime (esbuild IIFE breaks module imports)
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
-const getApi = (): NotionApi => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
-    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
-  }
-  return (g as Record<string, unknown>).notionApi as NotionApi;
-};
+import { notionApi } from '../api/index';
+import { formatApiError, formatPageSummary } from '../helpers';
 
 export const queryDatabaseTool: ToolDefinition = {
   name: 'query-database',
@@ -36,7 +20,6 @@ export const queryDatabaseTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { formatPageSummary } = n();
       const databaseId = (args.database_id as string) || '';
       const filterJson = args.filter as string | undefined;
       const sortsJson = args.sorts as string | undefined;
@@ -64,7 +47,7 @@ export const queryDatabaseTool: ToolDefinition = {
         }
       }
 
-      const result = getApi().queryDataSource(databaseId, body);
+      const result = notionApi.queryDataSource(databaseId, body);
 
       const rows = result.results.map((page: Record<string, unknown>) => {
         return { ...formatPageSummary(page), properties: page.properties };
@@ -72,7 +55,7 @@ export const queryDatabaseTool: ToolDefinition = {
 
       return JSON.stringify({ count: rows.length, has_more: result.has_more, rows });
     } catch (e) {
-      return JSON.stringify({ error: n().formatApiError(e) });
+      return JSON.stringify({ error: formatApiError(e) });
     }
   },
 };

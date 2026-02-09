@@ -1,15 +1,7 @@
 // Tool: notion-sync-now
 // Triggers an immediate sync and returns the result
+import { performSync } from '../sync';
 import '../skill-state';
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
 
 export const syncNowTool: ToolDefinition = {
   name: 'sync-now',
@@ -39,8 +31,6 @@ export const syncNowTool: ToolDefinition = {
         });
       }
 
-      // Trigger sync
-      const { performSync } = n();
       performSync();
 
       // Return results after sync completes

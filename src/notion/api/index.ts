@@ -1,16 +1,4 @@
 // Barrel export for the Notion API layer.
-//
-// IMPORTANT: esbuild IIFE bundling with the SKILL_HEADER `var exports = {}`
-// breaks inter-module imports.  `import * as pages from './pages'` resolves
-// to an empty object at runtime because tsc CJS output writes to the global
-// `exports` shim rather than to esbuild's per-module export objects.
-//
-// Workaround: we still import the modules (to trigger their initialization),
-// but build the notionApi object by reading functions from globalThis.exports
-// where the CJS modules actually placed them.
-//
-// The NotionApi interface is defined explicitly so TypeScript consumers
-// get proper return types (the runtime object is cast to this interface).
 import type {
   AppendBlockChildrenResponse,
   CreateCommentResponse,
@@ -70,10 +58,6 @@ export interface NotionApi {
   // search
   search(body: Record<string, unknown>): SearchResponse;
 }
-
-// After all modules initialize, their exported functions live on
-// globalThis.exports (the SKILL_HEADER's `var exports = {}`).
-const _e = (globalThis as unknown as { exports: Record<string, unknown> }).exports;
 
 export const notionApi: NotionApi = {
   // pages

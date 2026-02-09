@@ -1,22 +1,6 @@
 // Tool: notion-update-database
-import type { NotionApi } from '../api/index';
-import type { NotionGlobals } from '../types';
-
-// Resolve from globalThis at runtime (esbuild IIFE breaks module imports)
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
-const getApi = (): NotionApi => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
-    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
-  }
-  return (g as Record<string, unknown>).notionApi as NotionApi;
-};
+import { notionApi } from '../api/index';
+import { buildRichText, formatApiError, formatDatabaseSummary } from '../helpers';
 
 export const updateDatabaseTool: ToolDefinition = {
   name: 'update-database',
@@ -32,7 +16,6 @@ export const updateDatabaseTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { formatDatabaseSummary, buildRichText } = n();
       const databaseId = (args.database_id as string) || '';
       const title = args.title as string | undefined;
       const propsJson = args.properties as string | undefined;
@@ -59,14 +42,14 @@ export const updateDatabaseTool: ToolDefinition = {
         return JSON.stringify({ error: 'No updates specified' });
       }
 
-      const dbResult = getApi().updateDatabase(databaseId, body);
+      const dbResult = notionApi.updateDatabase(databaseId, body);
 
       return JSON.stringify({
         success: true,
         database: formatDatabaseSummary(dbResult as Record<string, unknown>),
       });
     } catch (e) {
-      return JSON.stringify({ error: n().formatApiError(e) });
+      return JSON.stringify({ error: formatApiError(e) });
     }
   },
 };

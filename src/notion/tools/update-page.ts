@@ -1,22 +1,6 @@
 // Tool: notion-update-page
-import type { NotionApi } from '../api/index';
-import type { NotionGlobals } from '../types';
-
-// Resolve from globalThis at runtime (esbuild IIFE breaks module imports)
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
-const getApi = (): NotionApi => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
-    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
-  }
-  return (g as Record<string, unknown>).notionApi as NotionApi;
-};
+import { notionApi } from '../api/index';
+import { buildRichText, formatApiError, formatPageSummary } from '../helpers';
 
 export const updatePageTool: ToolDefinition = {
   name: 'update-page',
@@ -39,7 +23,6 @@ export const updatePageTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { formatPageSummary, buildRichText } = n();
       const pageId = (args.page_id as string) || '';
       const title = args.title as string | undefined;
       const propsJson = args.properties as string | undefined;
@@ -73,14 +56,14 @@ export const updatePageTool: ToolDefinition = {
         return JSON.stringify({ error: 'No updates specified' });
       }
 
-      const page = getApi().updatePage(pageId, body);
+      const page = notionApi.updatePage(pageId, body);
 
       return JSON.stringify({
         success: true,
         page: formatPageSummary(page as Record<string, unknown>),
       });
     } catch (e) {
-      return JSON.stringify({ error: n().formatApiError(e) });
+      return JSON.stringify({ error: formatApiError(e) });
     }
   },
 };

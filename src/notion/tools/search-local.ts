@@ -1,14 +1,11 @@
 // Tool: notion-search-local
 // Query local SQLite pages and databases by title/content
-import type { NotionGlobals } from '../types';
-
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
+import {
+  getLocalDatabases,
+  getLocalDatabaseRows,
+  getLocalPages,
+} from '../db-helpers';
+import { formatApiError } from '../helpers';
 
 export const searchLocalTool: ToolDefinition = {
   name: 'search-local',
@@ -46,7 +43,6 @@ export const searchLocalTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-      const { getLocalPages, getLocalDatabases, getLocalDatabaseRows } = n();
 
       const query = (args.query as string) || '';
       if (!query) {
@@ -184,7 +180,7 @@ export const searchLocalTool: ToolDefinition = {
 
       return JSON.stringify({ query, count: trimmed.length, results: trimmed });
     } catch (e) {
-      return JSON.stringify({ error: n().formatApiError(e) });
+      return JSON.stringify({ error: formatApiError(e) });
     }
   },
 };
