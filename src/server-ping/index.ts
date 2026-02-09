@@ -518,8 +518,6 @@ const skill: Skill = {
   info: {
     id: 'server-ping',
     name: 'Server Ping',
-    runtime: 'v8',
-    entry: 'index.js',
     version: '2.2.0',
     description:
       'Monitors server health with configurable ping intervals using setInterval. Demos setup flow, DB, state, data, net, platform, skills interop, options, and tools.',

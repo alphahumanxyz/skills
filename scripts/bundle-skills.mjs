@@ -24,35 +24,88 @@ var module = { exports: exports };
 `;
 
 // Footer code that exposes the bundled skill object to globalThis.__skill
-// The V8 runtime will access the skill via globalThis.__skill.default
+// The V8/QuickJS runtime accesses the skill via globalThis.__skill.default or globalThis
 const SKILL_FOOTER = `
-// Expose skill bundle to globalThis for V8 runtime access
-// Use module.exports.default if available (CommonJS), otherwise use __skill_bundle
-globalThis.__skill = module.exports.default ? { default: module.exports.default } : __skill_bundle;
-
-// IMPORTANT: Fix for esbuild CommonJS interop issue
-// Tool modules write to global 'exports' object, but the tools array references
-// empty module-specific exports. Rebuild tools array from global exports.
+// Expose skill bundle to globalThis for runtime access.
+// Priority: module.exports.default > __skill_bundle (esbuild IIFE return) > globalThis
 (function() {
-  var skill = globalThis.__skill && globalThis.__skill.default;
-  if (!skill || !skill.tools) return;
+  var skill = null;
+  if (module.exports && module.exports.default) {
+    skill = module.exports.default;
+  } else if (typeof __skill_bundle === 'object' && __skill_bundle !== null) {
+    skill = __skill_bundle;
+  }
 
-  // Check if tools array has undefined elements (sign of the CommonJS issue)
-  var hasUndefined = skill.tools.some(function(t) { return t === undefined || t === null; });
-  if (!hasUndefined) return;
+  // If neither produced a usable object, build one from globalThis properties
+  // (esbuild IIFE may return undefined when using __esm pattern)
+  if (!skill || typeof skill !== 'object') {
+    skill = {};
+    // Collect lifecycle functions from globalThis (where _g = globalThis assigns them)
+    var lifecycleFns = ['init','start','stop','onCronTrigger','onSessionStart','onSessionEnd',
+      'onSetupStart','onSetupSubmit','onSetupCancel','onOAuthComplete','onOAuthRevoked',
+      'onDisconnect','onListOptions','onSetOption','onServerEvent','publishState','onRpc'];
+    for (var i = 0; i < lifecycleFns.length; i++) {
+      if (typeof globalThis[lifecycleFns[i]] === 'function') {
+        skill[lifecycleFns[i]] = globalThis[lifecycleFns[i]];
+      }
+    }
+  }
 
-  // Collect tools from global exports object (where they actually ended up)
+  // Attach tools: prefer skill.tools, then globalThis.tools (set by bare assignment in IIFE)
+  if (!skill.tools && globalThis.tools) {
+    skill.tools = globalThis.tools;
+  }
+
+  // Fix undefined/null entries in tools array (esbuild CommonJS interop issue).
+  // Tool modules write to the global 'exports' object; the original tools array
+  // may reference stale module-scoped exports that resolved to undefined.
+  // Always merge tools from both the skill.tools array AND the exports object,
+  // since esbuild __esm pattern causes some tool references to resolve to undefined
+  // while the actual tool objects end up on the outer 'exports' object.
+  var toolsArr = skill.tools || [];
   var fixedTools = [];
+  var seenNames = {};
+
+  // 1. Keep valid tools from the existing array
+  for (var k = 0; k < toolsArr.length; k++) {
+    if (toolsArr[k] && typeof toolsArr[k] === 'object' && toolsArr[k].name && typeof toolsArr[k].execute === 'function') {
+      if (!seenNames[toolsArr[k].name]) {
+        fixedTools.push(toolsArr[k]);
+        seenNames[toolsArr[k].name] = true;
+      }
+    }
+  }
+
+  // 2. Always collect tool-shaped objects from global exports (dedup by name)
   for (var key in exports) {
-    if (key.endsWith('Tool') && exports[key] && exports[key].name && exports[key].execute) {
-      fixedTools.push(exports[key]);
+    if (exports[key] && typeof exports[key] === 'object' && exports[key].name && typeof exports[key].execute === 'function') {
+      if (!seenNames[exports[key].name]) {
+        fixedTools.push(exports[key]);
+        seenNames[exports[key].name] = true;
+      }
+    }
+  }
+
+  // 3. Also check globalThis.tools for any we may have missed
+  var gtTools = globalThis.tools || [];
+  for (var g = 0; g < gtTools.length; g++) {
+    if (gtTools[g] && typeof gtTools[g] === 'object' && gtTools[g].name && typeof gtTools[g].execute === 'function') {
+      if (!seenNames[gtTools[g].name]) {
+        fixedTools.push(gtTools[g]);
+        seenNames[gtTools[g].name] = true;
+      }
     }
   }
 
   if (fixedTools.length > 0) {
     skill.tools = fixedTools;
-    console.log('[skill-fixup] Rebuilt tools array from exports (' + fixedTools.length + ' tools)');
+    globalThis.tools = fixedTools;
+    if (fixedTools.length !== toolsArr.length) {
+      console.log('[skill-fixup] Rebuilt tools array (' + fixedTools.length + ' tools, was ' + toolsArr.length + ')');
+    }
   }
+
+  globalThis.__skill = { default: skill };
 })();
 `;
 

@@ -2,8 +2,6 @@ interface Skill {
   info: {
     id: string;
     name: string;
-    runtime: string;
-    entry: string;
     version: string;
     description: string;
     auto_start: boolean;
@@ -17,6 +15,10 @@ interface Skill {
   onSetupStart?: () => SetupStartResult;
   onSetupSubmit?: (args: { stepId: string; values: Record<string, unknown> }) => SetupSubmitResult;
   onSetupCancel?: () => void;
+  onOAuthComplete?: (args: OAuthCompleteArgs) => unknown;
+  onDisconnect?: () => void;
+  publishState?: () => void;
+  onOAuthRevoked?: (args: OAuthRevokedArgs) => void;
   onListOptions?: () => { options: SkillOption[] };
   onSetOption?: (args: { name: string; value: unknown }) => void;
   onSessionStart?: (args: { sessionId: string }) => void;

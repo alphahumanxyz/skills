@@ -897,8 +897,6 @@ const skill: Skill = {
   info: {
     id: 'telegram',
     name: 'Telegram',
-    runtime: 'v8',
-    entry: 'index.js',
     version: '2.1.0', // Bumped for persistent storage
     description: 'Telegram integration via TDLib with persistent storage',
     auto_start: false,

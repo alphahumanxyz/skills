@@ -369,41 +369,6 @@ function publishState(): void {
 // Tool definitions
 // ---------------------------------------------------------------------------
 
-tools = [
-  // Pages
-  searchTool,
-  getPageTool,
-  createPageTool,
-  updatePageTool,
-  deletePageTool,
-  getPageContentTool,
-  listAllPagesTool,
-  appendTextTool,
-  // Databases
-  queryDatabaseTool,
-  getDatabaseTool,
-  createDatabaseTool,
-  updateDatabaseTool,
-  listAllDatabasesTool,
-  // Blocks
-  getBlockTool,
-  getBlockChildrenTool,
-  appendBlocksTool,
-  updateBlockTool,
-  deleteBlockTool,
-  // Users
-  listUsersTool,
-  getUserTool,
-  // Comments
-  createCommentTool,
-  listCommentsTool,
-  // Local sync tools
-  searchLocalTool,
-  syncStatusTool,
-  syncNowTool,
-  // AI tools
-  summarizePagesTool,
-];
 
 // ---------------------------------------------------------------------------
 // Expose lifecycle hooks on globalThis so the REPL/runtime can call them.
@@ -423,3 +388,63 @@ _g.onDisconnect = onDisconnect;
 _g.onListOptions = onListOptions;
 _g.onSetOption = onSetOption;
 _g.publishState = publishState;
+
+const skill: Skill = {
+  info: {
+    id: 'notion',
+    name: 'Notion',
+    version: '2.1.0', // Bumped for persistent storage
+    description: 'Notion integration with persistent storage',
+    auto_start: false,
+    setup: { required: true, label: 'Configure Notion' },
+  },
+  tools: [
+ // Pages
+ searchTool,
+ getPageTool,
+ createPageTool,
+ updatePageTool,
+ deletePageTool,
+ getPageContentTool,
+ listAllPagesTool,
+ appendTextTool,
+ // Databases
+ queryDatabaseTool,
+ getDatabaseTool,
+ createDatabaseTool,
+ updateDatabaseTool,
+ listAllDatabasesTool,
+ // Blocks
+ getBlockTool,
+ getBlockChildrenTool,
+ appendBlocksTool,
+ updateBlockTool,
+ deleteBlockTool,
+ // Users
+ listUsersTool,
+ getUserTool,
+ // Comments
+ createCommentTool,
+ listCommentsTool,
+ // Local sync tools
+ searchLocalTool,
+ syncStatusTool,
+ syncNowTool,
+ // AI tools
+ summarizePagesTool,
+  ],
+  init,
+  start,
+  stop,
+  onCronTrigger,
+  onSessionStart,
+  onSessionEnd,
+  onOAuthComplete,
+  onOAuthRevoked,
+  onDisconnect,
+  onListOptions,
+  onSetOption,
+  publishState,
+};
+
+export default skill;
