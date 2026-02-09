@@ -1,11 +1,8 @@
 // Export all Telegram tool definitions.
-
-import { getChatsToolDefinition } from './get-chats';
-import { getMessagesToolDefinition } from './get-messages';
-import { getContactsToolDefinition } from './get-contacts';
 import { getChatStatsToolDefinition } from './get-chat-stats';
-
-
+import { getChatsToolDefinition } from './get-chats';
+import { getContactsToolDefinition } from './get-contacts';
+import { getMessagesToolDefinition } from './get-messages';
 
 /**
  * Get all storage-related tool definitions.

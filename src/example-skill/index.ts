@@ -521,7 +521,6 @@ function publishState(): void {
 const _g = globalThis as Record<string, unknown>;
 _g.publishState = publishState;
 
-
 const skill: Skill = {
   info: {
     id: 'example-skill',

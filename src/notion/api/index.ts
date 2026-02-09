@@ -20,13 +20,27 @@ import type {
   UpdatePageResponse,
 } from '@notionhq/client/build/src/api-endpoints';
 
-// Side-effect imports — trigger module initialization
-import { getDatabase, resolveDataSourceId, getDataSource, queryDataSource, createDatabase, updateDatabase, listAllDatabases } from './databases';
-import { getPage, createPage, updatePage, archivePage, getPageContent } from './pages';
-import { getBlock, getBlockChildren, appendBlockChildren, updateBlock, deleteBlock } from './blocks';
-import { getUser, listUsers } from './users';
+import {
+  appendBlockChildren,
+  deleteBlock,
+  getBlock,
+  getBlockChildren,
+  updateBlock,
+} from './blocks';
 import { createComment, listComments } from './comments';
+// Side-effect imports — trigger module initialization
+import {
+  createDatabase,
+  getDatabase,
+  getDataSource,
+  listAllDatabases,
+  queryDataSource,
+  resolveDataSourceId,
+  updateDatabase,
+} from './databases';
+import { archivePage, createPage, getPage, getPageContent, updatePage } from './pages';
 import { search } from './search';
+import { getUser, listUsers } from './users';
 
 export interface NotionApi {
   // pages

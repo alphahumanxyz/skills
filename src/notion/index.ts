@@ -4,9 +4,9 @@
 // Authentication is handled via the platform OAuth bridge.
 import './api/index';
 import './db-helpers';
+import { getEntityCounts } from './db-helpers';
 import './db-schema';
 import { initializeNotionSchema } from './db-schema';
-import { getEntityCounts } from './db-helpers';
 import { getNotionSkillState } from './skill-state';
 import type { NotionSkillConfig } from './skill-state';
 import { performSync } from './sync';

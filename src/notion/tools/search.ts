@@ -1,10 +1,6 @@
 // Tool: notion-search
 import { notionApi } from '../api/index';
-import {
-  formatApiError,
-  formatDatabaseSummary,
-  formatPageSummary,
-} from '../helpers';
+import { formatApiError, formatDatabaseSummary, formatPageSummary } from '../helpers';
 
 export const searchTool: ToolDefinition = {
   name: 'search',

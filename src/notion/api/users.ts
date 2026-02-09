@@ -1,7 +1,7 @@
 // Notion Users API
 import type { GetUserResponse, ListUsersResponse } from '@notionhq/client/build/src/api-endpoints';
-import { apiFetch } from './client';
 
+import { apiFetch } from './client';
 
 export function getUser(userId: string): GetUserResponse {
   return apiFetch<GetUserResponse>(`/users/${userId}`);

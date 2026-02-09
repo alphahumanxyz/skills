@@ -1,10 +1,6 @@
 // Tool: notion-append-text
 import { notionApi } from '../api/index';
-import {
-  buildParagraphBlock,
-  formatApiError,
-  formatBlockSummary,
-} from '../helpers';
+import { buildParagraphBlock, formatApiError, formatBlockSummary } from '../helpers';
 
 export const appendTextTool: ToolDefinition = {
   name: 'append-text',

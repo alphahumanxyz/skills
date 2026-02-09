@@ -1,10 +1,6 @@
 // Tool: notion-search-local
 // Query local SQLite pages and databases by title/content
-import {
-  getLocalDatabases,
-  getLocalDatabaseRows,
-  getLocalPages,
-} from '../db-helpers';
+import { getLocalDatabaseRows, getLocalDatabases, getLocalPages } from '../db-helpers';
 import { formatApiError } from '../helpers';
 
 export const searchLocalTool: ToolDefinition = {
@@ -43,7 +39,6 @@ export const searchLocalTool: ToolDefinition = {
   },
   execute(args: Record<string, unknown>): string {
     try {
-
       const query = (args.query as string) || '';
       if (!query) {
         return JSON.stringify({ error: 'Search query is required' });

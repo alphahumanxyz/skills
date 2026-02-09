@@ -8,8 +8,7 @@ export function notionFetch(
   endpoint: string,
   options: { method?: string; body?: unknown } = {}
 ): unknown {
-  if (!oauth.getCredential())
-    throw new Error('Notion not connected. Please complete setup first.');
+  if (!oauth.getCredential()) throw new Error('Notion not connected. Please complete setup first.');
 
   const response = oauth.fetch(`/v1${endpoint}`, {
     method: options.method || 'GET',

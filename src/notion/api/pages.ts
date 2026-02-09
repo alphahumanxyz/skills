@@ -5,8 +5,8 @@ import type {
   ListBlockChildrenResponse,
   UpdatePageResponse,
 } from '@notionhq/client/build/src/api-endpoints';
-import { apiFetch } from './client';
 
+import { apiFetch } from './client';
 
 export function getPage(pageId: string): GetPageResponse {
   return apiFetch<GetPageResponse>(`/pages/${pageId}`);

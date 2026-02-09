@@ -446,7 +446,6 @@ _g.performSync = performSync;
 _g.publishSkillState = publishSkillState;
 _g.loadGmailProfile = loadGmailProfile;
 
-
 const skill: Skill = {
   info: {
     id: 'gmail',

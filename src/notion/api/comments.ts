@@ -3,8 +3,8 @@ import type {
   CreateCommentResponse,
   ListCommentsResponse,
 } from '@notionhq/client/build/src/api-endpoints';
-import { apiFetch } from './client';
 
+import { apiFetch } from './client';
 
 export function createComment(body: Record<string, unknown>): CreateCommentResponse {
   return apiFetch<CreateCommentResponse>('/comments', { method: 'POST', body });

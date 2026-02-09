@@ -14,7 +14,6 @@ import './sync';
 import type { TdLibClient as TdLibClientType, TdUpdate, TdUser } from './tdlib-client';
 import './tdlib-client';
 import tools from './tools/index';
-
 // registers globalThis.telegramSync
 // Import tool definitions
 // registers globalThis.telegramDb
@@ -900,12 +899,7 @@ const skill: Skill = {
     auto_start: false,
     setup: { required: true, label: 'Configure Telegram' },
   },
-  tools: [
-    telegramPingTool,
-    telegramStatusTool,
-    telegramSyncTool,
-    ...tools,
-  ],
+  tools: [telegramPingTool, telegramStatusTool, telegramSyncTool, ...tools],
   init,
   start,
   stop,

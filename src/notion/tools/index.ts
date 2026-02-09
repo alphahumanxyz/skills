@@ -53,6 +53,6 @@ export const tools: ToolDefinition[] = [
   updateBlockTool,
   updateDatabaseTool,
   updatePageTool,
-]
+];
 
 export default tools;

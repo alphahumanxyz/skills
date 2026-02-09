@@ -6,6 +6,7 @@ import type {
   ListBlockChildrenResponse,
   UpdateBlockResponse,
 } from '@notionhq/client/build/src/api-endpoints';
+
 import { apiFetch } from './client';
 
 export function getBlock(blockId: string): GetBlockResponse {

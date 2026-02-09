@@ -1,11 +1,6 @@
 // Tool: notion-create-page
 import { notionApi } from '../api/index';
-import {
-  buildParagraphBlock,
-  buildRichText,
-  formatApiError,
-  formatPageSummary,
-} from '../helpers';
+import { buildParagraphBlock, buildRichText, formatApiError, formatPageSummary } from '../helpers';
 
 export const createPageTool: ToolDefinition = {
   name: 'create-page',
