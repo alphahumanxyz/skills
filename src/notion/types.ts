@@ -1,6 +1,4 @@
-// Shared type for Notion helper functions exposed on globalThis
-import type { NotionApi } from './api/index';
-
+// Shared type for Notion helper/API surface used by tools and sync
 export interface NotionGlobals {
   notionFetch(endpoint: string, options?: { method?: string; body?: unknown }): unknown;
   formatApiError(error: unknown): string;
@@ -54,28 +52,4 @@ export interface NotionGlobals {
   getUnsyncedSummaries(limit: number): unknown[];
   markSummariesSynced(ids: number[]): void;
   performSync(): void;
-}
-
-// Access helpers at runtime (call inside execute(), not at module scope).
-// In the production QuickJS runtime, helpers are on globalThis.
-// In esbuild IIFE bundles, helpers end up on the shared `exports` object
-// due to CommonJS interop (__esm wrappers write to the outer exports shim).
-// This function checks both locations.
-export function n(): NotionGlobals {
-  const g = globalThis as unknown as Record<string, unknown>;
-  // When bundled with esbuild, helpers are on the 'exports' shim object
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-}
-
-// Access the typed Notion API layer at runtime.
-// Same dual-location resolution as n().
-export function getApi(): NotionApi {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
-    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
-  }
-  return (g as Record<string, unknown>).notionApi as NotionApi;
 }

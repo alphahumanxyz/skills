@@ -1,29 +1,21 @@
 // Notion sync engine
 // Periodically downloads pages, databases, users, and page content from Notion
 // into local SQLite for fast local querying.
-import type { NotionApi } from './api/index';
+import { notionApi } from './api/index';
+import {
+  getDatabaseById,
+  getDatabaseRowById,
+  getEntityCounts,
+  getLocalDatabases,
+  getPageById,
+  getPagesNeedingContent,
+  updatePageContent,
+  upsertDatabase,
+  upsertDatabaseRow,
+  upsertPage,
+} from './db-helpers';
+import { fetchBlockTreeText } from './helpers';
 import './skill-state';
-import type { NotionGlobals } from './types';
-
-// Resolve helpers and API from globalThis at call time.
-// We avoid module imports of n()/getApi() because esbuild's IIFE bundling
-// can fail to resolve peer-module exports in sync.ts (tools/ works fine
-// because they're in a subdirectory). Resolving from globalThis is reliable.
-const n = (): NotionGlobals => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionFetch === 'function') {
-    return g.exports as unknown as NotionGlobals;
-  }
-  return globalThis as unknown as NotionGlobals;
-};
-
-const getApi = (): NotionApi => {
-  const g = globalThis as unknown as Record<string, unknown>;
-  if (g.exports && typeof (g.exports as Record<string, unknown>).notionApi === 'object') {
-    return (g.exports as Record<string, unknown>).notionApi as NotionApi;
-  }
-  return g.notionApi as NotionApi;
-};
 
 // ---------------------------------------------------------------------------
 // Main sync orchestrator
@@ -76,9 +68,6 @@ export function performSync(): void {
     const nowMs = Date.now();
     s.syncStatus.nextSyncTime = nowMs + s.config.syncIntervalMinutes * 60 * 1000;
     s.syncStatus.lastSyncDurationMs = durationMs;
-
-    // Persist sync time in database
-    const { getEntityCounts } = n();
 
     // Only advance lastSyncTime if we actually have items in the DB.
     // This prevents the incremental sync from skipping everything on the
@@ -134,7 +123,7 @@ function syncUsers(): void {
   const allUsers: Array<Record<string, unknown>> = [];
 
   while (hasMore) {
-    const result = getApi().listUsers(100, startCursor);
+    const result = notionApi.listUsers(100, startCursor);
 
     for (const user of result.results) {
       try {
@@ -186,27 +175,6 @@ function syncUsers(): void {
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
 function syncSearchItems(): void {
-  const api = getApi();
-  const upsertPage = (globalThis as Record<string, unknown>).upsertPage as
-    | ((page: Record<string, unknown>) => void)
-    | undefined;
-  const upsertDatabase = (globalThis as Record<string, unknown>).upsertDatabase as
-    | ((database: Record<string, unknown>) => void)
-    | undefined;
-  const getPageById = (globalThis as Record<string, unknown>).getPageById as
-    | ((id: string) => { last_edited_time: string } | null)
-    | undefined;
-  const getDatabaseById = (globalThis as Record<string, unknown>).getDatabaseById as
-    | ((id: string) => { last_edited_time: string } | null)
-    | undefined;
-
-  if (!upsertPage || !upsertDatabase) {
-    console.warn(
-      '[notion] upsertPage/upsertDatabase not available on globalThis — skipping search sync'
-    );
-    return;
-  }
-
   const s = globalThis.getNotionSkillState();
   const lastSyncTime = s.syncStatus.lastSyncTime;
   const isFirstSync = lastSyncTime === 0;
@@ -228,7 +196,7 @@ function syncSearchItems(): void {
     };
     if (startCursor) body.start_cursor = startCursor;
 
-    const result = api.search(body);
+    const result = notionApi.search(body);
 
     for (const item of result.results) {
       const rec = item as Record<string, unknown>;
@@ -316,7 +284,6 @@ function syncDataSources(
   lastSyncTime: number,
   isFirstSync: boolean
 ): { count: number; skipped: number; errors: number } {
-  const api = getApi();
   let startCursor: string | undefined;
   let hasMore = true;
   let count = 0;
@@ -325,7 +292,7 @@ function syncDataSources(
   let reachedOldItems = false;
 
   while (hasMore && !reachedOldItems) {
-    const result = api.search({
+    const result = notionApi.search({
       page_size: 100,
       sort: { direction: 'descending', timestamp: 'last_edited_time' },
       filter: { property: 'object', value: 'data_source' },
@@ -378,23 +345,6 @@ function syncDataSources(
 const MAX_ROWS_PER_DATABASE = 200;
 
 function syncDatabaseRows(): void {
-  const api = getApi();
-  const { getLocalDatabases } = n();
-
-  const upsertDatabaseRow = (globalThis as Record<string, unknown>).upsertDatabaseRow as
-    | ((row: Record<string, unknown>, databaseId: string) => void)
-    | undefined;
-  const getDatabaseRowById = (globalThis as Record<string, unknown>).getDatabaseRowById as
-    | ((id: string) => { last_edited_time: string } | null)
-    | undefined;
-
-  if (!upsertDatabaseRow) {
-    console.warn(
-      '[notion] upsertDatabaseRow not available on globalThis — skipping database row sync'
-    );
-    return;
-  }
-
   // Get all locally synced databases
   const databases = getLocalDatabases({ limit: 100 }) as Array<{ id: string; title: string }>;
 
@@ -430,7 +380,7 @@ function syncDatabaseRows(): void {
 
         let result: { results: Record<string, unknown>[]; has_more: boolean; next_cursor?: string };
         try {
-          result = api.queryDataSource(database.id, body) as typeof result;
+          result = notionApi.queryDataSource(database.id, body) as typeof result;
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           // Skip databases we can't query (permissions, deleted, etc.)
@@ -515,16 +465,6 @@ function syncDatabaseRows(): void {
 
 function syncContent(): void {
   const s = globalThis.getNotionSkillState();
-  const { fetchBlockTreeText } = n();
-  const getPagesNeedingContent = (globalThis as Record<string, unknown>).getPagesNeedingContent as
-    | ((limit: number, updatedAfterIso?: string) => Array<{ id: string; title: string }>)
-    | undefined;
-  const updatePageContent = (globalThis as Record<string, unknown>).updatePageContent as
-    | ((pageId: string, text: string) => void)
-    | undefined;
-
-  if (!getPagesNeedingContent || !updatePageContent) return;
-
   const batchSize = s.config.maxPagesPerContentSync;
   const cutoffIso = new Date(Date.now() - THIRTY_DAYS_MS).toISOString();
   const pages = getPagesNeedingContent(batchSize, cutoffIso);
@@ -687,10 +627,3 @@ function publishSyncState(): void {
     lastSyncDurationMs: s.syncStatus.lastSyncDurationMs,
   });
 }
-
-// Expose on globalThis
-const _g = globalThis as Record<string, unknown>;
-_g.performSync = performSync;
-_g.publishSyncState = publishSyncState;
-_g.syncDatabaseRows = syncDatabaseRows;
-_g.syncSummariesToServer = syncSummariesToServer;

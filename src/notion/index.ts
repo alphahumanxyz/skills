@@ -2,56 +2,13 @@
 // Notion integration skill exposing 25 tools for the Notion API + local sync.
 // Supports pages, databases, blocks, users, comments, and local search.
 // Authentication is handled via the platform OAuth bridge.
-// Import modules to initialize state and expose functions on globalThis
-// Side-effect import: triggers api module initialization.
-// Do NOT destructure — `import { notionApi }` is broken by IIFE CJS interop.
-// The api/index.ts module writes notionApi to globalThis.exports at init time.
 import './api/index';
 import './db-helpers';
 import './db-schema';
-// Import helpers
-import {
-  buildParagraphBlock,
-  buildRichText,
-  fetchBlockTreeText,
-  formatApiError,
-  formatBlockContent,
-  formatBlockSummary,
-  formatDatabaseSummary,
-  formatPageSummary,
-  formatPageTitle,
-  formatRichText,
-  formatUserSummary,
-  notionFetch,
-} from './helpers';
 import './skill-state';
 import type { NotionSkillConfig } from './skill-state';
-import './sync';
+import { performSync } from './sync';
 import tools from './tools/index';
-
-
-// ---------------------------------------------------------------------------
-// Expose helpers on globalThis for tools to access at runtime
-// ---------------------------------------------------------------------------
-
-const _g = globalThis as Record<string, unknown>;
-// notionApi was built by api/index.ts and written to globalThis.exports.notionApi.
-// Read it from there (module import would be empty due to IIFE CJS interop).
-_g.notionApi = (
-  (globalThis as unknown as Record<string, unknown>).exports as Record<string, unknown>
-)?.notionApi;
-_g.notionFetch = notionFetch;
-_g.formatApiError = formatApiError;
-_g.formatRichText = formatRichText;
-_g.formatPageTitle = formatPageTitle;
-_g.formatPageSummary = formatPageSummary;
-_g.formatDatabaseSummary = formatDatabaseSummary;
-_g.formatBlockContent = formatBlockContent;
-_g.formatBlockSummary = formatBlockSummary;
-_g.formatUserSummary = formatUserSummary;
-_g.buildRichText = buildRichText;
-_g.buildParagraphBlock = buildParagraphBlock;
-_g.fetchBlockTreeText = fetchBlockTreeText;
 
 // ---------------------------------------------------------------------------
 // Lifecycle hooks
@@ -135,9 +92,8 @@ function start(): void {
   const TEN_MINS_MS = 10 * 60 * 1000;
   const lastSync = s.syncStatus.lastSyncTime;
   const recentlySynced = lastSync > 0 && Date.now() - lastSync < TEN_MINS_MS;
-  const doSync = (globalThis as { performSync?: () => void }).performSync;
-  if (doSync && !recentlySynced) {
-    doSync();
+  if (!recentlySynced) {
+    performSync();
   } else if (recentlySynced) {
     console.log('[notion] Skipping initial sync — last sync was within 10 minutes');
   }
@@ -164,10 +120,7 @@ function onCronTrigger(scheduleId: string): void {
   console.log(`[notion] Cron triggered: ${scheduleId}`);
 
   if (scheduleId === 'notion-sync') {
-    const doSync = (globalThis as { performSync?: () => void }).performSync;
-    if (doSync) {
-      doSync();
-    }
+    performSync();
   }
 }
 
@@ -209,11 +162,7 @@ function onOAuthComplete(args: OAuthCompleteArgs): OAuthCompleteResult | void {
   const cronExpr = `0 */${s.config.syncIntervalMinutes} * * * *`;
   cron.register('notion-sync', cronExpr);
 
-  const doSync = (globalThis as { performSync?: () => void }).performSync;
-  if (doSync) {
-    doSync();
-  }
-
+  performSync();
   publishState();
 }
 
@@ -350,19 +299,6 @@ function publishState(): void {
 // esbuild IIFE bundling traps function declarations in the closure scope —
 // without explicit assignment they are unreachable from outside.
 // ---------------------------------------------------------------------------
-
-_g.init = init;
-_g.start = start;
-_g.stop = stop;
-_g.onCronTrigger = onCronTrigger;
-_g.onSessionStart = onSessionStart;
-_g.onSessionEnd = onSessionEnd;
-_g.onOAuthComplete = onOAuthComplete;
-_g.onOAuthRevoked = onOAuthRevoked;
-_g.onDisconnect = onDisconnect;
-_g.onListOptions = onListOptions;
-_g.onSetOption = onSetOption;
-_g.publishState = publishState;
 
 const skill: Skill = {
   info: {
