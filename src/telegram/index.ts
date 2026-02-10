@@ -809,7 +809,7 @@ const telegramPingTool: ToolDefinition = {
   name: 'telegram-ping',
   description: 'Check if Telegram servers are reachable and get latency information.',
   input_schema: { type: 'object', properties: {}, required: [] },
-  execute(): string {
+  async execute(): Promise<string> {
     const s = globalThis.getTelegramSkillState();
     const endpoints = [
       'https://telegram.org',
@@ -827,7 +827,7 @@ const telegramPingTool: ToolDefinition = {
     for (const endpoint of endpoints) {
       const startTime = Date.now();
       try {
-        const response = net.fetch(endpoint, { method: 'HEAD', timeout: 5000 });
+        const response = await net.fetch(endpoint, { method: 'HEAD', timeout: 5000 });
         const latency = Date.now() - startTime;
         results.push({
           endpoint,

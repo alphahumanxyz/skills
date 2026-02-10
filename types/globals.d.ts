@@ -22,7 +22,7 @@ declare const db: {
 /** HTTP networking. */
 declare const net: {
   /** Synchronous HTTP fetch. Returns the parsed response. */
-  fetch(url: string, options?: NetFetchOptions): NetFetchResponse;
+  fetch(url: string, options?: NetFetchOptions): Promise<NetFetchResponse>;
 };
 
 /** Cron scheduling. */

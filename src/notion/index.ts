@@ -281,7 +281,7 @@ async function onPing(): Promise<PingResult> {
   }
   try {
     const response = await oauth.fetch('/v1/users?page_size=1');
-    console.log('[notion] onPing response: ', response);
+    console.log('[notion] onPing response: ', response.body);
     if (response.status === 401 || response.status === 403) {
       return { ok: false, errorType: 'auth', errorMessage: `Notion returned ${response.status}` };
     }

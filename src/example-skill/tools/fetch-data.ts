@@ -12,7 +12,7 @@ export const fetchDataTool: ToolDefinition = {
       },
     },
   },
-  execute(args: Record<string, unknown>): string {
+  async execute(args: Record<string, unknown>): Promise<string> {
     const s = (globalThis as any).getSkillState();
     const endpoint = (args.endpoint as string) || '';
     const url = s.config.serverUrl + endpoint;
@@ -20,7 +20,7 @@ export const fetchDataTool: ToolDefinition = {
     if (!s.config.serverUrl) return JSON.stringify({ error: 'Server URL not configured' });
 
     try {
-      const response = net.fetch(url, {
+      const response = await net.fetch(url, {
         method: 'GET',
         headers: { Authorization: `Bearer ${s.config.apiKey}`, 'Content-Type': 'application/json' },
         timeout: 10000,

@@ -468,7 +468,7 @@ async function syncContent(): Promise<void> {
  * Reads summaries with synced=0, submits each to the backend API,
  * and marks them as synced on success.
  */
-function syncSummariesToServer(): void {
+async function syncSummariesToServer(): Promise<void> {
   const batch = getUnsyncedSummaries(100);
   if (batch.length === 0) {
     console.log('[notion] No unsynced summaries to send');
@@ -508,7 +508,7 @@ function syncSummariesToServer(): void {
         updatedAt: row.source_updated_at,
       };
 
-      const resp = net.fetch(`${backendUrl}/api/summaries`, {
+      const resp = await net.fetch(`${backendUrl}/api/summaries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify(submission),

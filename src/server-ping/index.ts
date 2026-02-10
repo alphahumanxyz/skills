@@ -341,14 +341,14 @@ function onCronTrigger(_scheduleId: string): void {
   // This handler is kept for backwards compatibility
 }
 
-function doPing(): void {
+async function doPing(): Promise<void> {
   const s = getSkillState();
   s.pingCount++;
   const timestamp = new Date().toISOString();
   const startTime = Date.now();
 
   try {
-    const response = net.fetch(s.config.serverUrl, { method: 'GET', timeout: 10 });
+    const response = await net.fetch(s.config.serverUrl, { method: 'GET', timeout: 10 });
 
     const latencyMs = Date.now() - startTime;
     const success = response.status >= 200 && response.status < 400;

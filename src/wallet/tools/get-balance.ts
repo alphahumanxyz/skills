@@ -1,12 +1,12 @@
 // Tool: get_balance — get balance for a wallet address on a network via RPC
-function evmGetBalance(rpcUrl: string, address: string): string {
+async function evmGetBalance(rpcUrl: string, address: string): Promise<string> {
   const body = JSON.stringify({
     jsonrpc: '2.0',
     id: 1,
     method: 'eth_getBalance',
     params: [address, 'latest'],
   });
-  const response = net.fetch(rpcUrl, {
+  const response = await net.fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body,
@@ -51,7 +51,7 @@ export const getBalanceTool = {
     },
     required: ['address', 'chain_id'],
   },
-  execute(args: Record<string, unknown>): string {
+  async execute(args: Record<string, unknown>): Promise<string> {
     const s = (globalThis as any).getState() as {
       config: { networks: Array<{ chain_id: string; chain_type: string; rpc_url: string }> };
     };
@@ -70,6 +70,6 @@ export const getBalanceTool = {
       });
     }
 
-    return evmGetBalance(network.rpc_url, address);
+    return await evmGetBalance(network.rpc_url, address);
   },
 };

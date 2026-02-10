@@ -4,10 +4,10 @@
 // Notion API helpers
 // ---------------------------------------------------------------------------
 
-export async function notionFetch(
+export async function notionFetch<T>(
   endpoint: string,
   options: { method?: string; body?: unknown } = {}
-): Promise<unknown> {
+): Promise<T> {
   if (!oauth.getCredential()) throw new Error('Notion not connected. Please complete setup first.');
 
   const response = await oauth.fetch(`/v1${endpoint}`, {
@@ -31,7 +31,7 @@ export async function notionFetch(
     throw new Error(message);
   }
 
-  return JSON.parse(response.body);
+  return response.body as T;
 }
 
 export function formatApiError(error: unknown): string {
