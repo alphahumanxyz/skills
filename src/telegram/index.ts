@@ -392,12 +392,7 @@ function init(): void {
   // Initialize client
   initClient().catch(err => {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    onError({
-      type: 'network',
-      message: errorMsg,
-      source: 'initClient',
-      recoverable: true,
-    });
+    onError({ type: 'network', message: errorMsg, source: 'initClient', recoverable: true });
   });
 
   publishState();
@@ -493,12 +488,7 @@ function onSetupStart(): SetupStartResult {
   if (!s.client && !s.clientConnecting) {
     initClient().catch(err => {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      onError({
-        type: 'network',
-        message: errorMsg,
-        source: 'initClient',
-        recoverable: true,
-      });
+      onError({ type: 'network', message: errorMsg, source: 'initClient', recoverable: true });
     });
   }
 
@@ -536,12 +526,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
     // Start client initialization in background
     initClient().catch(err => {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      onError({
-        type: 'network',
-        message: errorMsg,
-        source: 'initClient',
-        recoverable: true,
-      });
+      onError({ type: 'network', message: errorMsg, source: 'initClient', recoverable: true });
     });
 
     return {
@@ -616,12 +601,7 @@ function onSetupSubmit(args: SetupSubmitArgs): SetupSubmitResult {
         // Client not connecting — kick off initialization again
         initClient().catch(err => {
           const errorMsg = err instanceof Error ? err.message : String(err);
-          onError({
-            type: 'network',
-            message: errorMsg,
-            source: 'initClient',
-            recoverable: true,
-          });
+          onError({ type: 'network', message: errorMsg, source: 'initClient', recoverable: true });
         });
       }
       return {
@@ -998,7 +978,9 @@ function onPing(): PingResult {
 
 function onError(args: SkillErrorArgs): void {
   const s = globalThis.getTelegramSkillState();
-  console.error(`[telegram] onError: type=${args.type} source=${args.source || 'unknown'} message=${args.message}`);
+  console.error(
+    `[telegram] onError: type=${args.type} source=${args.source || 'unknown'} message=${args.message}`
+  );
 
   s.clientError = args.message;
 
