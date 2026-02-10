@@ -890,6 +890,21 @@ const telegramSyncTool: ToolDefinition = {
 // Skill Export
 // ---------------------------------------------------------------------------
 
+function onPing(): PingResult {
+  const s = globalThis.getTelegramSkillState();
+  if (!s.client || !s.client.initialized) {
+    return { ok: false, errorType: 'network', errorMessage: 'TDLib client not connected' };
+  }
+  if (!s.config.isAuthenticated || s.authState !== 'ready') {
+    return {
+      ok: false,
+      errorType: 'auth',
+      errorMessage: `Not authenticated (state: ${s.authState})`,
+    };
+  }
+  return { ok: true };
+}
+
 const skill: Skill = {
   info: {
     id: 'telegram',
@@ -907,6 +922,7 @@ const skill: Skill = {
   onSetupStart,
   onSetupSubmit,
   onSetupCancel,
+  onPing,
 };
 
 export default skill;

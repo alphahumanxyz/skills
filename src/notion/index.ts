@@ -283,6 +283,29 @@ function publishState(): void {
 // without explicit assignment they are unreachable from outside.
 // ---------------------------------------------------------------------------
 
+function onPing(): PingResult {
+  const cred = oauth.getCredential();
+  if (!cred) {
+    return { ok: false, errorType: 'auth', errorMessage: 'No OAuth credential' };
+  }
+  try {
+    const response = oauth.fetch('/v1/users?page_size=1');
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, errorType: 'auth', errorMessage: `Notion returned ${response.status}` };
+    }
+    if (response.status >= 400) {
+      return {
+        ok: false,
+        errorType: 'network',
+        errorMessage: `Notion returned ${response.status}`,
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, errorType: 'network', errorMessage: String(err) };
+  }
+}
+
 const skill: Skill = {
   info: {
     id: 'notion',
@@ -305,6 +328,7 @@ const skill: Skill = {
   onListOptions,
   onSetOption,
   publishState,
+  onPing,
 };
 
 export default skill;
