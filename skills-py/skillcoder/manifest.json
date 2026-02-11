@@ -1,0 +1,9 @@
+{
+  "id": "skillcoder",
+  "name": "Skill Coder",
+  "version": "1.0.0",
+  "description": "A skill that makes new skills on it's own.",
+  "runtime": "python",
+  "entry": "__main__.py",
+  "dependencies": ["pydantic>=2.0"]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "notion",
+  "name": "Notion",
+  "version": "1.1.0",
+  "description": "Notion workspace integration — 25 tools for pages, databases, blocks, users, comments, search, and local sync with periodic background updates.",
+  "auto_start": false,
+  "platforms": ["windows", "macos", "linux", "android", "ios"],
+  "setup": {
+    "required": true,
+    "label": "Connect Notion",
+    "oauth": { "provider": "notion", "scopes": [], "apiBaseUrl": "https://api.notion.com/v1" }
+  }
+}

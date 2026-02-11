@@ -1,0 +1,75 @@
+{
+  "id": "telegram",
+  "name": "Telegram",
+  "version": "2.0.0",
+  "description": "Telegram integration via TDLib — 50+ tools for chats, messages, contacts, admin, and search.",
+  "auto_start": true,
+  "platforms": ["windows", "macos", "linux", "android", "ios"],
+  "env": ["TELEGRAM_API_ID", "TELEGRAM_API_HASH"],
+  "setup": { "required": true, "label": "Connect Telegram" },
+  "events_emitted": [
+    {
+      "type": "telegram.message.received",
+      "description": "A new message was received in any chat",
+      "entities": {
+        "chat": { "types": ["telegram.group", "telegram.channel", "telegram.dm"] },
+        "sender": { "types": ["telegram.contact", "telegram.channel"] }
+      },
+      "data_schema": {
+        "text": "string",
+        "content_type": "string",
+        "is_outgoing": "boolean",
+        "chat_id": "string",
+        "message_id": "string"
+      }
+    },
+    {
+      "type": "telegram.message.edited",
+      "description": "A message's content was edited",
+      "entities": { "chat": { "types": ["telegram.group", "telegram.channel", "telegram.dm"] } },
+      "data_schema": {
+        "text": "string",
+        "content_type": "string",
+        "chat_id": "string",
+        "message_id": "string"
+      }
+    },
+    {
+      "type": "telegram.message.deleted",
+      "description": "One or more messages were deleted from a chat",
+      "entities": { "chat": { "types": ["telegram.group", "telegram.channel", "telegram.dm"] } },
+      "data_schema": { "chat_id": "string", "message_ids": "string[]", "is_permanent": "boolean" }
+    },
+    {
+      "type": "telegram.chat.created",
+      "description": "A new chat was discovered or created",
+      "entities": { "chat": { "types": ["telegram.group", "telegram.channel", "telegram.dm"] } },
+      "data_schema": { "chat_id": "string", "title": "string", "chat_type": "string" }
+    },
+    {
+      "type": "telegram.chat.member_joined",
+      "description": "A member was added or joined a group",
+      "entities": {
+        "chat": { "types": ["telegram.group"] },
+        "member": { "types": ["telegram.contact"] },
+        "added_by": { "types": ["telegram.contact"] }
+      },
+      "data_schema": { "chat_id": "string", "member_id": "string", "added_by_id": "string|null" }
+    },
+    {
+      "type": "telegram.chat.member_left",
+      "description": "A member left or was removed from a group",
+      "entities": {
+        "chat": { "types": ["telegram.group"] },
+        "member": { "types": ["telegram.contact"] }
+      },
+      "data_schema": { "chat_id": "string", "member_id": "string", "removed_by_id": "string|null" }
+    },
+    {
+      "type": "telegram.user.status_changed",
+      "description": "A user's online status changed",
+      "entities": { "user": { "types": ["telegram.contact"] } },
+      "data_schema": { "user_id": "string", "status_type": "string" }
+    }
+  ]
+}

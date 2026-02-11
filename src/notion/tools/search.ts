@@ -1,0 +1,54 @@
+// Tool: notion-search
+import { notionApi } from '../api/index';
+import { formatApiError, formatDatabaseSummary, formatPageSummary } from '../helpers';
+
+export const searchTool: ToolDefinition = {
+  name: 'search',
+  description:
+    'Search for pages and databases in your Notion workspace. ' +
+    'Can filter by type (page or database) and returns matching results.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: 'Search query (optional, returns recent if empty)' },
+      filter: { type: 'string', enum: ['page', 'database'], description: 'Filter results by type' },
+      page_size: {
+        type: 'number',
+        description: 'Number of results to return (default 20, max 100)',
+      },
+    },
+  },
+  async execute(args: Record<string, unknown>): Promise<string> {
+    try {
+      const query = ((args.query as string) || '').trim();
+      const filter = args.filter as string | undefined;
+      const pageSize = Math.min((args.page_size as number) || 20, 100);
+
+      const body: Record<string, unknown> = { page_size: pageSize };
+      if (query) body.query = query;
+      if (filter)
+        body.filter = { property: 'object', value: filter === 'database' ? 'data_source' : filter };
+
+      const result = await notionApi.search(body);
+
+      const formatted = result.results.map((item: Record<string, unknown>) => {
+        const obj = item;
+        if (obj.object === 'page') {
+          return { object: 'page', ...formatPageSummary(obj) };
+        }
+        if (obj.object === 'database' || obj.object === 'data_source') {
+          return { object: 'data_source', ...formatDatabaseSummary(obj) };
+        }
+        return { object: obj.object, id: obj.id };
+      });
+
+      return JSON.stringify({
+        count: formatted.length,
+        has_more: result.has_more,
+        results: formatted,
+      });
+    } catch (e) {
+      return JSON.stringify({ error: formatApiError(e) });
+    }
+  },
+};

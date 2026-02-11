@@ -1,0 +1,140 @@
+// Database schema initialization for Notion skill
+// Creates SQLite tables for pages, databases, users, and sync state
+import '../state';
+
+/**
+ * Initialize Notion database schema
+ */
+export function initializeNotionSchema(): void {
+  console.log('[notion] Initializing database schema...');
+
+  // Pages table: metadata + extracted content
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS pages (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      url TEXT,
+      icon TEXT,
+      parent_type TEXT NOT NULL,
+      parent_id TEXT,
+      created_by_id TEXT,
+      last_edited_by_id TEXT,
+      created_time TEXT NOT NULL,
+      last_edited_time TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0,
+      content_text TEXT,
+      content_synced_at INTEGER,
+      page_entities TEXT,
+      synced_at INTEGER NOT NULL
+    )`,
+    []
+  );
+
+  // Databases table: metadata
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS databases (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      url TEXT,
+      icon TEXT,
+      property_count INTEGER NOT NULL DEFAULT 0,
+      created_time TEXT NOT NULL,
+      last_edited_time TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0,
+      synced_at INTEGER NOT NULL
+    )`,
+    []
+  );
+
+  // Users table
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      user_type TEXT NOT NULL,
+      email TEXT,
+      avatar_url TEXT,
+      synced_at INTEGER NOT NULL
+    )`,
+    []
+  );
+
+  // Database rows table: stores rows/entries within databases with their properties
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS database_rows (
+      id TEXT PRIMARY KEY,
+      database_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      url TEXT,
+      icon TEXT,
+      properties_json TEXT,
+      properties_text TEXT,
+      created_by_id TEXT,
+      last_edited_by_id TEXT,
+      created_time TEXT NOT NULL,
+      last_edited_time TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0,
+      synced_at INTEGER NOT NULL,
+      FOREIGN KEY (database_id) REFERENCES databases(id)
+    )`,
+    []
+  );
+
+  // Summaries table: stores AI-generated summaries with sync tracking
+  // page_id holds the source ID (page or database row)
+  db.exec(
+    `CREATE TABLE IF NOT EXISTS summaries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_id TEXT NOT NULL,
+      url TEXT,
+      summary TEXT NOT NULL,
+      category TEXT,
+      sentiment TEXT,
+      entities TEXT,
+      topics TEXT,
+      metadata TEXT,
+      source_created_at TEXT NOT NULL,
+      source_updated_at TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      synced INTEGER NOT NULL DEFAULT 0,
+      synced_at INTEGER
+    )`,
+    []
+  );
+
+  // Migrate: add page_entities column if it doesn't exist (for existing installs)
+  try {
+    db.exec('ALTER TABLE pages ADD COLUMN page_entities TEXT', []);
+  } catch {
+    // Column already exists
+  }
+
+  // Migrate: add url column to summaries if it doesn't exist (for existing installs)
+  try {
+    db.exec('ALTER TABLE summaries ADD COLUMN url TEXT', []);
+  } catch {
+    // Column already exists
+  }
+
+  // Migrate: drop old FK constraint on summaries (page_id now holds page OR row IDs)
+  // SQLite doesn't enforce FKs by default, so this is just documentation cleanup.
+
+  // Create indexes for performance
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pages_last_edited ON pages(last_edited_time DESC)', []);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pages_parent ON pages(parent_type, parent_id)', []);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pages_archived ON pages(archived)', []);
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_databases_last_edited ON databases(last_edited_time DESC)',
+    []
+  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_db_rows_database_id ON database_rows(database_id)', []);
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_db_rows_last_edited ON database_rows(last_edited_time DESC)',
+    []
+  );
+  db.exec('CREATE INDEX IF NOT EXISTS idx_summaries_synced ON summaries(synced)', []);
+  db.exec('CREATE INDEX IF NOT EXISTS idx_summaries_page_id ON summaries(page_id)', []);
+
+  console.log('[notion] Database schema initialized successfully');
+}

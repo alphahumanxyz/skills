@@ -1,0 +1,621 @@
+// telegram/index.ts
+// Telegram integration skill using TDLib via V8 runtime.
+// Provides tools for Telegram API access with native TDLib bindings.
+// Import skill state (initializes globalThis.getTelegramSkillState)
+// registers globalThis.initializeTelegramSchema
+import { getMe } from './api';
+import './db/helpers';
+import './db/schema';
+import { createSetupHandlers } from './setup';
+import './state';
+import type { AuthorizationState } from './state';
+// registers globalThis.telegramDispatchUpdate
+import './sync';
+// Import TDLib client wrapper - this also assigns TdLibClient to globalThis
+import type { TdLibClient as TdLibClientType, TdUpdate, TdUser } from './tdlib-client';
+import './tdlib-client';
+import tools from './tools/index';
+import './update-handlers';
+
+// Access TdLibClient from globalThis (workaround for esbuild bundling issues)
+const getTdLibClientClass = (): typeof TdLibClientType => {
+  const cls = (globalThis as Record<string, unknown>).TdLibClient as typeof TdLibClientType;
+  if (!cls) {
+    throw new Error('TdLibClient not available on globalThis');
+  }
+  return cls;
+};
+
+// Runtime globals (store, state, platform, db, cron, tools) are declared in types/globals.d.ts
+
+// ---------------------------------------------------------------------------
+// Authorization State Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse TDLib authorization state update to our simplified state type.
+ */
+function parseAuthState(update: TdUpdate): AuthorizationState {
+  const stateType = (update as { authorization_state?: { '@type': string } }).authorization_state?.[
+    '@type'
+  ];
+  switch (stateType) {
+    case 'authorizationStateWaitTdlibParameters':
+      return 'waitTdlibParameters';
+    case 'authorizationStateWaitPhoneNumber':
+      return 'waitPhoneNumber';
+    case 'authorizationStateWaitCode':
+      return 'waitCode';
+    case 'authorizationStateWaitPassword':
+      return 'waitPassword';
+    case 'authorizationStateReady':
+      return 'ready';
+    case 'authorizationStateClosed':
+      return 'closed';
+    default:
+      return 'unknown';
+  }
+}
+
+/**
+ * Handle TDLib updates (authorization state changes, etc.)
+ */
+function handleUpdate(update: TdUpdate): void {
+  const s = globalThis.getTelegramSkillState();
+  const updateType = update['@type'];
+
+  // Log non-frequent updates
+  if (!updateType.startsWith('updateFile') && !updateType.startsWith('updateOption')) {
+    console.log('[telegram] TDLib update:', updateType);
+  }
+
+  // Dispatch to storage handlers for persistence
+  globalThis.telegramDispatchUpdate(update);
+
+  if (updateType === 'updateAuthorizationState') {
+    const prevState = s.authState;
+    s.authState = parseAuthState(update);
+    console.log(`[telegram] Auth state changed: ${prevState} -> ${s.authState}`);
+
+    // Extract password hint if waiting for password
+    if (s.authState === 'waitPassword') {
+      const authState = (update as { authorization_state?: { password_hint?: string } })
+        .authorization_state;
+      s.passwordHint = authState?.password_hint || null;
+    }
+
+    // Handle ready state
+    if (s.authState === 'ready') {
+      s.config.isAuthenticated = true;
+      s.config.pendingCode = false;
+      state.set('config', s.config);
+      console.log('[telegram] User authenticated successfully');
+      loadMe();
+    }
+
+    publishState();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client Management
+// ---------------------------------------------------------------------------
+
+/**
+ * Initialize the TDLib client and start the update loop.
+ */
+async function initClient(): Promise<void> {
+  console.log('[telegram] initClient');
+  const s = globalThis.getTelegramSkillState();
+
+  // Check if client already exists or is being created
+  if (s.client) {
+    console.log('[telegram] Client already exists, skipping init');
+    return;
+  }
+  if (s.clientConnecting) {
+    console.log('[telegram] Client is already connecting, skipping init');
+    return;
+  }
+
+  // Get TdLibClient class from globalThis
+  const TdLibClientClass = getTdLibClientClass();
+
+  // Check if TDLib is available
+  if (!TdLibClientClass.isAvailable()) {
+    console.warn('[telegram] TDLib is not available on this platform');
+    s.clientError = 'TDLib is not available on this platform';
+    publishState();
+    return;
+  }
+
+  s.clientConnecting = true;
+  s.clientError = null;
+  publishState();
+
+  console.log('[telegram] Creating TDLib client with apiId:', 28685916);
+
+  try {
+    // Create TDLib client
+    const client = new TdLibClientClass();
+
+    // Determine data directory (use skill data directory)
+    const dataDir = s.config.dataDir || getDefaultDataDir();
+    s.config.dataDir = dataDir;
+
+    console.log('[telegram] Initializing TDLib with data dir:', dataDir);
+    await client.init(dataDir);
+
+    // Store client in state
+    s.client = client;
+
+    const apiId = 28685916;
+    const apiHash = 'd540ab21dece5404af298c44f4f6386d';
+
+    // Set TDLib parameters (this triggers the auth flow)
+    console.log('[telegram] Setting TDLib parameters...');
+    await client.setTdlibParameters({
+      api_id: apiId,
+      api_hash: apiHash,
+      database_directory: dataDir,
+      files_directory: dataDir + '/files',
+      use_message_database: true,
+      use_secret_chats: false,
+      system_language_code: 'en',
+      device_model: 'Desktop',
+      application_version: '1.0.0',
+    });
+
+    console.log('[telegram] TDLib parameters set, polling for auth state...');
+
+    // Manually poll for auth state updates BEFORE starting the background
+    // update loop.  This guarantees auth state transitions to a usable value
+    // (e.g. waitPhoneNumber / ready) before initClient() returns, avoiding
+    // race conditions where the setup wizard checks authState too early.
+    const maxWaitMs = 10000;
+    const startTime = Date.now();
+    while (
+      (s.authState === 'unknown' || s.authState === 'waitTdlibParameters') &&
+      Date.now() - startTime < maxWaitMs
+    ) {
+      const update = await client.receive(500);
+      if (update) {
+        handleUpdate(update);
+      }
+    }
+    console.log('[telegram] Auth state after init polling:', s.authState);
+
+    // Now start the background update loop for ongoing updates
+    client.startUpdateLoop(handleUpdate);
+
+    s.clientConnecting = false;
+    publishState();
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('[telegram] Failed to initialize TDLib:', errorMsg);
+    s.clientError = errorMsg;
+    s.clientConnecting = false;
+    s.client = null;
+    publishState();
+    throw err;
+  }
+}
+
+/**
+ * Get default data directory for TDLib files.
+ */
+function getDefaultDataDir(): string {
+  // Use the skill's data directory if available via platform
+  // Otherwise use a reasonable default
+  const os = platform.os();
+  if (os === 'windows') {
+    return 'C:/Users/Public/AlphaHuman/telegram';
+  } else if (os === 'macos') {
+    return '/tmp/alphahuman/telegram.macos';
+  } else {
+    return '/tmp/alphahuman/telegram';
+  }
+}
+
+/**
+ * Load current user info after authentication.
+ */
+async function loadMe(): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+  if (!s.client) return;
+
+  try {
+    console.log('[telegram] Loading user info...');
+    const me: TdUser = await s.client.getMe();
+    if (me) {
+      s.cache.me = {
+        id: String(me.id),
+        firstName: me.first_name,
+        lastName: me.last_name,
+        username: me.usernames?.active_usernames?.[0],
+        phoneNumber: me.phone_number,
+        isBot: false,
+        isPremium: me.is_premium,
+      };
+      s.cache.lastSync = Date.now();
+      console.log('[telegram] Loaded user:', s.cache.me.username || s.cache.me.firstName);
+    }
+    publishState();
+  } catch (e) {
+    console.error('[telegram] Failed to load me:', e);
+  }
+}
+
+/**
+ * Trigger initial sync of chats, messages, and contacts.
+ */
+async function onSync(): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+
+  // Skip if already syncing or completed
+  if (s.sync.inProgress) {
+    console.log('[telegram] Initial sync already in progress');
+    return;
+  }
+
+  // Check if sync was already completed
+  if (globalThis.telegramSync.isSyncCompleted()) {
+    console.log('[telegram] Initial sync already completed');
+    s.sync.completed = true;
+    s.sync.lastSyncTime = globalThis.telegramSync.getLastSyncTime();
+    updateStorageStats();
+    publishState();
+    return;
+  }
+
+  if (!s.client) {
+    console.log('[telegram] Cannot sync: client not available');
+    return;
+  }
+
+  s.sync.inProgress = true;
+  s.sync.error = null;
+  publishState();
+
+  try {
+    await globalThis.telegramSync.performInitialSync(s.client, msg => {
+      console.log(`[telegram-sync] ${msg}`);
+    });
+
+    s.sync.completed = true;
+    s.sync.lastSyncTime = Date.now();
+    s.sync.inProgress = false;
+    s.sync.error = null;
+
+    updateStorageStats();
+    console.log('[telegram] Initial sync completed successfully');
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('[telegram] Initial sync failed:', errorMsg);
+    s.sync.inProgress = false;
+    s.sync.error = errorMsg;
+  }
+
+  publishState();
+}
+
+/**
+ * Update storage statistics from database.
+ */
+function updateStorageStats(): void {
+  const s = globalThis.getTelegramSkillState();
+  try {
+    const stats = globalThis.telegramDb.getStorageStats();
+    s.storage = {
+      chatCount: stats.chatCount,
+      messageCount: stats.messageCount,
+      contactCount: stats.contactCount,
+      unreadCount: stats.unreadCount,
+    };
+  } catch (err) {
+    console.error('[telegram] Failed to update storage stats:', err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lifecycle Hooks
+// ---------------------------------------------------------------------------
+
+async function init(): Promise<void> {
+  console.log('[telegram] Initializing skill');
+
+  // Get TdLibClient class from globalThis
+  const TdLibClientClass = getTdLibClientClass();
+
+  // Check runtime capabilities
+  console.log(`[telegram] TDLib available: ${TdLibClientClass.isAvailable()}`);
+  console.log(`[telegram] setTimeout available: ${typeof setTimeout !== 'undefined'}`);
+
+  // Create database tables
+  globalThis.initializeTelegramSchema();
+
+  // Load config from store
+  const s = globalThis.getTelegramSkillState();
+  const saved = state.get('config') as Partial<typeof s.config> | null;
+  if (saved) {
+    s.config.phoneNumber = saved.phoneNumber || '';
+    s.config.isAuthenticated = saved.isAuthenticated || false;
+    s.config.dataDir = saved.dataDir || '';
+    s.config.pendingCode = saved.pendingCode || false;
+    s.config.showSensitiveMessages = saved.showSensitiveMessages ?? s.config.showSensitiveMessages;
+  }
+
+  console.log(`[telegram] Authenticated: ${s.config.isAuthenticated}`);
+
+  // Load sync state from database
+  s.sync.completed = globalThis.telegramSync.isSyncCompleted();
+  s.sync.lastSyncTime = globalThis.telegramSync.getLastSyncTime();
+
+  // Update storage stats if sync was completed
+  if (s.sync.completed) {
+    updateStorageStats();
+  }
+
+  // Initialize client
+  initClient().catch(err => {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    onError({ type: 'network', message: errorMsg, source: 'initClient', recoverable: true });
+  });
+
+  publishState();
+}
+
+async function start(): Promise<void> {
+  console.log('[telegram] Starting skill');
+  // The update loop is already running from initClient
+}
+
+async function stop(): Promise<void> {
+  console.log('[telegram] Stopping skill');
+  console.log('[telegram] Disconnecting skill and performing cleanup');
+  const s = globalThis.getTelegramSkillState();
+
+  try {
+    // If authenticated, log out from Telegram servers first
+    if (s.client && (s.authState === 'ready' || s.config.isAuthenticated)) {
+      console.log('[telegram] Logging out from Telegram servers');
+      await s.client.logOut().catch(e => {
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        console.warn('[telegram] Error during logout:', errorMsg);
+      });
+    }
+
+    // Destroy TDLib client
+    if (s.client) {
+      await s.client.destroy().catch(e => {
+        const errorMsg = e instanceof Error ? e.message : String(e);
+        console.warn('[telegram] Error destroying client:', errorMsg);
+      });
+
+      s.client = null;
+    }
+  } catch (e) {
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    console.warn('[telegram] Error during disconnect:', errorMsg);
+  }
+
+  // Clear authentication state
+  s.config.isAuthenticated = false;
+  s.config.pendingCode = false;
+  s.config.phoneNumber = '';
+  s.authState = 'unknown';
+  s.cache.me = null;
+  s.cache.lastSync = 0;
+  s.passwordHint = null;
+  s.clientError = null;
+  s.clientConnecting = false;
+
+  // Save cleared config
+  state.set('config', s.config);
+  state.set('status', 'stopped');
+
+  // Publish updated state to frontend
+  publishState();
+
+  console.log('[telegram] Disconnect cleanup completed');
+}
+
+async function onCronTrigger(_scheduleId: string): Promise<void> {
+  // No-op: TDLib update loop handles everything
+}
+
+async function onListOptions(): Promise<{ options: SkillOption[] }> {
+  const s = globalThis.getTelegramSkillState();
+  return {
+    options: [
+      {
+        name: 'showSensitiveMessages',
+        type: 'boolean',
+        label: 'Show Sensitive Messages',
+        value: s.config.showSensitiveMessages ?? false,
+      },
+      {
+        name: 'allowGroupAdminActions',
+        type: 'boolean',
+        label: 'Allow Group Admin Actions',
+        value: s.config.allowGroupAdminActions ?? false,
+      },
+      {
+        name: 'allowWriteActions',
+        type: 'boolean',
+        label: 'Allow Write Actions',
+        value: s.config.allowWriteActions ?? false,
+      },
+    ],
+  };
+}
+
+async function onSetOption(args: { name: string; value: unknown }): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+  if (args.name === 'showSensitiveMessages') {
+    s.config.showSensitiveMessages = Boolean(args.value);
+    state.set('config', s.config);
+  }
+}
+
+async function publishState(): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+  const isConnected = s.client !== null && s.client.initialized;
+  const isConnecting = s.clientConnecting;
+  const isAuthenticated = s.config.isAuthenticated;
+
+  // Map to SkillHostConnectionState fields expected by the frontend
+  const connection_status: string = s.clientError
+    ? 'error'
+    : isConnecting
+      ? 'connecting'
+      : isConnected
+        ? 'connected'
+        : 'disconnected';
+
+  const auth_status: string = s.clientError
+    ? 'error'
+    : isAuthenticated
+      ? 'authenticated'
+      : s.authState === 'waitCode' || s.authState === 'waitPassword'
+        ? 'authenticating'
+        : 'not_authenticated';
+
+  state.setPartial({
+    // Standard SkillHostConnectionState fields
+    connection_status,
+    auth_status,
+    connection_error: s.clientError || null,
+    auth_error: null,
+    is_initialized: isConnected,
+    // Skill-specific fields
+    authState: s.authState,
+    pendingCode: s.config.pendingCode,
+    phoneNumber: s.config.phoneNumber,
+    me: s.cache.me,
+    dialogCount: s.cache.dialogs.length,
+    lastSync: s.cache.lastSync,
+    error: s.clientError,
+    // Sync state
+    syncInProgress: s.sync.inProgress,
+    syncCompleted: s.sync.completed,
+    syncError: s.sync.error,
+    lastSyncTime: s.sync.lastSyncTime,
+    // Storage statistics
+    storage: {
+      chatCount: s.storage.chatCount,
+      messageCount: s.storage.messageCount,
+      contactCount: s.storage.contactCount,
+      unreadCount: s.storage.unreadCount,
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Exports to globalThis (required for V8 runtime)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Tool Definitions
+// ---------------------------------------------------------------------------
+
+/**
+ * telegram-status tool - Get current connection status.
+ */
+const telegramStatusTool: ToolDefinition = {
+  name: 'telegram-status',
+  description: 'Get current Telegram connection and authentication status.',
+  input_schema: { type: 'object', properties: {}, required: [] },
+  async execute(): Promise<string> {
+    const s = globalThis.getTelegramSkillState();
+    return JSON.stringify({
+      connected: s.client !== null && s.client.initialized,
+      connecting: s.clientConnecting,
+      authenticated: s.config.isAuthenticated,
+      authState: s.authState,
+      phoneNumber: s.config.phoneNumber ? s.config.phoneNumber.slice(0, 4) + '****' : null,
+      me: s.cache.me,
+      syncInProgress: s.sync.inProgress,
+      syncCompleted: s.sync.completed,
+      lastSyncTime: s.sync.lastSyncTime,
+      storage: s.storage,
+      error: s.clientError || s.sync.error,
+    });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Skill Export
+// ---------------------------------------------------------------------------
+
+async function onPing(): Promise<PingResult> {
+  console.log('[telegram] onPing');
+  const s = globalThis.getTelegramSkillState();
+  if (!s.client || !s.client.initialized) {
+    console.log('[telegram] onPing: TDLib client not connected');
+    return { ok: false, errorType: 'network', errorMessage: 'TDLib client not connected' };
+  }
+  if (!s.config.isAuthenticated || s.authState !== 'ready') {
+    console.log('[telegram] onPing: Not authenticated (state: ${s.authState})');
+    return {
+      ok: false,
+      errorType: 'auth',
+      errorMessage: `Not authenticated (state: ${s.authState})`,
+    };
+  }
+
+  console.log('[telegram] onPing: Getting me');
+  const me = await getMe(s.client);
+  console.log('[telegram] onPing:', JSON.stringify(me));
+
+  return { ok: true };
+}
+
+async function onError(args: SkillErrorArgs): Promise<void> {
+  const s = globalThis.getTelegramSkillState();
+  console.error(
+    `[telegram] onError: type=${args.type} source=${args.source || 'unknown'} message=${args.message}`
+  );
+
+  s.clientError = args.message;
+
+  // For auth errors during login, reset the pending code flag so the user can retry
+  if (args.type === 'auth' || args.source === 'setAuthenticationPhoneNumber') {
+    s.config.pendingCode = false;
+    state.set('config', s.config);
+  }
+
+  publishState();
+}
+
+const { onSetupStart, onSetupSubmit, onSetupCancel } = createSetupHandlers({
+  initClient,
+  onError,
+  publishState,
+});
+
+const skill: Skill = {
+  info: {
+    id: 'telegram',
+    name: 'Telegram',
+    version: '2.1.0', // Bumped for persistent storage
+    description: 'Telegram integration via TDLib with persistent storage',
+    auto_start: false,
+    setup: { required: true, label: 'Configure Telegram' },
+  },
+  tools: [telegramStatusTool, ...tools],
+  init,
+  start,
+  stop,
+  onCronTrigger,
+  onSetupStart,
+  onSetupSubmit,
+  onSetupCancel,
+  onPing,
+  onError,
+  onSync,
+  onListOptions,
+  onSetOption,
+};
+
+export default skill;
