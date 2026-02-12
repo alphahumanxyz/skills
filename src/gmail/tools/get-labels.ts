@@ -1,9 +1,10 @@
-// Tool: gmail-get-labels
+// Tool: get-labels
 // Get all Gmail labels with counts and details
-import '../state';
+import { gmailFetch } from '../api';
+import { upsertLabel } from '../db/helpers';
 
 export const getLabelsTool: ToolDefinition = {
-  name: 'gmail-get-labels',
+  name: 'get-labels',
   description:
     'Get all Gmail labels including system and user-created labels with message counts and details.',
   input_schema: {
@@ -20,12 +21,6 @@ export const getLabelsTool: ToolDefinition = {
   },
   async execute(args: Record<string, unknown>): Promise<string> {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
-        .gmailFetch;
-      if (!gmailFetch) {
-        return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
-      }
-
       if (!oauth.getCredential()) {
         return JSON.stringify({
           success: false,
@@ -37,7 +32,7 @@ export const getLabelsTool: ToolDefinition = {
       const includeHidden = args.include_hidden === true;
 
       // Get labels from Gmail API
-      const response = gmailFetch('/users/me/labels');
+      const response = await gmailFetch('/users/me/labels');
 
       if (!response.success) {
         return JSON.stringify({
@@ -84,10 +79,7 @@ export const getLabelsTool: ToolDefinition = {
       }));
 
       // Update local database
-      const upsertLabel = (globalThis as { upsertLabel?: (label: any) => void }).upsertLabel;
-      if (upsertLabel) {
-        labels.forEach(label => upsertLabel(label));
-      }
+      labels.forEach(label => upsertLabel(label));
 
       // Categorize labels for easier use
       const categorized = {

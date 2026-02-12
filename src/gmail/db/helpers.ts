@@ -1,6 +1,5 @@
 // Database helper functions for Gmail skill
 // CRUD operations for emails, threads, labels, and attachments
-import '../state';
 import type {
   DatabaseAttachment,
   DatabaseEmail,
@@ -393,18 +392,3 @@ function insertEmailAttachments(message: GmailMessage): void {
     );
   });
 }
-
-// Expose helper functions on globalThis for tools to use
-const _g = globalThis as Record<string, unknown>;
-_g.upsertEmail = upsertEmail;
-_g.upsertThread = upsertThread;
-_g.upsertLabel = upsertLabel;
-_g.getEmails = getEmails;
-_g.getThreads = getThreads;
-_g.getLabels = getLabels;
-_g.getEmailById = getEmailById;
-_g.getThreadById = getThreadById;
-_g.getEmailAttachments = getEmailAttachments;
-_g.updateEmailReadStatus = updateEmailReadStatus;
-_g.getSyncState = getSyncState;
-_g.setSyncState = setSyncState;

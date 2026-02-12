@@ -1,10 +1,12 @@
-// Tool: gmail-get-email
+// Tool: get-email
 // Get full details of a specific email by ID
 import { isSensitiveText } from '../../helpers';
-import '../state';
+import { gmailFetch } from '../api';
+import { getEmailById, upsertEmail } from '../db/helpers';
+import { getGmailSkillState } from '../state';
 
 export const getEmailTool: ToolDefinition = {
-  name: 'gmail-get-email',
+  name: 'get-email',
   description:
     'Get full details of a specific email by its ID, including headers, body content, and attachments.',
   input_schema: {
@@ -22,12 +24,6 @@ export const getEmailTool: ToolDefinition = {
   },
   async execute(args: Record<string, unknown>): Promise<string> {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
-        .gmailFetch;
-      if (!gmailFetch) {
-        return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
-      }
-
       if (!oauth.getCredential()) {
         return JSON.stringify({
           success: false,
@@ -44,14 +40,13 @@ export const getEmailTool: ToolDefinition = {
       const includeBody = args.include_body !== false;
 
       // First check if email exists in local database
-      const getEmailById = (globalThis as { getEmailById?: (id: string) => any }).getEmailById;
-      const localEmail = getEmailById ? getEmailById(messageId) : null;
+      const localEmail = getEmailById(messageId);
 
       // Get email from Gmail API
       const params: string[] = [];
       params.push(`format=${encodeURIComponent(format)}`);
 
-      const response = gmailFetch(`/users/me/messages/${messageId}?${params.join('&')}`);
+      const response = await gmailFetch(`/users/me/messages/${messageId}?${params.join('&')}`);
 
       if (!response.success) {
         return JSON.stringify({
@@ -130,10 +125,7 @@ export const getEmailTool: ToolDefinition = {
       result.has_attachments = attachments.length > 0;
 
       // Update local database
-      const upsertEmail = (globalThis as { upsertEmail?: (msg: any) => void }).upsertEmail;
-      if (upsertEmail) {
-        upsertEmail(message);
-      }
+      upsertEmail(message);
 
       // Include local database info if available
       if (localEmail) {
@@ -145,7 +137,7 @@ export const getEmailTool: ToolDefinition = {
 
       // If sensitive and user has not opted in to show sensitive, return redacted response.
       // Consistent with search-emails: only check subject and snippet (not full body).
-      const s = globalThis.getGmailSkillState();
+      const s = getGmailSkillState();
       const showSensitive = s.config.showSensitiveMessages ?? false;
       if (!showSensitive) {
         const textToCheck = (result.headers?.subject || '') + ' ' + (result.snippet || '');

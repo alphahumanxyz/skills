@@ -1,9 +1,11 @@
-// Tool: gmail-send-email
+// Tool: send-email
 // Send emails via Gmail API with support for attachments, HTML/text, and threading
-import '../state';
+import { gmailFetch } from '../api';
+import { upsertEmail } from '../db/helpers';
+import { getGmailSkillState } from '../state';
 
 export const sendEmailTool: ToolDefinition = {
-  name: 'gmail-send-email',
+  name: 'send-email',
   description:
     'Send an email through Gmail with support for HTML/text content, attachments, CC/BCC recipients, and reply threading.',
   input_schema: {
@@ -68,12 +70,6 @@ export const sendEmailTool: ToolDefinition = {
   },
   async execute(args: Record<string, unknown>): Promise<string> {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
-        .gmailFetch;
-      if (!gmailFetch) {
-        return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
-      }
-
       if (!oauth.getCredential()) {
         return JSON.stringify({
           success: false,
@@ -104,7 +100,7 @@ export const sendEmailTool: ToolDefinition = {
       }
 
       // Get user's email from state
-      const s = globalThis.getGmailSkillState();
+      const s = getGmailSkillState();
       const fromEmail = s.config.userEmail || s.profile?.emailAddress;
 
       if (!fromEmail) {
@@ -197,7 +193,7 @@ export const sendEmailTool: ToolDefinition = {
       }
 
       // Send email
-      const response = gmailFetch('/users/me/messages/send', {
+      const response = await gmailFetch('/users/me/messages/send', {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });
@@ -213,13 +209,8 @@ export const sendEmailTool: ToolDefinition = {
 
       // Update local database if email was sent successfully
       if (sentMessage.id) {
-        const getEmailResponse = gmailFetch(`/users/me/messages/${sentMessage.id}`);
-        if (getEmailResponse.success) {
-          const upsertEmail = (globalThis as { upsertEmail?: (msg: any) => void }).upsertEmail;
-          if (upsertEmail) {
-            upsertEmail(getEmailResponse.data);
-          }
-        }
+        const getEmailResponse = await gmailFetch(`/users/me/messages/${sentMessage.id}`);
+        if (getEmailResponse.success) upsertEmail(getEmailResponse.data);
       }
 
       return JSON.stringify({

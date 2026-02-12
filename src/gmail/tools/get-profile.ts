@@ -1,20 +1,15 @@
-// Tool: gmail-get-profile
+// Tool: get-profile
 // Get Gmail user profile information
-import '../state';
+import { gmailFetch } from '../api';
+import { getGmailSkillState } from '../state';
 
 export const getProfileTool: ToolDefinition = {
-  name: 'gmail-get-profile',
+  name: 'get-profile',
   description:
     'Get Gmail user profile information including email address, total message counts, and account details.',
   input_schema: { type: 'object', properties: {}, required: [] },
   async execute(_args: Record<string, unknown>): Promise<string> {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
-        .gmailFetch;
-      if (!gmailFetch) {
-        return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
-      }
-
       if (!oauth.getCredential()) {
         return JSON.stringify({
           success: false,
@@ -23,7 +18,7 @@ export const getProfileTool: ToolDefinition = {
       }
 
       // Get profile from Gmail API
-      const response = gmailFetch('/users/me/profile');
+      const response = await gmailFetch('/users/me/profile');
 
       if (!response.success) {
         return JSON.stringify({
@@ -35,7 +30,7 @@ export const getProfileTool: ToolDefinition = {
       const profile = response.data;
 
       // Update skill state with profile info
-      const s = globalThis.getGmailSkillState();
+      const s = getGmailSkillState();
       s.profile = {
         emailAddress: profile.emailAddress,
         messagesTotal: profile.messagesTotal || 0,

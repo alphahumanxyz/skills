@@ -1,6 +1,5 @@
 // Shared skill state module for Gmail skill
-// Tools and lifecycle functions access state through globalThis.getGmailSkillState()
-// This pattern works in both production V8 runtime and test harness sandbox.
+// All modules import getGmailSkillState() and publishSkillState() directly.
 import type { GmailProfile, SkillConfig, SyncStatus } from './types';
 
 export interface GmailSkillState {
@@ -13,59 +12,58 @@ export interface GmailSkillState {
   lastApiError: string | null;
 }
 
-// Extend globalThis type
-declare global {
-  function getGmailSkillState(): GmailSkillState;
-
-  var __gmailSkillState: GmailSkillState;
-}
-
-/**
- * Initialize the Gmail skill state. Called once at module load.
- */
-function initGmailSkillState(): GmailSkillState {
-  const state: GmailSkillState = {
-    config: {
-      credentialId: '',
-      userEmail: '',
-      syncEnabled: true,
-      syncIntervalMinutes: 15,
-      maxEmailsPerSync: 100,
-      notifyOnNewEmails: true,
-      showSensitiveMessages: false,
-    },
-    profile: null,
-    syncStatus: {
-      lastSyncTime: 0,
-      lastHistoryId: '',
-      totalEmails: 0,
-      newEmailsCount: 0,
-      syncInProgress: false,
-      nextSyncTime: 0,
-    },
-    activeSessions: [],
-    rateLimitRemaining: 250,
-    rateLimitReset: Date.now() + 3600000,
-    lastApiError: null,
-  };
-
-  globalThis.__gmailSkillState = state;
-  return state;
-}
-
-// Initialize on module load
-initGmailSkillState();
-
-// Expose getGmailSkillState as a global function
-globalThis.getGmailSkillState = function getGmailSkillState(): GmailSkillState {
-  const state = globalThis.__gmailSkillState;
-  if (!state) {
-    throw new Error('[gmail] Skill state not initialized');
-  }
-  return state;
+// Module-level singleton state
+const skillState: GmailSkillState = {
+  config: {
+    credentialId: '',
+    userEmail: '',
+    syncEnabled: true,
+    syncIntervalMinutes: 15,
+    maxEmailsPerSync: 100,
+    notifyOnNewEmails: true,
+    showSensitiveMessages: false,
+  },
+  profile: null,
+  syncStatus: {
+    lastSyncTime: 0,
+    lastHistoryId: '',
+    totalEmails: 0,
+    newEmailsCount: 0,
+    syncInProgress: false,
+    nextSyncTime: 0,
+  },
+  activeSessions: [],
+  rateLimitRemaining: 250,
+  rateLimitReset: Date.now() + 3600000,
+  lastApiError: null,
 };
 
-// Re-export for TypeScript imports (won't be used at runtime, but satisfies compiler)
 export function getGmailSkillState(): GmailSkillState {
-  return globalThis.getGmailSkillState();
+  return skillState;
+}
+
+export function publishSkillState(): void {
+  const s = skillState;
+  const credential = oauth.getCredential();
+  const isConnected = !!credential;
+
+  state.setPartial({
+    // Standard SkillHostConnectionState fields
+    connection_status: isConnected ? 'connected' : 'disconnected',
+    auth_status: isConnected ? 'authenticated' : 'not_authenticated',
+    connection_error: s.lastApiError || null,
+    auth_error: null,
+    is_initialized: isConnected,
+    // Skill-specific fields
+    userEmail: s.config.userEmail,
+    syncEnabled: s.config.syncEnabled,
+    syncInProgress: s.syncStatus.syncInProgress,
+    lastSyncTime: new Date(s.syncStatus.lastSyncTime).toISOString(),
+    nextSyncTime: new Date(s.syncStatus.nextSyncTime).toISOString(),
+    totalEmails: s.syncStatus.totalEmails,
+    newEmailsCount: s.syncStatus.newEmailsCount,
+    activeSessions: s.activeSessions.length,
+    rateLimitRemaining: s.rateLimitRemaining,
+    lastError: s.lastApiError,
+  });
 }

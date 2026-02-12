@@ -1,9 +1,10 @@
-// Tool: gmail-mark-email
+// Tool: mark-email
 // Mark emails as read/unread, important, starred, etc.
-import '../state';
+import { gmailFetch } from '../api';
+import { updateEmailReadStatus } from '../db/helpers';
 
 export const markEmailTool: ToolDefinition = {
-  name: 'gmail-mark-email',
+  name: 'mark-email',
   description:
     'Mark emails with specific status (read/unread, important, starred) or add/remove labels.',
   input_schema: {
@@ -38,12 +39,6 @@ export const markEmailTool: ToolDefinition = {
   },
   async execute(args: Record<string, unknown>): Promise<string> {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
-        .gmailFetch;
-      if (!gmailFetch) {
-        return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
-      }
-
       if (!oauth.getCredential()) {
         return JSON.stringify({
           success: false,
@@ -77,7 +72,7 @@ export const markEmailTool: ToolDefinition = {
         try {
           const requestBody = { ids: [messageId], ...labelOperations };
 
-          const response = gmailFetch('/users/me/messages/batchModify', {
+          const response = await gmailFetch('/users/me/messages/batchModify', {
             method: 'POST',
             body: JSON.stringify(requestBody),
           });
@@ -86,17 +81,8 @@ export const markEmailTool: ToolDefinition = {
             results.push({ message_id: messageId, success: true, action });
 
             // Update local database
-            const updateEmailReadStatus = (
-              globalThis as { updateEmailReadStatus?: (id: string, isRead: boolean) => void }
-            ).updateEmailReadStatus;
-
-            if (updateEmailReadStatus) {
-              if (action === 'mark_read') {
-                updateEmailReadStatus(messageId, true);
-              } else if (action === 'mark_unread') {
-                updateEmailReadStatus(messageId, false);
-              }
-            }
+            if (action === 'mark_read') updateEmailReadStatus(messageId, true);
+            else if (action === 'mark_unread') updateEmailReadStatus(messageId, false);
           } else {
             results.push({
               message_id: messageId,

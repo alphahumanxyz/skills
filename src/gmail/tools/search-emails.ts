@@ -1,10 +1,12 @@
-// Tool: gmail-search-emails
+// Tool: search-emails
 // Advanced email search using Gmail query syntax
 import { isSensitiveText } from '../../helpers';
-import '../state';
+import { gmailFetch } from '../api';
+import { upsertEmail } from '../db/helpers';
+import { getGmailSkillState } from '../state';
 
 export const searchEmailsTool: ToolDefinition = {
-  name: 'gmail-search-emails',
+  name: 'search-emails',
   description:
     'Search emails using advanced Gmail query syntax. Supports complex queries with operators like from:, to:, subject:, has:attachment, is:unread, etc.',
   input_schema: {
@@ -31,12 +33,6 @@ export const searchEmailsTool: ToolDefinition = {
   },
   async execute(args: Record<string, unknown>): Promise<string> {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
-        .gmailFetch;
-      if (!gmailFetch) {
-        return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
-      }
-
       if (!oauth.getCredential()) {
         return JSON.stringify({
           success: false,
@@ -65,7 +61,7 @@ export const searchEmailsTool: ToolDefinition = {
       }
 
       // Search messages
-      const searchResponse = gmailFetch(`/users/me/messages?${params.join('&')}`);
+      const searchResponse = await gmailFetch(`/users/me/messages?${params.join('&')}`);
 
       if (!searchResponse.success) {
         return JSON.stringify({
@@ -98,7 +94,7 @@ export const searchEmailsTool: ToolDefinition = {
         const batch = searchResults.messages.slice(i, i + batchSize);
 
         for (const msgRef of batch) {
-          const msgResponse = gmailFetch(`/users/me/messages/${msgRef.id}?format=metadata`);
+          const msgResponse = await gmailFetch(`/users/me/messages/${msgRef.id}?format=metadata`);
 
           if (msgResponse.success) {
             const message = msgResponse.data;
@@ -138,10 +134,7 @@ export const searchEmailsTool: ToolDefinition = {
             });
 
             // Cache in local database
-            const upsertEmail = (globalThis as { upsertEmail?: (msg: any) => void }).upsertEmail;
-            if (upsertEmail) {
-              upsertEmail(message);
-            }
+            upsertEmail(message);
           }
         }
 
@@ -153,7 +146,7 @@ export const searchEmailsTool: ToolDefinition = {
       }
 
       // Filter out sensitive emails unless user opted in to show them
-      const s = globalThis.getGmailSkillState();
+      const s = getGmailSkillState();
       const showSensitive = s.config.showSensitiveMessages ?? false;
       const filteredEmails = showSensitive
         ? emails

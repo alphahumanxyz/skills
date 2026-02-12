@@ -1,6 +1,5 @@
 // Database schema initialization for Gmail skill
 // Creates SQLite tables for emails, threads, labels, and attachments
-import '../state';
 
 /**
  * Initialize Gmail database schema
@@ -114,6 +113,3 @@ export function initializeGmailSchema(): void {
 
   console.log('[gmail] Database schema initialized successfully');
 }
-
-// Expose function on globalThis for use by main module
-(globalThis as Record<string, unknown>).initializeGmailSchema = initializeGmailSchema;

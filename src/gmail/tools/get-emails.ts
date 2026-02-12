@@ -1,10 +1,12 @@
-// Tool: gmail-get-emails
+// Tool: get-emails
 // Get emails with filtering and search capabilities
 import { isSensitiveText } from '../../helpers';
-import '../state';
+import { gmailFetch } from '../api';
+import { upsertEmail } from '../db/helpers';
+import { getGmailSkillState } from '../state';
 
 export const getEmailsTool: ToolDefinition = {
-  name: 'gmail-get-emails',
+  name: 'get-emails',
   description:
     'Get emails from Gmail with optional filtering by query, labels, read status, and pagination. Supports Gmail search syntax.',
   input_schema: {
@@ -39,12 +41,6 @@ export const getEmailsTool: ToolDefinition = {
   },
   async execute(args: Record<string, unknown>): Promise<string> {
     try {
-      const gmailFetch = (globalThis as { gmailFetch?: (endpoint: string, options?: any) => any })
-        .gmailFetch;
-      if (!gmailFetch) {
-        return JSON.stringify({ success: false, error: 'Gmail API helper not available' });
-      }
-
       if (!oauth.getCredential()) {
         return JSON.stringify({
           success: false,
@@ -77,7 +73,7 @@ export const getEmailsTool: ToolDefinition = {
       }
 
       // Get email list
-      const listResponse = gmailFetch(`/users/me/messages?${params.join('&')}`);
+      const listResponse = await gmailFetch(`/users/me/messages?${params.join('&')}`);
 
       if (!listResponse.success) {
         return JSON.stringify({
@@ -99,7 +95,7 @@ export const getEmailsTool: ToolDefinition = {
       // Get detailed email data
       const emails = [];
       for (const msgRef of messageList.messages) {
-        const msgResponse = gmailFetch(`/users/me/messages/${msgRef.id}`);
+        const msgResponse = await gmailFetch(`/users/me/messages/${msgRef.id}`);
         if (msgResponse.success) {
           const message = msgResponse.data;
           const headers = message.payload?.headers || [];
@@ -134,15 +130,12 @@ export const getEmailsTool: ToolDefinition = {
           });
 
           // Store in local database for caching
-          const upsertEmail = (globalThis as { upsertEmail?: (msg: any) => void }).upsertEmail;
-          if (upsertEmail) {
-            upsertEmail(message);
-          }
+          upsertEmail(message);
         }
       }
 
       // Filter out sensitive emails unless user opted in to show them
-      const s = globalThis.getGmailSkillState();
+      const s = getGmailSkillState();
       const showSensitive = s.config.showSensitiveMessages ?? false;
       const filteredEmails = showSensitive
         ? emails
