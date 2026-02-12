@@ -21,6 +21,8 @@ export default [
       'examples/**',
       'skills-py/**',
       'dev/**',
+      '.venv/**',
+      '__pycache__/**',
       '*.config.js',
       '*.config.mjs',
       '*.config.ts',

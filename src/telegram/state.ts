@@ -61,6 +61,7 @@ export type AuthorizationState =
   | 'waitPassword'
   | 'ready'
   | 'closed'
+  | 'closing'
   | 'unknown';
 
 /**
@@ -97,6 +98,11 @@ export interface TelegramState {
   authState: AuthorizationState;
   authOperationInProgress: boolean;
   passwordHint: string | null;
+  // Event-based state change notification
+  authStateChangeNotifier: {
+    listeners: ((newState: AuthorizationState) => void)[];
+    notify: (newState: AuthorizationState) => void;
+  };
   workerRunning: boolean;
   workerTimeoutId: ReturnType<typeof setTimeout> | null;
   sync: SyncState;
@@ -137,6 +143,19 @@ function initSkillState(): TelegramState {
     authState: 'unknown',
     authOperationInProgress: false,
     passwordHint: null,
+    // Initialize event notification system
+    authStateChangeNotifier: {
+      listeners: [],
+      notify(newState: AuthorizationState) {
+        this.listeners.forEach(listener => {
+          try {
+            listener(newState);
+          } catch (e) {
+            console.error('[telegram] Error in auth state change listener:', e);
+          }
+        });
+      },
+    },
     workerRunning: false,
     workerTimeoutId: null,
     sync: {
