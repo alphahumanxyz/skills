@@ -545,6 +545,7 @@ ${c.bold}Commands:${c.reset}
   ${c.cyan}help${c.reset}                        Show this help
   ${c.cyan}tools${c.reset}                       List available tools
   ${c.cyan}call <tool> [json]${c.reset}          Call a tool (prompts for args if no JSON given)
+  ${c.cyan}load <json>${c.reset}                 Call onLoad(params) — e.g. load {"walletAddress":"0x..."}
   ${c.cyan}init${c.reset}                        Call init()
   ${c.cyan}start${c.reset}                       Call start()
   ${c.cyan}stop${c.reset}                        Call stop()
@@ -629,6 +630,32 @@ async function cmdCall(G: G, rest: string, rl: readline.Interface): Promise<void
     console.log(prettyJson(parsed));
   } catch (e) {
     console.log(`${c.red}Tool error: ${e}${c.reset}`);
+  }
+}
+
+function cmdLoad(G: G, rest: string): void {
+  const onLoad = G.onLoad as ((params: Record<string, unknown>) => void) | undefined;
+  if (typeof onLoad !== 'function') {
+    console.log(`${c.yellow}onLoad not defined${c.reset}`);
+    return;
+  }
+  const json = rest.trim();
+  if (!json) {
+    console.log(`${c.red}Usage: load <json> — e.g. load {"walletAddress":"0x73Eb66364AeF6A131b92EF15C72BE8222c54Ab1e"}${c.reset}`);
+    return;
+  }
+  let params: Record<string, unknown>;
+  try {
+    params = JSON.parse(json);
+  } catch (e) {
+    console.log(`${c.red}Invalid JSON: ${e}${c.reset}`);
+    return;
+  }
+  try {
+    onLoad(params);
+    console.log(`${c.green}onLoad() completed${c.reset}`);
+  } catch (e) {
+    console.log(`${c.red}onLoad() error: ${e}${c.reset}`);
   }
 }
 
@@ -1328,6 +1355,10 @@ async function main(): Promise<void> {
           try { await cmdCall(ctx.G, rest, tmpRl); } finally { tmpRl.close(); }
           break;
         }
+
+        case 'load':
+          cmdLoad(ctx.G, rest);
+          break;
 
         case 'init':
           await cmdLifecycle(ctx.G, 'init');

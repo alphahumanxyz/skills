@@ -1,5 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Tool: get_balance — get balance for a wallet address on a network via RPC
+
+/** Fallback for Ethereum mainnet when config.networks is empty (same as list_networks). */
+const ETH_MAINNET = {
+  chain_id: '1',
+  name: 'Ethereum Mainnet',
+  rpc_url: 'https://eth.llamarpc.com',
+  chain_type: 'evm' as const,
+};
+
 async function evmGetBalance(rpcUrl: string, address: string): Promise<string> {
   const body = JSON.stringify({
     jsonrpc: '2.0',
@@ -61,10 +70,19 @@ export const getBalanceTool = {
     if (!address) return JSON.stringify({ error: 'Missing required parameter: address' });
     if (!chainId) return JSON.stringify({ error: 'Missing required parameter: chain_id' });
 
-    const network = s.config.networks.find(
+    let network = s.config.networks.find(
       (n: { chain_id: string; chain_type: string }) =>
         n.chain_id === chainId && n.chain_type === 'evm'
     );
+    if (!network && chainId === '1') {
+      s.config.networks = s.config.networks?.length ? s.config.networks : [];
+      if (!s.config.networks.some((n: { chain_id: string }) => n.chain_id === '1')) {
+        s.config.networks = [ETH_MAINNET, ...s.config.networks];
+        const state = (globalThis as any).state as { set?: (key: string, value: unknown) => void };
+        if (state?.set) state.set('config', s.config);
+      }
+      network = ETH_MAINNET;
+    }
     if (!network) {
       return JSON.stringify({
         error: `Network not found for chain_id=${chainId}. Run list_networks to see configured networks.`,

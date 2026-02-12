@@ -4,12 +4,24 @@ import './state';
 import { getBalanceTool, listNetworksTool, listWalletsTool } from './tools';
 import { DEFAULT_NETWORKS, type NetworkConfig } from './types';
 
-// ---------------------------------------------------------------------------
-// Lifecycle
-// ---------------------------------------------------------------------------
+/** Ethereum Mainnet; always included so get_balance/list_networks work out of the box. */
+function ensureEthereumNetwork(networks: NetworkConfig[]): NetworkConfig[] {
+  const list = Array.isArray(networks) ? [...networks] : [];
+  const hasEth = list.some(n => n.chain_id === '1');
+  if (!hasEth) {
+    const defaults = Array.isArray(DEFAULT_NETWORKS) ? DEFAULT_NETWORKS : [];
+    const eth = defaults.find(n => n.chain_id === '1');
+    if (eth) list.unshift(eth);
+  }
+  return list;
+}
+
+function getState(): import('./state').WalletSkillState {
+  return (globalThis as any).getState();
+}
 
 async function init(): Promise<void> {
-  const s = globalThis.getWalletSkillState();
+  const s = getState();
   const saved = state.get('config') as {
     walletAddresses?: string[];
     networks?: NetworkConfig[];
@@ -20,19 +32,24 @@ async function init(): Promise<void> {
   if (saved?.networks?.length) {
     s.config.networks = saved.networks;
   }
-  if (s.config.networks.length === 0) {
-    const networks = Array.isArray(DEFAULT_NETWORKS) ? DEFAULT_NETWORKS : [];
-    const eth = networks.find(n => n.chain_id === '1');
-    if (eth) {
-      s.config.networks = [eth];
-    }
-  }
+  // Ensure at least Ethereum Mainnet is always available (and persist)
+  s.config.networks = ensureEthereumNetwork(s.config.networks);
+  state.set('config', s.config);
 }
 
 async function start(): Promise<void> {
   const s = globalThis.getWalletSkillState();
   s.isRunning = true;
-  publishState();
+  await publishState();
+}
+
+async function publishState(): Promise<void> {
+  const s = globalThis.getWalletSkillState();
+  state.setPartial({
+    status: s.isRunning ? 'running' : 'stopped',
+    connection_status: s.isRunning ? 'connected' : 'disconnected',
+    walletCount: s.config.walletAddresses.length,
+  });
 }
 
 async function stop(): Promise<void> {
@@ -59,24 +76,6 @@ async function onLoad(params: {
   state.setPartial({ walletCount: s.config.walletAddresses.length });
 }
 
-// ---------------------------------------------------------------------------
-// State publishing
-// ---------------------------------------------------------------------------
-
-async function publishState(): Promise<void> {
-  const s = globalThis.getWalletSkillState();
-  state.setPartial({
-    connection_status: 'connected',
-    status: 'running',
-    walletCount: s.config.walletAddresses.length,
-    networkCount: s.config.networks.length,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Expose on globalThis for bundle compatibility
-// ---------------------------------------------------------------------------
-
 const _g = globalThis as Record<string, unknown>;
 _g.init = init;
 _g.start = start;
@@ -84,8 +83,8 @@ _g.stop = stop;
 _g.onLoad = onLoad;
 _g.onSetupStart = globalThis.walletSetup.onSetupStart;
 _g.onSetupSubmit = globalThis.walletSetup.onSetupSubmit;
-_g.onSetupCancel = globalThis.walletSetup.onSetupCancel;
 _g.getState = globalThis.getWalletSkillState;
+_g.publishState = publishState;
 
 // ---------------------------------------------------------------------------
 // Skill export
@@ -110,7 +109,6 @@ const skill: Skill = {
   onLoad,
   onSetupStart: globalThis.walletSetup.onSetupStart,
   onSetupSubmit: async args => globalThis.walletSetup.onSetupSubmit(args),
-  onSetupCancel: globalThis.walletSetup.onSetupCancel,
 };
 
 export default skill;
