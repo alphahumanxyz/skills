@@ -135,6 +135,19 @@ function handleUpdate(update: TdUpdate): void {
 
     s.authState = newState;
     console.log(`[telegram] ${timestamp} Auth state changed: ${prevState} -> ${s.authState}`);
+    console.log(
+      `[telegram] ${timestamp} Race condition debug - auth state updated at: ${Date.now()}`
+    );
+
+    // Notify waiting functions of auth state change (event-based approach)
+    try {
+      console.log(
+        `[telegram] ${timestamp} Triggering ${s.authStateChangeNotifier?.listeners?.length || 0} auth state listeners`
+      );
+      s.authStateChangeNotifier.notify(newState);
+    } catch (e) {
+      console.error('[telegram] Error notifying auth state listeners:', e);
+    }
 
     // Extract password hint if waiting for password
     if (s.authState === 'waitPassword') {
@@ -157,7 +170,22 @@ function handleUpdate(update: TdUpdate): void {
       loadMe();
     }
 
+    // Force immediate state publication with critical state sync
     publishState();
+
+    // For critical auth state changes, add explicit verification
+    const criticalStates = ['waitCode', 'waitPassword', 'ready'];
+    if (criticalStates.includes(newState)) {
+      console.log(
+        `[telegram] ${timestamp} CRITICAL STATE SYNC: Ensuring ${newState} propagates to frontend`
+      );
+
+      // Small delay to ensure state propagation, then re-publish
+      setTimeout(() => {
+        publishState();
+        console.log(`[telegram] ${timestamp} Critical state re-published: ${newState}`);
+      }, 25);
+    }
   }
 }
 
@@ -206,45 +234,19 @@ async function initClient(): Promise<void> {
     // Store client in state
     s.client = client;
 
-    console.log('[telegram] Connected to TDLib, polling for auth state...');
-
-    // Manually poll for auth state updates BEFORE starting the background
-    // update loop.  This guarantees auth state transitions to a usable value
-    // (e.g. waitPhoneNumber / ready) before initClient() returns, avoiding
-    // race conditions where the setup wizard checks authState too early.
-    const maxWaitMs = 10000;
-    const startTime = Date.now();
-    while (
-      (s.authState === 'unknown' || s.authState === 'waitTdlibParameters') &&
-      Date.now() - startTime < maxWaitMs
-    ) {
-      const update = await client.receive(500);
-      if (update) {
-        handleUpdate(update);
-      }
-    }
-    console.log('[telegram] Auth state after init polling:', s.authState);
+    console.log(
+      '[telegram] Connected to TDLib, polling for auth state with states as...',
+      s.authState
+    );
 
     // Start the background update loop immediately for all TDLib communication
     // This eliminates race conditions between manual polling and background processing
     client.startUpdateLoop(handleUpdate);
     console.log('[telegram] Background update loop started, auth state:', s.authState);
 
-    // Ask TDLib for the current authorization state so the skill knows
-    // where it stands immediately instead of waiting for an unsolicited update.
-    try {
-      console.log('[telegram] Querying initial auth state...');
-      const authState = await client.send({ '@type': 'getAuthorizationState' });
-      console.log('[telegram] Initial auth state:', authState);
-      if (authState) {
-        handleUpdate({
-          '@type': 'updateAuthorizationState',
-          authorization_state: authState,
-        } as TdUpdate);
-      }
-    } catch (e) {
-      console.warn('[telegram] Failed to query initial auth state:', e);
-    }
+    // Note: getAuthorizationState is not supported by V8 TDLib runtime
+    // The background update loop will receive auth state updates automatically
+    console.log('[telegram] Relying on background update loop for initial auth state');
 
     s.clientConnecting = false;
     publishState();
@@ -546,7 +548,8 @@ async function publishState(): Promise<void> {
         ? 'authenticating'
         : 'not_authenticated';
 
-  state.setPartial({
+  const timestamp = new Date().toISOString().slice(11, -1);
+  const stateData = {
     // Standard SkillHostConnectionState fields
     connection_status,
     auth_status,
@@ -575,7 +578,45 @@ async function publishState(): Promise<void> {
       contactCount: s.storage.contactCount,
       unreadCount: s.storage.unreadCount,
     },
-  });
+  };
+
+  // Log critical state changes for debugging frontend sync issues
+  const criticalStateChanges = [
+    s.authState === 'waitCode' && 'AUTH_STATE_WAIT_CODE',
+    s.authState === 'waitPassword' && 'AUTH_STATE_WAIT_PASSWORD',
+    s.authState === 'ready' && 'AUTH_STATE_READY',
+    s.config.isAuthenticated && 'IS_AUTHENTICATED',
+    s.clientError && 'CLIENT_ERROR',
+  ].filter(Boolean);
+
+  if (criticalStateChanges.length > 0) {
+    console.log(
+      `[telegram] ${timestamp} PUBLISHING CRITICAL STATE: ${criticalStateChanges.join(', ')}`
+    );
+    console.log(
+      `[telegram] ${timestamp} Frontend state sync - authState: ${s.authState}, auth_status: ${auth_status}, isAuthenticated: ${isAuthenticated}`
+    );
+  }
+
+  // Publish state with verification
+  try {
+    state.setPartial(stateData);
+
+    // Verify the state was set by checking a sample field
+    const testKey = 'authState';
+    const publishedValue = state.get(testKey);
+    if (publishedValue !== s.authState) {
+      console.warn(
+        `[telegram] ${timestamp} STATE SYNC WARNING: Published ${testKey}=${publishedValue} but expected ${s.authState}`
+      );
+    } else if (criticalStateChanges.length > 0) {
+      console.log(
+        `[telegram] ${timestamp} State sync verification passed - ${testKey} correctly published as ${publishedValue}`
+      );
+    }
+  } catch (e) {
+    console.error(`[telegram] ${timestamp} FAILED TO PUBLISH STATE:`, e);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -623,7 +664,7 @@ async function onPing(): Promise<PingResult> {
     return { ok: false, errorType: 'network', errorMessage: 'TDLib client not connected' };
   }
   if (!s.config.isAuthenticated || s.authState !== 'ready') {
-    console.log('[telegram] onPing: Not authenticated (state: ${s.authState})');
+    console.log(`[telegram] onPing: Not authenticated (state: ${s.authState})`);
     return {
       ok: false,
       errorType: 'auth',
